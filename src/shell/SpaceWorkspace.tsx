@@ -1,0 +1,169 @@
+/* Workspace of an open Marketing Space: sidebar + the active space module +
+   the content editor (which opens over any module). */
+import { Component, Suspense, type ReactNode } from 'react';
+import { Folder, FolderOpen, Home as HomeIcon, Keyboard, Loader2, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Redo2, Settings, Sun, TriangleAlert, Undo2 } from 'lucide-react';
+import { SPACE_GROUPS, SPACE_MODULES, SPACE_MODULE_BY_ID } from '@/spaces/registry';
+import { SPACE_TYPES } from '@/spaces/constants';
+import { ContentEditorHost } from '@/spaces/modules/content/ContentEditor';
+import { navigateSpace, setTheme, toggleSidebar, useApp } from '@/store/app';
+import { spaceRedo, spaceUndo, useCanRedoSpace, useCanUndoSpace, useSpace, useSpaceStore } from '@/store/space';
+import { optionLabel } from '@/lib/constants';
+import { assetUrl, backend } from '@/backend';
+import { Button, IconButton, Menu } from '@/ui';
+import { AgentIndicator } from './AgentDialog';
+import { leaveSpace } from './spaceActions';
+import '@/spaces/mind';
+
+class SpaceModuleBoundary extends Component<{ children: ReactNode; moduleId: string }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidUpdate(prev: { moduleId: string }) {
+    if (prev.moduleId !== this.props.moduleId && this.state.error) this.setState({ error: null });
+  }
+  componentDidCatch(error: Error) {
+    console.error(error);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="empty" style={{ flex: 1 }}>
+          <div className="empty-icon" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+            <TriangleAlert />
+          </div>
+          <h3>Something went wrong in this screen</h3>
+          <p className="mono small">{this.state.error.message}</p>
+          <Button onClick={() => this.setState({ error: null })}>Try again</Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function SpaceSaveState() {
+  const appStatus = useApp((s) => s.saveStatus);
+  const err = useApp((s) => s.saveError);
+  const clean = useSpaceStore((s) => s.version === s.savedVersion);
+  const status = appStatus === 'error' || appStatus === 'saving' ? appStatus : clean ? 'saved' : 'idle';
+  const label = status === 'saving' ? 'Saving…' : status === 'error' ? 'Save failed' : status === 'idle' ? 'Unsaved' : 'Saved';
+  return (
+    <div className={`save-state ${status}`} title={status === 'error' ? err : 'Saved automatically'}>
+      <span className="dot" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function SpaceSidebar() {
+  const moduleId = useApp((s) => s.spaceModuleId);
+  const collapsed = useApp((s) => s.sidebarCollapsed);
+  const theme = useApp((s) => s.theme);
+  const meta = useSpace((s) => s.meta);
+  const spaceId = useSpace((s) => s.id);
+  const contentCount = useSpace((s) => s.content.length);
+  const canUndo = useCanUndoSpace();
+  const canRedo = useCanRedoSpace();
+  // the emoji reads best at this size; otherwise the cover (or a square logo)
+  const logo = meta.emoji ? '' : assetUrl(meta.cover || meta.logo);
+  return (
+    <aside className="sidebar space-sidebar">
+      <div className="sidebar-top">
+        <Menu
+          trigger={
+            <button className="project-switch" title={meta.title}>
+              <span className="swatch-lg" style={{ background: meta.color }}>
+                {logo ? <img src={logo} alt="" /> : meta.emoji || meta.title.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="ptext" style={{ minWidth: 0 }}>
+                <div className="ptitle ellipsis">{meta.title}</div>
+                <div className="ptype">Marketing space · {optionLabel(SPACE_TYPES, meta.type)}</div>
+              </span>
+            </button>
+          }
+          items={[
+            { label: 'Library', icon: HomeIcon, shortcut: 'Ctrl+Shift+H', onClick: () => leaveSpace() },
+            { label: 'Space settings', icon: Settings, shortcut: 'Ctrl+,', onClick: () => navigateSpace('settings') },
+            ...(backend.openProjectFolder ? [{ label: 'Open space folder', icon: FolderOpen, onClick: () => backend.openProjectFolder!(spaceId) }] : []),
+            { separator: true },
+            { label: 'Keyboard shortcuts', icon: Keyboard, shortcut: 'F1', onClick: () => useApp.setState({ shortcutsOpen: true }) },
+          ]}
+        />
+      </div>
+      <nav className="sidebar-nav">
+        {SPACE_GROUPS.map((g) => (
+          <div className="nav-group" key={g}>
+            <div className="nav-group-label">{g}</div>
+            {SPACE_MODULES.filter((m) => m.group === g).map((m) => {
+              const Icon = m.icon;
+              return (
+                <button key={m.id} className={`nav-item ${moduleId === m.id ? 'active' : ''}`} onClick={() => navigateSpace(m.id)} title={collapsed ? m.label : m.description}>
+                  <Icon />
+                  <span>{m.label}</span>
+                  {m.id === 'content' && contentCount > 0 && !collapsed && <span className="nav-badge">{contentCount}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        <div className="nav-group">
+          <button className={`nav-item ${moduleId === 'settings' ? 'active' : ''}`} onClick={() => navigateSpace('settings')} title="Space settings">
+            <Settings />
+            <span>Space Settings</span>
+          </button>
+          <button className="nav-item" onClick={() => leaveSpace()} title="Back to the library">
+            <Folder />
+            <span>All projects & spaces</span>
+          </button>
+        </div>
+      </nav>
+      {window.prepro?.mcp && (
+        <div className="sidebar-agent">
+          <AgentIndicator compact={collapsed} />
+        </div>
+      )}
+      <div className="sidebar-bottom">
+        <SpaceSaveState />
+        <IconButton icon={Undo2} label="Undo (Ctrl+Z)" size="sm" disabled={!canUndo} onClick={() => spaceUndo()} />
+        <IconButton icon={Redo2} label="Redo (Ctrl+Y)" size="sm" disabled={!canRedo} onClick={() => spaceRedo()} />
+        <Menu
+          align="end"
+          trigger={<IconButton icon={theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor} label="Theme" size="sm" />}
+          items={[
+            { label: 'System', checked: theme === 'system', onClick: () => setTheme('system') },
+            { label: 'Light', checked: theme === 'light', onClick: () => setTheme('light') },
+            { label: 'Dark', checked: theme === 'dark', onClick: () => setTheme('dark') },
+          ]}
+        />
+        <IconButton icon={collapsed ? PanelLeftOpen : PanelLeftClose} label="Toggle sidebar (Ctrl+\)" size="sm" onClick={toggleSidebar} />
+      </div>
+    </aside>
+  );
+}
+
+export function SpaceWorkspace() {
+  const moduleId = useApp((s) => s.spaceModuleId);
+  const collapsed = useApp((s) => s.sidebarCollapsed);
+  const def = SPACE_MODULE_BY_ID[moduleId] ?? SPACE_MODULE_BY_ID.overview;
+  const Comp = def.component;
+  return (
+    <div className={`app space-app ${collapsed ? 'sidebar-collapsed' : ''}`}>
+      <SpaceSidebar />
+      <main className="main">
+        <SpaceModuleBoundary moduleId={moduleId}>
+          <Suspense
+            fallback={
+              <div className="module-loading">
+                <Loader2 className="spin" size={18} /> Loading…
+              </div>
+            }
+          >
+            <Comp key={moduleId} />
+          </Suspense>
+        </SpaceModuleBoundary>
+      </main>
+      <ContentEditorHost />
+    </div>
+  );
+}

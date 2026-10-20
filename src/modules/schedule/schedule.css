@@ -1,0 +1,1026 @@
+/* Shooting Schedule module (prefix: sched-).
+   Strips use the literal industry strip colours (STRIP_COLORS) with dark text in
+   both themes, like paper strips on a production board. */
+
+/* ---------------------------------------------------------------- board layout */
+
+.sched-board {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.sched-days {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px 20px 48px;
+  container-type: inline-size;
+}
+
+.sched-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-right: 6px;
+}
+.sched-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.sched-legend-item > span {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border-strong);
+}
+@media (max-width: 1280px) {
+  .sched-legend {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- day */
+
+.sched-day {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 14px;
+  overflow: hidden;
+  transition: box-shadow 0.12s, border-color 0.12s;
+}
+.sched-day.over {
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+}
+.sched-day-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 7px 10px 7px 6px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+.sched-day.collapsed .sched-day-head {
+  border-bottom: 0;
+}
+.sched-collapse {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sched-collapse:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.sched-collapse svg {
+  width: 16px;
+  height: 16px;
+}
+.sched-day-num {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.sched-day-num span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.sched-day-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sched-day-date .input {
+  width: 138px;
+}
+.sched-weekday {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+.sched-auto {
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.sched-day-label {
+  flex: 1 1 140px;
+  min-width: 110px;
+  width: auto;
+}
+.sched-day-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.sched-day-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.sched-day-stats > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.sched-day-stats svg {
+  width: 13px;
+  height: 13px;
+  color: var(--text-3);
+}
+.sched-day-stats .over,
+.sched-day-stats .over svg {
+  color: var(--danger);
+  font-weight: 650;
+}
+
+.sched-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sched-warn.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.sched-warn svg {
+  width: 13px;
+  height: 13px;
+}
+.sched-warn-list {
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sched-warn-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.sched-warn-item svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.sched-warn-item.warning svg {
+  color: var(--warning);
+}
+.sched-warn-item.danger svg {
+  color: var(--danger);
+}
+
+.sched-day-notes {
+  padding: 3px 10px 0;
+}
+.sched-day-notes .textarea {
+  min-height: 28px;
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 4px 8px;
+}
+.sched-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px 10px;
+  min-height: 44px;
+}
+.sched-drop-hint {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.sched-day-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 12px;
+  background: var(--text);
+  color: var(--bg-elev);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+.sched-day-foot.over {
+  background: var(--danger);
+  color: #fff;
+}
+
+.sched-add-day {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sched-add-day:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.sched-add-day svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------------------------------------------------------------- strip */
+
+.sched-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px 30px minmax(140px, 1fr) 46px 44px minmax(80px, 0.5fr) 54px minmax(100px, 0.45fr) 26px;
+  align-items: center;
+  gap: 0 8px;
+  min-height: 38px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  font-size: 12px;
+  line-height: 1.25;
+  cursor: grab;
+  user-select: none;
+  outline: none;
+}
+.sched-strip:hover {
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+.sched-strip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.sched-strip.highlight {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  animation: sched-pulse 1.2s ease-out 2;
+}
+.sched-strip.ghost,
+.sched-banner.ghost {
+  opacity: 0.35;
+}
+.sched-strip.overlay,
+.sched-banner.overlay {
+  cursor: grabbing;
+  box-shadow: var(--shadow-lg);
+}
+@keyframes sched-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.sched-num {
+  font-weight: 800;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sched-ie,
+.sched-dn {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sched-set {
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.01em;
+}
+.sched-syn {
+  font-size: 11.5px;
+  color: rgba(0, 0, 0, 0.66);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.sched-pages {
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sched-faint {
+  color: rgba(0, 0, 0, 0.45);
+}
+.sched-cast {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+  max-height: 38px;
+  overflow: hidden;
+}
+.sched-castbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 17px;
+  padding: 0 3px;
+  border: 1px solid rgba(0, 0, 0, 0.42);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sched-castmore {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: rgba(0, 0, 0, 0.6);
+  align-self: center;
+}
+.sched-est {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.sched-est input {
+  width: 36px;
+  height: 22px;
+  padding: 0 3px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-weight: 650;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  cursor: text;
+}
+.sched-est input:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+.sched-est input:focus {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.45);
+}
+.sched-est input::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+.sched-est span {
+  color: rgba(0, 0, 0, 0.55);
+}
+.sched-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11.5px;
+  color: rgba(0, 0, 0, 0.75);
+}
+.sched-loc svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.sched-strip-menu,
+.sched-banner-del {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sched-strip-menu svg,
+.sched-banner-del svg {
+  width: 15px;
+  height: 15px;
+}
+.sched-strip:hover .sched-strip-menu,
+.sched-strip:focus-within .sched-strip-menu,
+.sched-banner:hover .sched-banner-del,
+.sched-banner:focus-within .sched-banner-del,
+.sched-strip-menu:focus-visible {
+  opacity: 0.7;
+}
+.sched-strip-menu:hover,
+.sched-banner-del:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+@container (max-width: 860px) {
+  .sched-strip:not(.compact) {
+    grid-template-columns: 40px 28px minmax(120px, 1fr) 44px 42px minmax(70px, 0.5fr) 54px 26px;
+  }
+  .sched-strip:not(.compact) .sched-loc {
+    display: none;
+  }
+}
+@container (max-width: 600px) {
+  .sched-strip:not(.compact) {
+    grid-template-columns: 38px 28px minmax(100px, 1fr) 42px 40px 26px;
+  }
+  .sched-strip:not(.compact) .sched-cast,
+  .sched-strip:not(.compact) .sched-est {
+    display: none;
+  }
+}
+
+/* compact strips (boneyard) */
+.sched-strip.compact {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 4px 5px 9px;
+}
+.sched-strip-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.sched-strip-line.sub {
+  min-height: 18px;
+  font-size: 11.5px;
+}
+.sched-strip.compact .sched-set {
+  flex: 1;
+  min-width: 0;
+}
+.sched-strip.compact .sched-syn {
+  flex: 1;
+}
+.sched-strip.compact .sched-cast {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.sched-strip.compact .sched-strip-menu {
+  width: 22px;
+  height: 20px;
+}
+
+/* ---------------------------------------------------------------- banner */
+
+.sched-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 2px 4px 2px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  cursor: grab;
+  outline: none;
+}
+.sched-banner:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.sched-banner-swatch {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+}
+.sched-banner-swatch svg {
+  width: 14px;
+  height: 14px;
+}
+.sched-banner:hover .sched-banner-swatch,
+.sched-banner:focus-within .sched-banner-swatch {
+  opacity: 0.7;
+}
+.sched-banner-swatch:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.1);
+}
+.sched-banner-text {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-weight: 750;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: center;
+  outline: none;
+}
+.sched-banner-text:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.sched-banner-text:focus {
+  background: rgba(255, 255, 255, 0.3);
+  text-transform: none;
+  text-align: left;
+}
+
+.sched-missing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 2px 6px 2px 10px;
+  border: 1px dashed var(--danger);
+  border-radius: 5px;
+  color: var(--danger);
+  font-size: 12px;
+  background: var(--danger-soft);
+  cursor: grab;
+}
+.sched-missing.ghost {
+  opacity: 0.35;
+}
+.sched-missing > svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------- boneyard */
+
+.sched-bone {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.sched-bone-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 8px 14px;
+}
+.sched-bone-head > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-2);
+}
+.sched-bone-search {
+  padding: 0 12px 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sched-bone-list {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 28px;
+  transition: background 0.12s;
+}
+.sched-bone-list.over {
+  background: var(--accent-soft);
+}
+.sched-bone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-2);
+}
+.sched-bone-empty > svg {
+  width: 26px;
+  height: 26px;
+  color: var(--text-3);
+}
+@media (max-width: 1100px) {
+  .sched-bone {
+    width: 300px;
+  }
+}
+
+/* ---------------------------------------------------------------- dialogs */
+
+.sched-move-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sched-move-list .list-item:disabled {
+  opacity: 0.55;
+  cursor: default;
+  background: none;
+}
+.sched-move-day {
+  min-width: 52px;
+  font-weight: 700;
+}
+.sched-settings {
+  width: 300px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sched-settings .divider {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- calendar */
+
+.sched-cal-title {
+  font-size: 15px;
+  font-weight: 650;
+  min-width: 150px;
+  padding: 0 4px;
+}
+.sched-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.sched-cal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.sched-cal-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.sched-cal-legend i.shoot {
+  background: var(--accent);
+}
+@media (max-width: 1180px) {
+  .sched-cal-legend {
+    display: none;
+  }
+}
+.sched-cal-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.sched-cal-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  font-size: 12.5px;
+}
+.sched-cal-note > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+.sched-cal-note > span {
+  flex: 1;
+  min-width: 260px;
+}
+.sched-cal-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 650;
+  font-size: 12px;
+  cursor: grab;
+}
+.sched-cal {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.sched-cal-month {
+  padding: 8px 12px;
+  font-weight: 650;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.sched-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.sched-cal-wd {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.sched-cal-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 4px 5px 6px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.sched-cal-cell:nth-child(7n) {
+  border-right: 0;
+}
+.sched-cal-cell.weekend {
+  background: var(--bg-sunken);
+}
+.sched-cal-cell.out > * {
+  opacity: 0.45;
+}
+.sched-cal-cell.drop {
+  outline: 2px dashed var(--accent);
+  outline-offset: -3px;
+  background: var(--accent-soft);
+}
+.sched-cal-daynum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  min-height: 20px;
+}
+.sched-cal-daynum > span:first-child {
+  padding: 0 5px;
+  border-radius: 10px;
+  line-height: 19px;
+}
+.sched-cal-cell.today .sched-cal-daynum > span:first-child {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.sched-cal-clash {
+  font-size: 9.5px;
+  font-weight: 750;
+  color: var(--danger);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sched-cal-marker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border-left: 3px solid var(--mk);
+  background: color-mix(in srgb, var(--mk) 14%, transparent);
+  font-size: 11px;
+  font-weight: 550;
+}
+.sched-cal-marker svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  color: var(--mk);
+}
+.sched-cal-marker.done span {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.sched-cal-shoot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 3px 5px 4px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  cursor: pointer;
+  outline: none;
+}
+.sched-cal-shoot:hover,
+.sched-cal-shoot:focus-visible {
+  border-color: var(--accent);
+}
+.sched-cal-shoot-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11.5px;
+}
+.sched-cal-shoot-title strong {
+  color: var(--accent);
+  white-space: nowrap;
+}
+.sched-cal-pages {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.sched-cal-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.sched-cal-pill {
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.sched-cal-empty {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+/* ---------------------------------------------------------------- day out of days */
+
+.sched-dood-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.sched-dood-legend span {
+  display: inline-flex;
+  align-items: center;
+}
+.sched-dood-legend b {
+  display: inline-block;
+  min-width: 32px;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-align: center;
+}
+.sched-dood-wrap {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
+table.sched-dood {
+  width: auto;
+}
+.sched-dood th.day {
+  text-align: center;
+  min-width: 66px;
+  border-left: 1px solid var(--border);
+}
+.sched-dood th.day .sub {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.sched-dood td {
+  height: 32px;
+}
+.sched-dood td.code {
+  text-align: center;
+  font-weight: 700;
+  font-size: 11.5px;
+  border-left: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+.sched-dood th.tot,
+.sched-dood td.num {
+  border-left: 1px solid var(--border);
+}
+.sched-dood .sticky {
+  position: sticky;
+  z-index: 1;
+  background: var(--panel);
+}
+.sched-dood th.sticky {
+  z-index: 3;
+  background: var(--bg-elev);
+}
+.sched-dood .c1 {
+  left: 0;
+  width: 44px;
+  min-width: 44px;
+}
+.sched-dood .c2 {
+  left: 44px;
+  width: 150px;
+  min-width: 150px;
+}
+.sched-dood .c3 {
+  left: 194px;
+  width: 160px;
+  min-width: 160px;
+  box-shadow: inset -1px 0 0 var(--border);
+}
+.sched-dood tbody tr:hover td.sticky {
+  background: linear-gradient(var(--bg-hover), var(--bg-hover)), var(--panel);
+}
+.sched-dood tfoot td {
+  border-top: 2px solid var(--border-strong);
+  background: var(--bg-elev);
+  position: sticky;
+  bottom: 0;
+}
+.sched-dood tfoot td.sticky {
+  z-index: 2;
+}

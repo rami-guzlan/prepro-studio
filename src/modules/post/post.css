@@ -1,0 +1,344 @@
+/* Post-Production (prefix: post-) */
+
+.post-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.post-summary b {
+  color: var(--text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.post-warn {
+  color: var(--danger);
+  font-weight: 600;
+}
+.post-warn b {
+  color: var(--danger);
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.post-table .table {
+  min-width: var(--post-min, 0);
+  table-layout: fixed;
+}
+.post-table .table td {
+  vertical-align: top;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.post-table .table td.drag,
+.post-table .table td.actions-cell {
+  vertical-align: middle;
+}
+.post-table .table .textarea.bare {
+  line-height: 1.4;
+}
+.post-status.select {
+  border-radius: 12px;
+  font-weight: 650;
+  font-size: 11.5px;
+  height: 24px !important;
+  margin-top: 2px !important;
+}
+.post-calc {
+  display: inline-block;
+  padding: 4px 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+}
+.post-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.post-legend b {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------- gantt */
+
+.post-gantt {
+  font-size: 12px;
+}
+.post-gantt-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: center;
+  min-height: 27px;
+}
+.post-gantt-body .post-gantt-row:hover {
+  background: var(--bg-hover);
+  border-radius: 6px;
+}
+.post-gantt-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px 0 4px;
+  min-width: 0;
+  font-weight: 550;
+}
+.post-gantt-track {
+  position: relative;
+  height: 27px;
+}
+.post-gantt-row.head {
+  min-height: 20px;
+}
+.post-gantt-row.head .post-gantt-track {
+  height: 20px;
+}
+.post-gantt-tick {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.post-gantt-body {
+  position: relative;
+  padding-bottom: 20px;
+}
+.post-gantt-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 200px;
+  right: 0;
+  pointer-events: none;
+}
+.post-gantt-grid {
+  position: absolute;
+  top: 0;
+  bottom: 18px;
+  width: 1px;
+  background: var(--border);
+}
+.post-gantt-today,
+.post-gantt-deadline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: 3;
+}
+.post-gantt-today {
+  border-left: 2px solid var(--danger);
+}
+.post-gantt-deadline {
+  border-left: 2px dashed var(--accent);
+}
+.post-gantt-today span,
+.post-gantt-deadline span {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: #fff;
+  white-space: nowrap;
+}
+.post-gantt-today span {
+  background: var(--danger);
+}
+.post-gantt-deadline span {
+  background: var(--accent);
+}
+.post-gantt-bar {
+  position: absolute;
+  top: 5px;
+  height: 17px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--bar) 62%, transparent);
+  border: 1px solid var(--bar);
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  overflow: hidden;
+  z-index: 2;
+}
+.post-gantt-bar span {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+.post-gantt-bar.done {
+  background: var(--bar);
+}
+.post-gantt-bar.late {
+  box-shadow: 0 0 0 2px var(--danger);
+}
+.post-gantt-nodate {
+  font-size: 11px;
+  color: var(--text-3);
+  padding-left: 4px;
+  line-height: 27px;
+}
+
+/* ---------------------------------------------------------------- generate dates */
+
+.post-gen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.post-gen-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.post-gen-table {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.post-gen-table td {
+  padding: 6px 10px;
+}
+.post-gen-keep td {
+  color: var(--text-3);
+}
+
+/* ---------------------------------------------------------------- lower thirds modal */
+
+.post-lt {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.post-lt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.post-lt-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.post-lt-row:hover {
+  background: var(--bg-hover);
+}
+.post-lt-row input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  margin: 0;
+}
+.post-lt-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-left: 9px;
+  border-left: 3px solid var(--accent);
+  line-height: 1.25;
+}
+.post-lt-card small {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+
+/* ---------------------------------------------------------------- import dialogue */
+
+.post-dlg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.post-dlg-line {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 64px;
+  gap: 12px;
+  align-items: start;
+  text-align: left;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.post-dlg-line:hover {
+  border-color: var(--accent);
+}
+.post-dlg-line.in {
+  background: var(--bg-sunken);
+  color: var(--text-2);
+}
+.post-dlg-line:disabled {
+  cursor: default;
+}
+.post-dlg-name {
+  font-family: var(--font-script);
+  font-weight: 700;
+  font-size: 12px;
+}
+.post-dlg-text {
+  font-family: var(--font-script);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+}
+.post-dlg-add {
+  justify-self: end;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  display: inline-flex;
+}
+.post-dlg-line.in .post-dlg-add {
+  color: var(--success);
+}
+
+/* ---------------------------------------------------------------- workflow */
+
+.post-workflow-body {
+  display: flex;
+  flex-direction: column;
+}
+.post-workflow.textarea {
+  flex: 1;
+  min-height: 420px;
+  max-width: 1100px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  padding: 16px 18px;
+  resize: none;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  tab-size: 4;
+}

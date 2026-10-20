@@ -1,0 +1,233 @@
+/* Crew module */
+
+.crew-pad {
+  padding: 16px 20px 24px;
+}
+.crew-module .split > .pane-main > .empty {
+  height: 100%;
+}
+
+.crew-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+}
+.crew-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--bg-active);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+.crew-group .btn {
+  opacity: 0;
+  transition: opacity 0.12s;
+  font-weight: 550;
+}
+.table tr.group-row:hover .crew-group .btn,
+.crew-group .btn:focus-visible {
+  opacity: 1;
+}
+
+.crew-status {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.crew-status .color-dot {
+  width: 8px;
+  height: 8px;
+}
+.crew-status .select.bare {
+  margin-left: 0;
+}
+
+.crew-linkinput {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.crew-linkinput .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------ detail */
+
+.split > .pane-right.crew-detail-pane {
+  width: 400px;
+}
+.crew-detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.crew-detail-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px 10px 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+.crew-detail-name.input {
+  flex: 1;
+  height: 34px;
+  font-size: 16px;
+  font-weight: 650;
+  border-color: transparent;
+  background: transparent;
+  padding: 0 8px;
+}
+.crew-detail-name.input:hover {
+  background: var(--bg-hover);
+}
+.crew-detail-name.input:focus {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+}
+.crew-detail-body {
+  padding: 14px 16px 28px;
+}
+.crew-detail-top {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.crew-detail-photo {
+  width: 104px;
+  flex-shrink: 0;
+}
+.crew-detail-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.crew-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.crew-detail-grid > .span-all,
+.crew-detail-grid > .span-2 {
+  grid-column: 1 / -1;
+}
+.crew-gearlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.crew-linkbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------ quick add */
+
+.crew-qa {
+  display: flex;
+  height: min(520px, calc(100vh - 220px));
+}
+.crew-qa-left {
+  width: 230px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow: auto;
+  padding: 8px;
+  background: var(--bg);
+}
+.crew-qa-left .list-item {
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+.crew-qa-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.crew-qa-title {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.crew-qa-title h3 {
+  margin: 0 0 2px;
+  font-size: 14px;
+}
+.crew-qa-title p {
+  margin: 0;
+}
+.crew-qa-list {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 12px 14px;
+}
+.crew-qa-dept {
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  padding: 10px 6px 3px;
+}
+.crew-qa-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12.5px;
+}
+.crew-qa-item:hover {
+  background: var(--bg-hover);
+}
+.crew-qa-item.exists {
+  cursor: default;
+  color: var(--text-3);
+}
+.crew-qa-item.exists:hover {
+  background: none;
+}
+.crew-qa-have {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* fixed-layout tables: columns keep their widths, the table scrolls sideways when the pane is narrow */
+.crew-xtable .table {
+  table-layout: fixed;
+  min-width: var(--xt-minw, 0);
+}
+.crew-xtable .table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

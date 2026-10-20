@@ -1,0 +1,122 @@
+/* ==========================================================================
+   AI agent bridge (renderer side of the local MCP server).
+
+   electron/mcp.cjs speaks MCP over HTTP and forwards tools/call requests here
+   over IPC. Each call is validated against the tool's input schema, run
+   against the live project store (wrapped in ONE undo step) and answered with
+   MCP content blocks. Calls run one at a time, in order.
+   ========================================================================== */
+import { asOneStep, useProjectStore } from '@/store/project';
+import { asOneSpaceStep, useSpaceStore } from '@/store/space';
+import { runPreSaveHooks } from '@/store/autosave';
+import { AgentError, journal, openKind, project } from './ctx';
+import { validate } from './schema';
+import type { ToolDef, ToolReturn } from './tool';
+import { INSTRUCTIONS, PROMPTS } from './instructions';
+import { appTools } from './tools/app';
+import { dataTools } from './tools/data';
+import { scriptTools } from './tools/script';
+import { visualTools } from './tools/visual';
+import { productionTools } from './tools/production';
+import { outputTools } from './tools/output';
+import { spaceTools } from './tools/spaces';
+
+export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
+const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
+
+type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+export interface CallResult {
+  content: Content[];
+  isError?: boolean;
+}
+
+function errorResult(text: string): CallResult {
+  return { content: [{ type: 'text', text }], isError: true };
+}
+
+function toResult(out: ToolReturn): CallResult {
+  const content: Content[] = [];
+  if (out.text) content.push({ type: 'text', text: out.text });
+  if (out.data !== undefined) content.push({ type: 'text', text: JSON.stringify(out.data) });
+  for (const img of out.images ?? []) content.push({ type: 'image', data: img.data, mimeType: img.mimeType });
+  if (!content.length) content.push({ type: 'text', text: out.summary ?? 'Done.' });
+  return { content };
+}
+
+export function describeTools() {
+  return {
+    instructions: INSTRUCTIONS,
+    prompts: PROMPTS,
+    tools: TOOLS.map((t) => ({
+      name: t.name,
+      title: t.title,
+      description: t.description,
+      inputSchema: t.input,
+      annotations: { title: t.title, readOnlyHint: !!t.readOnly, destructiveHint: !!t.destructive, idempotentHint: !!t.readOnly, openWorldHint: false },
+    })),
+  };
+}
+
+/** Run one tool call (also used by the self-test). */
+export async function callTool(name: string, args: unknown): Promise<{ result: CallResult; summary?: string }> {
+  const tool = BY_NAME.get(name);
+  if (!tool) return { result: errorResult(`Unknown tool: ${name}`) };
+  const a = (args && typeof args === 'object' && !Array.isArray(args) ? args : {}) as Record<string, unknown>;
+  const errs = validate(tool.input, a);
+  if (errs.length) return { result: errorResult(`Invalid arguments for ${name}:\n- ${errs.slice(0, 10).join('\n- ')}`) };
+  if (!tool.global) {
+    try {
+      project();
+    } catch (e) {
+      return { result: errorResult(e instanceof Error ? e.message : String(e)) };
+    }
+  }
+  runPreSaveHooks();
+  const mutating = !tool.readOnly && !tool.noStep;
+  try {
+    if (openKind() === 'space') {
+      const before = useSpaceStore.getState();
+      const sid = before.space?.id;
+      const out = mutating ? await asOneSpaceStep(() => tool.run(a)) : await tool.run(a);
+      const after = useSpaceStore.getState();
+      if (mutating && sid && after.space?.id === sid && after.version !== before.version) {
+        journal.push({ tool: name, summary: out.summary ?? name, projectId: sid, kind: 'space', version: after.version });
+        if (journal.length > 60) journal.shift();
+      }
+      return { result: toResult(out), summary: out.summary };
+    }
+    const before = useProjectStore.getState();
+    const pid = before.project?.id;
+    const docBefore = before.project?.script.doc;
+    const out = mutating ? await asOneStep(() => tool.run(a)) : await tool.run(a);
+    const after = useProjectStore.getState();
+    if (mutating && pid && after.project?.id === pid && after.version !== before.version) {
+      journal.push({ tool: name, summary: out.summary ?? name, projectId: pid, kind: 'project', version: after.version, scriptBefore: after.project.script.doc !== docBefore ? docBefore : undefined });
+      if (journal.length > 60) journal.shift();
+    }
+    return { result: toResult(out), summary: out.summary };
+  } catch (e) {
+    if (!(e instanceof AgentError)) console.error(`[agent] ${name} failed`, e);
+    const msg = e instanceof AgentError ? e.message : `${name} failed: ${e instanceof Error ? e.message : String(e)}`;
+    return { result: errorResult(msg) };
+  }
+}
+
+let started = false;
+
+/** Connect to the main-process MCP server (desktop app only). */
+export function startAgentServer() {
+  const m = window.prepro?.mcp;
+  if (!m || started) return;
+  started = true;
+  let queue: Promise<unknown> = Promise.resolve();
+  m.onCall((req: { reqId: string; name: string; args: unknown }) => {
+    queue = queue
+      .then(() => callTool(req.name, req.args))
+      .then(
+        (res) => m.respond({ reqId: req.reqId, result: res.result, summary: res.summary }),
+        (e) => m.respond({ reqId: req.reqId, error: String(e instanceof Error ? e.message : e) }),
+      );
+  });
+  m.ready(describeTools());
+}

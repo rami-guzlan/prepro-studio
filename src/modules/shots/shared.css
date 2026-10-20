@@ -1,0 +1,76 @@
+/* Shared by the Shot List and Storyboard modules (imported by components.tsx). */
+
+/* Compact native select: short value when closed, full labels in the dropdown. */
+.shots-cselect {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px;
+  margin: 0 -6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.shots-cselect:hover {
+  background: var(--bg-hover);
+}
+.shots-cselect:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+  background: var(--bg-elev);
+}
+.shots-cselect .val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.shots-cselect .val.empty {
+  color: var(--text-3);
+}
+.shots-cselect select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+.shots-cselect select option {
+  background: var(--bg-elev);
+  color: var(--text);
+}
+.shots-cselect.chip-like {
+  margin: 0;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--bg-sunken);
+  border-color: var(--border);
+  color: var(--text-2);
+}
+.shots-cselect.chip-like:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.shots-cselect.chip-like .val.empty {
+  font-weight: 500;
+}
+.shots-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

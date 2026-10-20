@@ -1,0 +1,206 @@
+# PrePro Studio
+
+A fully local pre-production and post-production planning workspace for video projects:
+short films, commercials, corporate and training videos, social content, music videos and documentaries.
+Write the script, build storyboards and shot lists, draw lighting plots, manage cast, crew and locations,
+break down the script, schedule the shoot, send call sheets, plan gear, budget and post. Run your marketing in
+**Marketing Spaces**: strategy, ideas, multiformat content from first draft to published post, a visual content
+calendar and results. Then **print or export everything as PDF**.
+
+Nothing goes to the cloud. Every project is a normal folder on your computer.
+
+---
+
+## Running it
+
+Requirements: [Node.js](https://nodejs.org) 20 or newer. Built and tested on Windows 11; the desktop app is
+Electron, so `npm run start` should also work on macOS and Linux (untested).
+
+### Build the desktop app (Windows)
+```
+git clone https://github.com/rami-guzlan/prepro-studio.git
+cd prepro-studio
+npm install
+npm run package
+```
+Then double-click **`release\PrePro Studio-win32-x64\PrePro Studio.exe`**.
+You can pin it to the taskbar or create a desktop shortcut (right-click the .exe → *Send to → Desktop*).
+
+### Developer commands
+```
+npm install
+npm run start       # build the UI and launch the desktop app
+npm run package     # rebuild the standalone Windows app into release/
+npm run dev         # browser-only UI at http://localhost:5173 (data stored in the browser)
+npm run selftest    # automated check: renders every document to PDF into %TEMP%\prepro-selftest
+npm run mcp-test    # drives every AI-agent (MCP) tool through the official MCP client, HTTP + stdio bridge
+```
+
+## Where your data lives
+- Projects: `Documents\PrePro Studio Projects\<project-name>__<id>\`
+  - `project.json` — all project data
+  - `assets\` — images (storyboard frames, headshots, location photos, logos)
+  - `backups\` — automatic snapshots (every 10 minutes while you work, last 40 kept)
+- Change the folder from the Project Library (bottom of the screen).
+- **Export project archive (.zip)** to back up or move a project to another computer, and **Import archive** to bring it back.
+- Saving is automatic. *Project Settings → Automatic backups* restores an earlier snapshot.
+- Deleting a project moves its folder to the Windows Recycle Bin.
+
+## Demo project
+*The Last Take* is a complete sample production with every module filled in (script, mind dump, storyboard, lighting
+plots, schedule, call sheets, budget, post…). It sits on the home screen next to your projects (the **Demo** card);
+the Marketing Spaces tab has a demo space too (*The Last Take — release campaign*). Edit them freely.
+
+- **Remove a demo** from the home screen with its card menu (⋯ → *Remove from home screen* or *Delete demo*).
+- The demos are **always in the Help menu**: **Help → Open Demo Project / Open Demo Marketing Space**,
+  **Help → Reset Demo …** for a fresh copy, and **Help → Show Demos on the Home Screen** to bring the cards back.
+
+## New projects
+**New project** asks what you're making — short, feature, commercial, music video, **trailer / teaser / promo**,
+corporate, training, social, documentary, **mini-doc**, interview, episodic — and how to start:
+- **Template** pre-fills a checklist, post schedule, deliverables, budget lines and gear for that type.
+  Trailers get a beat structure (hook → setup → escalation → title → button → end card) and mini-docs a story
+  structure (cold open → subject → challenge → journey → resolution) in the A/V script.
+- **Blank** starts completely empty. An empty A/V script can still pull in a trailer or mini-doc structure later.
+- **Based on an existing project** copies branding, cast & characters, crew & contacts and locations (with photos) —
+  ideal for a trailer or behind-the-scenes mini-doc of a film you already planned.
+
+Printable **blank templates** (Print & Export → Blank Templates): A/V script, trailer beat sheet, interview sheet,
+shot list and storyboard.
+
+## Modules
+
+| Area | Module | What you can do |
+|---|---|---|
+| Overview | **Overview** | Dashboard, key info, readiness checklist, timeline, notes. Print a project one-sheet. |
+| | **Tasks & Milestones** | Pre-production checklist (kanban or list), milestones. |
+| Writing | **Script** | Screenplay editor (Final Draft-style) or two-column **A/V script**; title page; index cards; scene navigator; notes; breakdown tagging; find & replace. |
+| Visuals | **Storyboard** | Frames per scene from imported/pasted images, sketch & annotate tool, animatic player, export frames as PNGs for Miro. |
+| | **Shot List** | Every shot with size, angle, movement, lens, gear, timing and status. |
+| | **Lighting Diagrams** | Top-down lighting & camera plots with a fixture library, beams, legend and gear export. |
+| People | **Cast & Characters** | Characters from the script, actors, headshots, sizes, contacts, releases. |
+| | **Crew** | Crew by department, rates, call times, deal memos. |
+| | **Contacts & Vendors** | Clients, rental houses, vendors. |
+| Production | **Script Breakdown** | Industry breakdown sheets per scene (cast, extras, props, wardrobe, vehicles, SFX/VFX…). |
+| | **Props, Wardrobe & Elements** | Everything from the breakdown with status, source, cost, photos. |
+| | **Locations & Sets** | Locations with photos, permits, parking, power, hospital; map script sets to real locations. |
+| | **Shooting Schedule** | Drag-and-drop stripboard, shoot days, calendar, Day Out of Days. |
+| | **Call Sheets** | Daily call sheets built from the schedule (sunrise/sunset calculated offline). |
+| | **Gear & Equipment** | Equipment lists, rentals, packing checklist. |
+| | **Budget** | Top sheet, line items, fringes, contingency, actuals. |
+| Post | **Post-Production** | Post schedule (Gantt), deliverables specs, graphics & lower thirds, music cue sheet, VFX, ADR, edit notes, media workflow. |
+| Output | **Print & Export** | Every document in one place, plus a merged **Production Book** PDF. |
+
+## Marketing Spaces
+The library has two tabs: **Projects** (productions: one film or video with its script, team, shoot and post) and
+**Marketing Spaces** (ongoing marketing for a goal: your personal brand, a YouTube channel, a film's release
+campaign). **New marketing space** (Ctrl+Shift+M) asks for the kind of space and starts from a template (channels
+with cadences, content pillars, goals, campaign phases with dated milestones, starter content ideas) or blank, and can
+link production projects (a release campaign links its film and uses its poster as the cover).
+
+| Module | What you can do |
+|---|---|
+| **Overview** | What's next (posts in the next 14 days), pipeline, goals progress, active campaigns, channel cadence this week, overdue / at-risk content, getting-started checklist. |
+| **Strategy** | Goals (metric, baseline → target), audience personas, content pillars (target vs actual share), positioning, value proposition, voice, key messages, tactics. |
+| **Campaigns & Milestones** | Roadmap timeline of campaign phases, milestones and posts; each campaign's objective, dates, channels, CTA and content. |
+| **Ideas** | The same brainstorm boards as the script's Mind Dump (one board per idea batch or category); turn notes into content ideas (short video, long-form, carousel, thread, newsletter …) or milestones. |
+| **Content** | Every piece from **idea → writing → planning → shooting → editing → ready → published** as a kanban board or list. The content editor has a brief (concept, hook, CTA, audience, goals), a script / copy editor (structure templates, two-column A/V, word and character counts vs platform limits), production (shoot day, shot list, checklist, references), publishing (one post per channel: date, time, title, caption, hashtags, link, status) and results. Repurpose a piece into cut-downs. |
+| **Production** | Batch shoot days: several pieces filmed together, combined shot list, run of show. |
+| **Calendar** | Month / week / agenda views of posts (coloured by channel), shoot days, milestones and campaigns; drag posts to reschedule, drag unscheduled content onto a day, weekly cadence per channel. |
+| **Channels** | Platforms and handles, cadence targets, best times, followers, per-channel stats and platform limits. |
+| **Results** | Views, engagement, clicks, followers gained by period, channel, format and pillar; top posts; quick results entry. |
+| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, music and links. |
+| **Linked Projects** | Productions this space promotes, with their linked content and campaigns. |
+| **Print & Export** | One-sheet, strategy brief, campaign plan, content briefs, content plan, calendar, posting schedule, shoot plan, results report, brand kit, ideas board — or one merged **marketing plan** PDF. |
+
+Spaces are saved in `Documents\PrePro Studio Projects\Marketing Spaces\<name>__<id>\space.json` (+ `assets\`,
+`backups\`). **Help → Open Demo Marketing Space** opens *The Last Take — Release Campaign* with every screen filled in.
+AI agents connected over MCP can open, create and fill spaces too (content with posts, the calendar, strategy, ideas,
+reports and PDFs).
+
+## Writing the script (Final Draft-style)
+
+| Key | Action |
+|---|---|
+| **Enter** | Next element (Scene Heading → Action, Character → Dialogue, Dialogue → Action, Transition → Scene Heading…) |
+| **Tab** | On an empty line: change element (Action → Character, Character → Transition, Dialogue → Parenthetical). After text: start the next element (Character → Parenthetical, Dialogue → Parenthetical, Action → Character). |
+| **Shift+Tab** | Previous element |
+| **Ctrl+1 … Ctrl+7, Ctrl+0** | Scene Heading, Action, Character, Parenthetical, Dialogue, Transition, Shot, General |
+| **Shift+Enter** | Line break inside an element |
+| **Ctrl+B / I / U** | Bold / italic / underline |
+| **Ctrl+D** | Dual dialogue (on the second speaker) |
+| **Ctrl+F / Ctrl+H** | Find / replace |
+| **Ctrl+G** | Go to scene |
+| **Ctrl+Alt+M** | Add a script note |
+| **Ctrl+Alt+T** | Tag the selection for the breakdown |
+| **Ctrl+P** | Print / PDF |
+
+- Corporate, training and documentary projects can use the **two-column A/V script** instead (Script → *A/V Script*):
+  picture on the left, narration/dialogue on the right, durations suggested from word count, running time vs. target,
+  thumbnails from your storyboard. **Ctrl+Enter** adds a row, **Alt+↑/↓** moves it, **Ctrl+Shift+S** adds a segment band.
+- **SmartType** suggests INT./EXT., locations you've used, times of day, character names, extensions (V.O., O.S.,
+  CONT'D) and transitions. **Enter** or **Tab** accepts, **Esc** dismisses.
+- **Smart formatting**: typing `int.` + space at the start of an action line makes it a scene heading;
+  typing an all-caps line ending in `TO:` makes it a transition.
+- The editor shows **real pages** (page breaks, (MORE)/(CONT'D), automatic (CONT'D)), identical to the PDF.
+- The Tab/Enter flow is configurable per element in **Project Settings → Element flow**, like *Final Draft › Elements*.
+- Import and export **Final Draft (.fdx)**, **Fountain** and plain text.
+- Tag props, wardrobe, cast, vehicles and more from the script (select text → *Tag*, or right-click). Tags feed the breakdown
+  sheets, elements lists, schedule and call sheets automatically.
+
+## Mind Dump (Script → Mind Dump)
+Get your thoughts out first, structure them later:
+- **Boards**: keep each batch or category of ideas on its own board (e.g. *Story*, *Look*, *BTS mini-doc*). Every board
+  has its own free writing, notes, groups and arrows, and remembers its Write / Split / Board layout. **+ New board**
+  adds one; double-click a tab to rename it; right-click (or ⋯) to recolour, duplicate, reorder or delete it.
+  Right-click notes → **Move to board** to re-file ideas.
+- **Write** freely in the brain-dump panel, or type a **quick thought** and press Enter to pin it on the board.
+- **Make notes** turns every line (or paragraph) into a sticky note.
+- On the **board**: double-click to add a note, drag to move, drag on empty space to select several, colour them,
+  **Group** them into titled frames, and drag the dot on a note's right edge onto another note to draw an arrow.
+  **Tidy** arranges notes in a grid or in columns by colour. Scroll to move around, Ctrl+scroll to zoom.
+- **Turn into** sends notes to the script (new scenes, with the note as the index-card synopsis, or action),
+  to the A/V script, the shot list or the task list. Used notes get a green tick.
+- **Print** gives each board as a picture, an outline of every note by group, and your free-written text
+  (the **Boards** option picks which boards; empty prints all of them).
+
+## Printing & PDFs
+Every module has a **Print / Export** button. The preview shows the exact PDF. You can then:
+- **Export PDF**: choose where to save. The page size (US Letter or A4) comes from Project Settings and can be changed per export.
+- **Print…**: opens the PDF in a print-ready window. Press **Ctrl+P** there for your printer.
+- Optional for every document: project logo, *CONFIDENTIAL* footer, a watermark (e.g. *DRAFT*), or black-and-white images.
+- **Print & Export → Production Book**: one merged PDF with any documents you choose, in your order.
+- Spreadsheets: most tables export to **CSV** (opens in Excel / Google Sheets).
+
+## Working with an AI agent (MCP)
+While PrePro Studio is open it runs a local **MCP server** (Model Context Protocol), so Claude, or any AI tool that
+supports MCP, can plan shoots with you conversationally. The agent can read and edit everything you can: the script
+(as Fountain), Mind Dump, storyboard frames (including SVG sketches it draws), shots, lighting plots, cast, crew,
+contacts, locations, breakdown tags, schedule, call sheets, gear, budget, post, tasks and settings. It can also export
+PDFs and look at page previews. Changes appear live in the window, are saved automatically, and **Ctrl+Z** undoes them
+(each agent action is one undo step). The sidebar shows when an agent is connected or working.
+
+**Help → Connect an AI Agent (MCP)…** (also in the library and the sidebar) shows the server status and setup:
+- **Claude Desktop:** click **Add PrePro Studio to Claude Desktop**, then quit Claude from the tray and reopen it.
+  If PrePro Studio is closed when Claude needs it, it starts automatically.
+- **Claude Code:** run once in a terminal:
+  ```
+  claude mcp add --transport http --scope user prepro-studio http://127.0.0.1:39217/mcp
+  ```
+- **Other MCP clients** (Cursor, VS Code, Windsurf …): server URL `http://127.0.0.1:39217/mcp` (Streamable HTTP),
+  or the stdio command shown in the dialog.
+
+Things to ask: *"Open my short film project and break down the script"*, *"Brainstorm a cold open on the Mind Dump"*,
+*"Write scene 4 where June finds the camera"*, *"Plan a 2-day shoot starting Nov 7 and fill the call sheets"*,
+*"Shot-list scene 1 and sketch storyboard frames"*, *"Light the rooftop scene for magic hour"*,
+*"Export the production book as PDF"*. Built-in prompts: *plan the shoot*, *break down the script*, *brainstorm*,
+*shot list & storyboard*.
+
+The server only accepts connections from this computer (127.0.0.1) and refuses requests from web pages. Your AI tool
+sends what it reads to its own AI service as usual. You can turn the server off or change the port in the dialog.
+
+## Working with Miro
+PrePro Studio is fully local. To share with your team on Miro:
+- **Storyboard → Export frames for Miro**: a .zip of numbered PNG frames you can drop onto a Miro board.
+- Export any document as PDF and drag it onto Miro. Miro shows every page.
+- Images exported from Miro (PNG/JPG) can be dropped straight onto storyboard frames, locations or headshots.

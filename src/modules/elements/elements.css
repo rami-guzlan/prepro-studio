@@ -1,0 +1,231 @@
+/* Props, Wardrobe & Elements module (prefix: elements-) */
+
+.elements-status .select.bare {
+  font-weight: 550;
+}
+
+/* ---------------------------------------------------------------- scenes cell */
+
+.elements-scenes-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 26px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.elements-scenes-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.elements-scenes-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.elements-scenes-none {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-3);
+}
+.elements-scenes-pop {
+  width: 340px;
+  max-width: 80vw;
+  padding: 2px;
+}
+.elements-scenes-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+.elements-scenes-row:hover {
+  background: var(--bg-hover);
+}
+.elements-scenes-num {
+  flex-shrink: 0;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.elements-scenes-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+.elements-scenes-link svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+  opacity: 0;
+}
+.elements-scenes-link:hover {
+  color: var(--accent);
+}
+.elements-scenes-link:hover svg {
+  opacity: 1;
+}
+.elements-scenes-x {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.elements-scenes-x:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+.elements-scenes-pop .select {
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------- merge */
+
+.elements-merge-pair {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.elements-merge-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+.elements-warn {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.elements-warn svg {
+  flex-shrink: 0;
+  color: var(--warning);
+  margin-top: 1px;
+}
+.elements-dupgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.elements-dupitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.elements-dupitem:hover {
+  background: var(--bg-hover);
+}
+.elements-dupitem.on {
+  background: var(--accent-soft);
+}
+.elements-dupitem input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- wardrobe plot */
+
+.elements-plot td {
+  vertical-align: top;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.elements-plot-scene {
+  min-width: 32px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.elements-plot-cell.has {
+  background: color-mix(in srgb, #1c7ed6 8%, transparent);
+}
+.elements-plot-cell.gap {
+  color: var(--warning);
+}
+.elements-plot-item {
+  display: block;
+  border: 0;
+  background: none;
+  padding: 1px 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.elements-plot-item:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------- table */
+
+.elements-tablewrap table.table {
+  min-width: var(--elements-minw, 0);
+}

@@ -1,0 +1,332 @@
+/* Linked Projects (prefix: sp-projects-) */
+
+.sp-projects-page {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sp-projects-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+.sp-projects-link:hover {
+  text-decoration: underline;
+}
+
+.sp-projects-spin svg {
+  animation: spin 0.9s linear infinite;
+}
+
+.sp-projects-intro {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.sp-projects-intro > svg {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sp-projects-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- poster */
+
+.sp-projects-poster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pj-color) 75%, #000), var(--pj-color));
+  color: #fff;
+  font-weight: 750;
+  box-shadow: var(--shadow-sm);
+}
+.sp-projects-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sp-projects-poster.missing {
+  background: var(--bg-sunken);
+  color: var(--text-3);
+  border: 1.5px dashed var(--border-strong);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.sp-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .sp-projects-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-projects-page {
+    padding: 14px;
+  }
+}
+
+.sp-projects-card {
+  overflow: hidden;
+  position: relative;
+}
+.sp-projects-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--pj-color);
+}
+.sp-projects-card.missing::before {
+  background: var(--border-strong);
+}
+.sp-projects-card-top {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--pj-color, var(--border)) 9%, transparent), transparent 60%);
+}
+.sp-projects-posterbtn {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-self: flex-start;
+}
+.sp-projects-posterbtn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.sp-projects-posterbtn:hover .sp-projects-poster {
+  box-shadow: var(--shadow);
+}
+.sp-projects-ident {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sp-projects-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.sp-projects-kicker .badge {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.sp-projects-ident h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.sp-projects-sub {
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.sp-projects-meta {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.sp-projects-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  flex-wrap: wrap;
+}
+
+.sp-projects-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  border-top: 1px solid var(--border);
+}
+.sp-projects-card-body.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .sp-projects-card-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-projects-block + .sp-projects-block {
+    border-left: 0 !important;
+    border-top: 1px solid var(--border);
+  }
+}
+.sp-projects-block {
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+.sp-projects-block + .sp-projects-block {
+  border-left: 1px solid var(--border);
+}
+.sp-projects-block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  margin: 0 4px 6px;
+}
+.sp-projects-block-title .badge {
+  height: 17px;
+  padding: 0 6px;
+  letter-spacing: 0;
+}
+.sp-projects-none {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 4px;
+}
+.sp-projects-rows {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow: auto;
+}
+.sp-projects-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.sp-projects-row:hover {
+  background: var(--bg-hover);
+}
+.sp-projects-row:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus);
+}
+
+/* ---------------------------------------------------------------- referenced, not linked */
+
+.sp-projects-section .section-title {
+  margin-top: 8px;
+}
+.sp-projects-unlinked {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-projects-ref {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.sp-projects-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+.sp-projects-chips .chip {
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+}
+.sp-projects-chips .chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------- picker */
+
+.sp-projects-picker {
+  width: 340px;
+  padding: 4px;
+}
+.sp-projects-picker-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  overflow: auto;
+}
+.sp-projects-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.sp-projects-pick:hover,
+.sp-projects-pick:focus-visible {
+  background: var(--bg-hover);
+  outline: none;
+}
+.sp-projects-pick:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent-soft);
+}
+.sp-projects-picker-empty {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.sp-projects-picker-empty svg {
+  flex-shrink: 0;
+}

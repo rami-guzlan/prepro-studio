@@ -1,0 +1,445 @@
+/* Cast & Characters module */
+
+.cast-tabbody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.cast-tabbody > .empty {
+  flex: 1;
+}
+.cast-pad {
+  padding: 16px 20px 24px;
+}
+
+/* ------------------------------------------------------------ shared bits */
+
+.cast-linkinput {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.cast-linkinput .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cast-colordot {
+  display: inline-block;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.cast-colordot.none {
+  background: transparent;
+  border: 1.5px dashed var(--border-strong);
+}
+.cast-colordot:hover {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.cast-dup {
+  color: var(--danger) !important;
+  font-weight: 700;
+}
+
+.cast-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  background: var(--bg-sunken);
+  color: var(--text-2);
+}
+.cast-note.warning {
+  background: var(--warning-soft);
+  color: var(--text);
+}
+.cast-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ------------------------------------------------------------ characters */
+
+.cast-charname {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-width: 0;
+}
+.cast-charname .input {
+  flex: 1;
+  min-width: 90px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.cast-charname > .strong {
+  letter-spacing: 0.01em;
+}
+.cast-charname > .tiny {
+  flex-basis: 100%;
+  margin-top: -2px;
+}
+
+.split > .pane-right.cast-side {
+  width: 340px;
+}
+.cast-side-inner {
+  padding: 14px 16px 20px;
+}
+.cast-side-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.cast-side-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.cast-boardnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cast-side-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.cast-side-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+.cast-side-stats strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.cast-side-stats span {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cast-side-block {
+  margin-bottom: 4px;
+}
+.cast-actorlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.cast-actorlink:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.cast-scenelist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cast-scene {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.cast-scene:hover {
+  background: var(--bg-hover);
+}
+.cast-scene-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------ cast grid */
+
+.cast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+  gap: 14px;
+}
+.cast-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+  outline: none;
+  text-align: left;
+  color: var(--text);
+  padding: 0;
+}
+.cast-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+}
+.cast-card:focus-visible {
+  box-shadow: var(--focus);
+}
+.cast-card.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow);
+}
+.cast-card.declined {
+  opacity: 0.6;
+}
+.cast-card-photo {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--bg-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.cast-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cast-card-initials {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+.cast-card-board {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.cast-card-body {
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+.cast-card-name {
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.cast-card-roles {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+.cast-card-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.cast-card-add {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 240px;
+  border-style: dashed;
+  border-width: 1.5px;
+  background: transparent;
+  color: var(--text-3);
+  box-shadow: none;
+  font-weight: 550;
+}
+.cast-card-add svg {
+  width: 22px;
+  height: 22px;
+}
+.cast-card-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.cast-nomatch {
+  grid-column: 1 / -1;
+  padding: 28px;
+  text-align: center;
+}
+.cast-rolechip {
+  cursor: pointer;
+}
+.cast-rolechip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------ cast detail */
+
+.split > .pane-right.cast-detail-pane {
+  width: 410px;
+}
+.cast-detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.cast-detail-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px 10px 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+.cast-detail-name.input {
+  flex: 1;
+  height: 34px;
+  font-size: 16px;
+  font-weight: 650;
+  border-color: transparent;
+  background: transparent;
+  padding: 0 8px;
+}
+.cast-detail-name.input:hover {
+  background: var(--bg-hover);
+}
+.cast-detail-name.input:focus {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+}
+.cast-detail-body {
+  padding: 14px 16px 28px;
+}
+.cast-detail-top {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.cast-detail-photo {
+  width: 124px;
+  flex-shrink: 0;
+}
+.cast-detail-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.cast-detail-section-head {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  margin-bottom: 8px;
+}
+.cast-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.cast-detail-grid > .span-all,
+.cast-detail-grid > .span-2 {
+  grid-column: 1 / -1;
+}
+.cast-sizes-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+}
+.cast-sizes-summary > div {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--bg-sunken);
+  min-width: 0;
+}
+.cast-sizes-summary span {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.cast-sizes-summary strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ sizes */
+
+.cast-sizes-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.cast-sizes-name:hover .strong {
+  color: var(--accent);
+}
+
+/* fixed-layout tables: columns keep their widths, the table scrolls sideways when the pane is narrow */
+.cast-xtable .table {
+  table-layout: fixed;
+  min-width: var(--xt-minw, 0);
+}
+.cast-xtable .table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

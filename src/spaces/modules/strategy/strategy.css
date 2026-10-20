@@ -1,0 +1,674 @@
+/* Space Strategy (prefix: sp-strategy-) */
+
+.sp-strategy-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sp-strategy-page.wide {
+  max-width: none;
+}
+
+.sp-strategy-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.sp-strategy-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* inline title / subtitle inputs used on cards */
+.sp-strategy-title-input,
+.sp-strategy-sub-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  outline: none;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  color: var(--text);
+}
+.sp-strategy-title-input {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.sp-strategy-sub-input {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.sp-strategy-title-input:hover,
+.sp-strategy-sub-input:hover {
+  background: var(--bg-hover);
+}
+.sp-strategy-title-input:focus,
+.sp-strategy-sub-input:focus {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+}
+
+.sp-strategy-add-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sp-strategy-add-card:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.sp-strategy-colorbtn {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.sp-strategy-colorbtn:hover {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--border-strong);
+}
+.sp-strategy-colorpop {
+  padding: 6px;
+  width: 204px;
+}
+
+.sp-strategy-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 520px;
+}
+.sp-strategy-quick-chip {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.sp-strategy-quick-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- goals */
+
+.sp-strategy-goals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .sp-strategy-goals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sp-strategy-goal {
+  padding: 12px 16px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.sp-strategy-goal::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gc);
+}
+.sp-strategy-goal.done .sp-strategy-title-input {
+  color: var(--text-2);
+}
+.sp-strategy-goal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sp-strategy-pill.select {
+  width: auto;
+  height: 22px;
+  border: 0;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 650;
+  padding: 0 24px 0 9px;
+}
+.sp-strategy-due {
+  font-size: 11.5px;
+  font-weight: 550;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.sp-strategy-due.overdue {
+  color: var(--danger);
+}
+.sp-strategy-goal-desc.textarea,
+.sp-strategy-goal-notes.textarea {
+  margin: 0 -9px;
+  width: calc(100% + 18px);
+  min-height: 0;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.sp-strategy-goal-notes.textarea {
+  font-size: 12px;
+}
+.sp-strategy-goal-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+.sp-strategy-goal-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  min-height: 22px;
+}
+.sp-strategy-goal-nums > b:first-child {
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.sp-strategy-goal-nums > span:nth-child(2) {
+  color: var(--text-2);
+}
+.sp-strategy-goal-nums > b:last-child {
+  font-size: 14px;
+}
+.sp-strategy-pace {
+  font-size: 11px;
+  font-weight: 650;
+  padding: 1px 7px;
+  border-radius: 9px;
+}
+.sp-strategy-pace.success {
+  color: var(--success);
+  background: var(--success-soft);
+}
+.sp-strategy-pace.warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+.sp-strategy-pace.danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+.sp-strategy-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 5px;
+  background: var(--bg-active);
+}
+.sp-strategy-bar .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 5px;
+  transition: width 0.2s;
+}
+.sp-strategy-bar .tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text-2);
+  opacity: 0.6;
+}
+.sp-strategy-goal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.sp-strategy-goal-grid .field {
+  gap: 3px;
+  min-width: 0;
+}
+.sp-strategy-goal-grid .field > label {
+  font-size: 10.5px;
+}
+.sp-strategy-goal-grid .field.wide {
+  grid-column: span 2;
+}
+
+/* ---------------------------------------------------------------- audience */
+
+.sp-strategy-personas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.sp-strategy-persona {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sp-strategy-persona-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.sp-strategy-persona-head .image-drop {
+  flex-shrink: 0;
+}
+.sp-strategy-persona-names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+}
+.sp-strategy-persona-names .muted {
+  padding-left: 0;
+}
+.sp-strategy-persona-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.sp-strategy-pfield {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.sp-strategy-pfield > span {
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  padding-top: 6px;
+}
+.sp-strategy-pfield .textarea.bare {
+  margin: 0 -9px;
+  width: calc(100% + 18px);
+  min-height: 0;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- pillars */
+
+.sp-strategy-mix {
+  padding: 14px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sp-strategy-mix-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sp-strategy-mix-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.sp-strategy-mixrow {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.sp-strategy-mixbar {
+  display: flex;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-sunken);
+  gap: 2px;
+}
+.sp-strategy-mixbar > span {
+  display: flex;
+  align-items: center;
+  min-width: 3px;
+  background: var(--pc);
+  overflow: hidden;
+}
+.sp-strategy-mixbar > span em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 650;
+  color: #fff;
+  padding: 0 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.sp-strategy-mixbar > span.striped,
+.sp-strategy-share-track > span.striped {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--pc) 75%, transparent) 0 6px, color-mix(in srgb, var(--pc) 55%, transparent) 6px 12px);
+}
+.sp-strategy-warn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.sp-strategy-warn > svg {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+.sp-strategy-warn-text {
+  color: var(--warning);
+}
+
+.sp-strategy-pillars {
+  overflow: hidden;
+}
+.sp-strategy-pillars-head,
+.sp-strategy-pillar {
+  display: grid;
+  grid-template-columns: 52px minmax(200px, 1.3fr) 84px minmax(220px, 1fr) 32px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 0 8px;
+}
+.sp-strategy-pillars-head {
+  height: 34px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.sp-strategy-pillars-head .num {
+  text-align: right;
+  padding-right: 20px;
+}
+.sp-strategy-pillar {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sp-strategy-pillar:hover {
+  background: var(--bg-hover);
+}
+.sp-strategy-pillar.dragging {
+  opacity: 0.4;
+}
+.sp-strategy-pillar.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.sp-strategy-pillar.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.sp-strategy-pillar-order {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.sp-strategy-grip {
+  display: inline-flex;
+  color: var(--text-3);
+  cursor: grab;
+  padding: 2px;
+}
+.sp-strategy-grip:active {
+  cursor: grabbing;
+}
+.sp-strategy-arrows {
+  display: flex;
+  flex-direction: column;
+}
+.sp-strategy-arrows .btn.icon.sm {
+  height: 16px;
+  width: 22px;
+}
+.sp-strategy-arrows .btn svg {
+  width: 13px;
+  height: 13px;
+}
+.sp-strategy-pillar-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sp-strategy-pillar-main .sp-strategy-sub-input {
+  margin-left: 22px;
+  width: calc(100% - 16px);
+}
+.sp-strategy-pillar-target {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sp-strategy-pillar-target .input {
+  width: 60px;
+}
+.sp-strategy-pillar-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sp-strategy-share {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 118px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.sp-strategy-share-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.sp-strategy-share-track {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--bg-active);
+  overflow: hidden;
+}
+.sp-strategy-share-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--pc);
+}
+.sp-strategy-share-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sp-strategy-diff {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 7px;
+}
+.sp-strategy-diff.over {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+.sp-strategy-diff.under {
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 14%, transparent);
+}
+.sp-strategy-pillars-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+}
+@media (max-width: 900px) {
+  .sp-strategy-pillars-head {
+    display: none;
+  }
+  .sp-strategy-pillar {
+    grid-template-columns: 52px minmax(0, 1fr) 84px 32px;
+  }
+  .sp-strategy-pillar-bars {
+    grid-column: 2 / 4;
+    grid-row: 2;
+  }
+}
+
+/* ---------------------------------------------------------------- messaging */
+
+.sp-strategy-msg-intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sp-strategy-msg-intro h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.sp-strategy-msg-intro p {
+  margin: 0;
+}
+.sp-strategy-count {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-2);
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--bg-active);
+}
+.sp-strategy-tagline {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background:
+    linear-gradient(115deg, var(--accent-soft), transparent 55%),
+    var(--panel);
+}
+.sp-strategy-tagline-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  outline: none;
+  padding: 4px 8px;
+  margin: 0 -8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.sp-strategy-tagline-input:hover {
+  background: var(--bg-hover);
+}
+.sp-strategy-tagline-input:focus {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+}
+.sp-strategy-tagline-input::placeholder {
+  color: var(--text-3);
+  font-weight: 600;
+}
+.sp-strategy-msg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .sp-strategy-msg-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sp-strategy-msg {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sp-strategy-msg-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+}
+.sp-strategy-msg-title > svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.sp-strategy-msg-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+.sp-strategy-msg .textarea {
+  line-height: 1.55;
+}
+
+.sp-strategy-notes {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sp-strategy-notes .textarea {
+  line-height: 1.6;
+  min-height: 320px;
+}
+
+/* ---------------------------------------------------------------- tactics */
+
+.sp-strategy-tactics-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

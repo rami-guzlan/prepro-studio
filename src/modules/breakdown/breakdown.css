@@ -1,0 +1,539 @@
+/* Script Breakdown module (prefix: breakdown-) */
+
+/* ---------------------------------------------------------------- scene list */
+
+.breakdown-listtools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.breakdown-listtools .tabs {
+  display: flex;
+}
+.breakdown-listtools .tabs button {
+  flex: 1;
+  justify-content: center;
+  padding: 0 6px;
+}
+.breakdown-scenes {
+  flex: 1;
+  overflow: auto;
+  padding: 6px;
+  outline: none;
+}
+.breakdown-listempty {
+  padding: 24px 12px;
+  text-align: center;
+}
+.breakdown-scene {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.breakdown-scene:hover {
+  background: var(--bg-hover);
+}
+.breakdown-scene.active {
+  background: var(--accent-soft);
+}
+.breakdown-scene:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.breakdown-scene-num {
+  flex-shrink: 0;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 5px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.breakdown-scene-title {
+  display: block;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.breakdown-scene-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breakdown-scene-count {
+  flex-shrink: 0;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--bg-active);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.breakdown-scene.active .breakdown-scene-count {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.breakdown-scene-todo {
+  flex-shrink: 0;
+  color: var(--warning);
+  display: inline-flex;
+}
+.breakdown-listfoot {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------- sheet */
+
+.breakdown-sheet {
+  padding: 20px;
+  max-width: 1400px;
+}
+.breakdown-sheet-head {
+  display: flex;
+  overflow: hidden;
+}
+.breakdown-sheet-strip {
+  width: 74px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 16px 6px;
+  border-right: 1px solid var(--border);
+}
+.breakdown-sheet-num {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.breakdown-sheet-striplabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  opacity: 0.75;
+}
+.breakdown-sheet-main {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px 16px;
+}
+.breakdown-sheet-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+}
+.breakdown-sheet-titles {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.breakdown-sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.breakdown-sheet-kicker {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.breakdown-sheet-heading {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-family: var(--font-script);
+}
+.breakdown-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px 12px;
+  margin-top: 14px;
+}
+.breakdown-span-2 {
+  grid-column: span 2;
+}
+.breakdown-span-all {
+  grid-column: 1 / -1;
+}
+.breakdown-static {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------- category boxes */
+
+.breakdown-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.breakdown-box {
+  --cat-text: color-mix(in srgb, var(--cat) 72%, var(--text));
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--cat);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  min-height: 116px;
+  box-shadow: var(--shadow-sm);
+}
+.breakdown-box.wide {
+  grid-column: 1 / -1;
+}
+.breakdown-box-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cat-text);
+  background: color-mix(in srgb, var(--cat) 9%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--cat) 18%, var(--border));
+}
+.breakdown-box-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--cat);
+  flex-shrink: 0;
+}
+.breakdown-box-count {
+  min-width: 19px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--cat);
+  color: #fff;
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.breakdown-box-body {
+  flex: 1;
+  padding: 6px 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.breakdown-box-foot {
+  padding: 2px 6px 6px;
+}
+.breakdown-none {
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 4px 0 6px;
+  border-radius: 6px;
+}
+.breakdown-item:hover {
+  background: var(--bg-hover);
+}
+.breakdown-item-name {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breakdown-item-name:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.breakdown-item-sub {
+  font-size: 11.5px;
+  color: var(--text-3);
+  min-width: 0;
+  flex-shrink: 1;
+}
+.breakdown-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.breakdown-board {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--cat) 16%, transparent);
+  color: var(--cat-text);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.breakdown-tagbadge {
+  flex-shrink: 0;
+  height: 17px;
+  padding: 0 6px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.breakdown-tagbadge.speaking {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.breakdown-tagbadge.silent {
+  background: var(--bg-active);
+  color: var(--text-2);
+}
+.breakdown-item-x {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+}
+.breakdown-item:hover .breakdown-item-x,
+.breakdown-item-x:focus-visible {
+  opacity: 1;
+}
+.breakdown-item-x:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+.breakdown-item-x-spacer {
+  width: 20px;
+  flex-shrink: 0;
+}
+.breakdown-extras,
+.breakdown-notes {
+  border-color: transparent !important;
+  background: var(--bg-sunken) !important;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+.breakdown-extras:focus,
+.breakdown-notes:focus {
+  border-color: var(--accent) !important;
+  background: var(--bg-elev) !important;
+}
+.breakdown-hints {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------- add picker */
+
+.breakdown-picker {
+  position: relative;
+}
+.breakdown-picker-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  border-radius: 6px;
+  color: var(--text-3);
+  border: 1px dashed transparent;
+}
+.breakdown-picker-input:hover,
+.breakdown-picker-input:focus-within {
+  border-color: var(--border-strong);
+}
+.breakdown-picker-input .input {
+  height: 26px;
+  font-size: 12px;
+}
+.breakdown-picker-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 3px);
+  z-index: 30;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  max-height: 260px;
+  overflow: auto;
+}
+.breakdown-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+.breakdown-picker-item.on {
+  background: var(--accent-soft);
+}
+.breakdown-picker-item.create {
+  color: var(--accent);
+}
+.breakdown-picker-sub {
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+.breakdown-picker-note {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ---------------------------------------------------------------- summary matrix */
+
+.breakdown-matrix th.breakdown-matrix-cat {
+  text-align: center;
+  padding: 6px 4px;
+  border-bottom: 3px solid var(--cat);
+  min-width: 52px;
+}
+.breakdown-matrix-catlabel {
+  font-size: 11px;
+}
+.breakdown-matrix-num {
+  width: 52px;
+}
+.breakdown-matrix-scene {
+  min-width: 34px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.breakdown-matrix-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  max-width: 340px;
+  text-align: left;
+}
+.breakdown-matrix-heading:hover .ellipsis {
+  color: var(--accent);
+}
+.breakdown-matrix-cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  cursor: pointer;
+}
+.table tbody tr:hover td.breakdown-matrix-cell.has {
+  filter: brightness(0.96);
+}
+.breakdown-matrix-zero {
+  color: var(--text-3);
+  opacity: 0.6;
+}
+.breakdown-matrix-foot td {
+  background: var(--bg-elev);
+  font-weight: 700;
+  border-top: 1px solid var(--border-strong);
+  position: sticky;
+  bottom: 0;
+}

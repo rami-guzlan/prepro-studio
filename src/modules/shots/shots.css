@@ -1,0 +1,225 @@
+/* Shot List module */
+
+.shots-body {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px;
+  overflow: hidden;
+}
+.shots-wrap {
+  flex: 1;
+  min-height: 0;
+}
+.shots-table {
+  table-layout: fixed;
+}
+.shots-table th.center,
+.shots-table td.center {
+  text-align: center;
+}
+.shots-table td {
+  vertical-align: top;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.shots-table td.drag {
+  padding-top: 11px;
+  opacity: 0.5;
+}
+.shots-table tr.shots-row:hover td.drag {
+  opacity: 1;
+}
+.shots-table td.center .checkbox {
+  margin-top: 6px;
+}
+.shots-table td.actions-cell {
+  padding-top: 5px;
+}
+.shots-table td.num .input {
+  text-align: right;
+}
+
+/* shot number */
+.shots-table .input.shots-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* thumbnails */
+.shots-thumb {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 1px 0;
+}
+.shots-thumb button:hover {
+  border-color: var(--accent) !important;
+}
+
+/* cast chips inside the table */
+.shots-table td.col-cast .row {
+  min-height: 28px !important;
+}
+.shots-table td.col-cast .chip {
+  height: 20px;
+  font-size: 11px;
+  padding: 0 6px;
+}
+.shots-table td.col-cast .select.bare {
+  width: auto !important;
+  margin: 0;
+  min-width: 70px !important;
+  height: 22px;
+  padding: 0 20px 0 4px;
+}
+
+/* compact selects fill their cell */
+.shots-table td .shots-cselect {
+  width: calc(100% + 12px);
+}
+
+/* scene header rows */
+.shots-table tr.shots-scene-row td {
+  background: var(--bg-sunken);
+  padding: 0;
+  border-top: 1px solid var(--border);
+  position: sticky;
+  top: 33px;
+  z-index: 1;
+}
+.shots-table tbody.shots-group:first-of-type tr.shots-scene-row td {
+  border-top: 0;
+}
+.shots-table tbody tr.shots-scene-row:hover td {
+  background: var(--bg-sunken);
+}
+.shots-scene-inner {
+  position: sticky;
+  left: 0;
+  width: var(--shots-vw, 100%);
+  max-width: 100%;
+  padding: 7px 12px;
+  box-sizing: border-box;
+}
+.shots-scene-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.shots-scene-heading {
+  flex: 0 1 auto;
+  min-width: 90px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.shots-scene-heading:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.shots-scene-heading.static {
+  cursor: default;
+}
+.shots-scene-heading.static:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+.shots-scene-meta {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  display: inline-flex;
+  gap: 12px;
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.shots-scene-syn {
+  margin: 3px 0 0 36px;
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "add shot" row at the end of each scene */
+.shots-table tr.shots-add-row td {
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+.shots-table tbody tr.shots-add-row:hover td {
+  background: transparent;
+}
+.shots-table tr.shots-add-row .shots-scene-inner {
+  padding: 3px 12px 6px 30px;
+}
+.shots-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.shots-add-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.shots-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+.shots-link:hover {
+  text-decoration: underline;
+}
+
+/* row states */
+.shots-table tr.drop-before td {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.shots-table tr.drop-after td {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.shots-table tr.dragging td {
+  opacity: 0.4;
+}
+.shots-table tr.omitted td:not(.drag):not(.actions-cell) {
+  opacity: 0.5;
+}
+.shots-table tr.omitted td.col-description .textarea {
+  text-decoration: line-through;
+}
+.shots-table tr.flash td {
+  animation: shots-flash 2s ease-out;
+}
+@keyframes shots-flash {
+  0%,
+  35% {
+    background: var(--accent-soft);
+  }
+  100% {
+    background: transparent;
+  }
+}

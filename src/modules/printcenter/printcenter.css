@@ -1,0 +1,70 @@
+.pc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  padding: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .pc-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.pc-group {
+  margin-bottom: 22px;
+}
+.pc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.pc-doc {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 132px;
+}
+.pc-doc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pc-doc-head svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.pc-desc {
+  line-height: 1.4;
+}
+.pc-doc.is-empty {
+  opacity: 0.75;
+}
+.pc-empty {
+  color: var(--warning);
+  font-weight: 550;
+}
+.pc-side {
+  position: sticky;
+  top: 20px;
+}
+.pc-book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 340px;
+  overflow: auto;
+}
+.pc-book-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--bg-sunken);
+  font-size: 12.5px;
+  cursor: grab;
+}
+.pc-book-item.is-empty {
+  opacity: 0.55;
+}

@@ -1,0 +1,41 @@
+/* Gear & Equipment module (prefix: gear-) */
+
+.gear-packed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+.gear-grouphead {
+  gap: 10px;
+  min-height: 26px;
+}
+.gear-grouphead .btn {
+  color: var(--text-2);
+}
+.gear-groupsum {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text);
+}
+.gear-total {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.gear-foot {
+  margin-top: 10px;
+}
+.gear-importlist {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 240px;
+  overflow: auto;
+  color: var(--text);
+}
+.gear-importlist li {
+  padding: 1px 0;
+}
+
+.gear-tablewrap table.table {
+  min-width: var(--gear-minw, 0);
+}

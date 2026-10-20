@@ -1,0 +1,72 @@
+/* Contacts & Vendors module */
+
+.contacts-pad {
+  padding: 16px 20px 24px;
+}
+.contacts-module .module-body > .empty {
+  height: 100%;
+}
+
+.ct-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+}
+.ct-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--bg-active);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+.ct-group .btn {
+  opacity: 0;
+  transition: opacity 0.12s;
+  font-weight: 550;
+}
+.table tr.group-row:hover .ct-group .btn,
+.ct-group .btn:focus-visible {
+  opacity: 1;
+}
+
+.ct-linkcell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.ct-linkcell .input {
+  flex: 1;
+  min-width: 0;
+}
+.ct-linkbtn.btn {
+  position: absolute;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  opacity: 0;
+  background: var(--bg-elev);
+  color: var(--accent);
+  transition: opacity 0.12s;
+}
+.table tr:hover .ct-linkbtn.btn,
+.ct-linkbtn.btn:focus-visible {
+  opacity: 1;
+}
+
+/* fixed-layout tables: columns keep their widths, the table scrolls sideways when the pane is narrow */
+.ct-xtable .table {
+  table-layout: fixed;
+  min-width: var(--xt-minw, 0);
+}
+.ct-xtable .table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

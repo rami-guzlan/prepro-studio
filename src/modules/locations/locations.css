@@ -1,0 +1,639 @@
+/* Locations & Sets module */
+
+/* ------------------------------------------------------------ left list */
+
+.split > .pane-left.loc-left {
+  width: 290px;
+}
+.loc-left-search {
+  padding: 10px 10px 6px;
+  flex-shrink: 0;
+}
+.loc-list {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 8px 16px;
+}
+.loc-list-label {
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  padding: 12px 8px 4px;
+}
+.loc-list-empty {
+  padding: 16px 10px;
+  text-align: center;
+}
+.loc-list-empty p {
+  margin: 0 0 8px;
+}
+.loc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+.loc-item:hover {
+  background: var(--bg-hover);
+}
+.loc-item:focus-visible {
+  box-shadow: var(--focus);
+}
+.loc-item.active {
+  background: var(--accent-soft);
+}
+.loc-item.over {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.loc-item.declined .loc-item-name {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.loc-item-sets {
+  margin-bottom: 2px;
+}
+.loc-thumb {
+  width: 52px;
+  height: 38px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+}
+.loc-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.loc-thumb svg {
+  width: 17px;
+  height: 17px;
+}
+.loc-thumb-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+.loc-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.loc-item-name {
+  font-weight: 600;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loc-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  min-width: 0;
+}
+.loc-item-meta .badge {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 10.5px;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------ main / detail */
+
+.loc-main {
+  background: var(--bg);
+}
+.loc-module .loc-main > .empty {
+  height: 100%;
+}
+.loc-detail-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.loc-name.input {
+  flex: 1;
+  min-width: 200px;
+  height: 36px;
+  font-size: 17px;
+  font-weight: 650;
+  border-color: transparent;
+  background: transparent;
+  padding: 0 8px;
+  margin-left: -8px;
+}
+.loc-name.input:hover {
+  background: var(--bg-hover);
+}
+.loc-name.input:focus {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+}
+.loc-detail-body {
+  padding: 16px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1280px;
+}
+.loc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.loc-card.full {
+  grid-column: 1 / -1;
+}
+.loc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.loc-card-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.loc-card-head .muted {
+  margin-left: auto;
+}
+.loc-card-body {
+  padding: 14px 16px 16px;
+}
+.loc-hosp-icon {
+  color: var(--danger);
+}
+.loc-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.loc-grid2.wide {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.loc-grid2 > .span-all,
+.loc-grid2 > .span-2 {
+  grid-column: 1 / -1;
+}
+.loc-linkinput {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.loc-linkinput .input {
+  flex: 1;
+  min-width: 0;
+}
+.input.loc-invalid,
+.input.loc-invalid:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+.loc-error {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--danger);
+}
+
+/* ------------------------------------------------------------ gallery */
+
+.loc-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  border-radius: var(--radius);
+  outline: none;
+}
+.loc-gallery.fileover {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+}
+.loc-photo {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  outline: none;
+}
+.loc-photo:focus-visible {
+  box-shadow: var(--focus);
+}
+.loc-photo.cover {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.loc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s;
+}
+.loc-photo:hover img {
+  transform: scale(1.02);
+}
+.loc-photo.dragging {
+  opacity: 0.4;
+}
+.loc-photo.over {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.loc-cover-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.loc-photo-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.loc-photo:hover .loc-photo-actions,
+.loc-photo:focus-within .loc-photo-actions {
+  opacity: 1;
+}
+.loc-photo-actions .btn {
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  border-color: transparent;
+}
+.loc-photo-add {
+  aspect-ratio: 3 / 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 12px;
+}
+.loc-photo-add svg {
+  width: 22px;
+  height: 22px;
+  color: var(--text-3);
+}
+.loc-photo-add .tiny {
+  color: var(--text-3);
+}
+.loc-photo-add:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.loc-photo-add:hover svg {
+  color: var(--accent);
+}
+.loc-photo-add:only-child {
+  aspect-ratio: auto;
+  min-height: 140px;
+  grid-column: 1 / -1;
+}
+
+.loc-lightbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  min-height: 300px;
+}
+.loc-lightbox img {
+  max-width: 100%;
+  max-height: 64vh;
+  object-fit: contain;
+  display: block;
+}
+.loc-lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.loc-lb-nav:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+.loc-lb-nav.prev {
+  left: 12px;
+}
+.loc-lb-nav.next {
+  right: 12px;
+}
+.loc-lb-strip {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: #111;
+}
+.loc-lb-strip button {
+  width: 72px;
+  height: 48px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #222;
+  opacity: 0.6;
+}
+.loc-lb-strip button.on {
+  border-color: #fff;
+  opacity: 1;
+}
+.loc-lb-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ------------------------------------------------------------ sun */
+
+.loc-sun-empty {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--text-2);
+}
+.loc-sun-empty > svg {
+  color: var(--warning);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.loc-sun-dates {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.loc-daychip {
+  cursor: pointer;
+}
+.loc-daychip:hover {
+  border-color: var(--accent);
+}
+.loc-daychip.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.loc-sun-main {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.loc-sun-main > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+.loc-sun-main svg {
+  color: var(--warning);
+  margin-bottom: 2px;
+}
+.loc-sun-k {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.loc-sun-main strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.loc-sunbar {
+  position: relative;
+  height: 12px;
+  margin: 12px 0 18px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #1c2541 70%, var(--bg-sunken));
+  overflow: visible;
+}
+.loc-sunbar-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.loc-sunbar-band.twilight {
+  background: #6c7bd1;
+}
+.loc-sunbar-band.golden {
+  background: #f5a524;
+}
+.loc-sunbar-band.day {
+  background: #fcd96a;
+}
+.loc-sunbar-tick {
+  position: absolute;
+  top: 14px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.loc-sunbar-tick::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  height: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.5);
+}
+.loc-sun-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.loc-sun-rows > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.golden-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f5a524;
+}
+
+/* ------------------------------------------------------------ sets & scenes */
+
+.loc-setchip {
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+.loc-setchip.unused {
+  border-style: dashed;
+}
+.loc-setchip-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--bg-active);
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 650;
+}
+.loc-days {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.loc-scenes {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.loc-scene {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.loc-scene:hover {
+  background: var(--bg-hover);
+}
+.loc-scene-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  flex-shrink: 0;
+}
+.loc-scene-btn {
+  cursor: pointer;
+}
+.loc-scene-btn:hover {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* ------------------------------------------------------------ sets overview */
+
+.loc-sets {
+  padding: 20px 20px 32px;
+  max-width: 1280px;
+}
+.loc-sets-head h2 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 650;
+}
+.loc-sets-head p {
+  margin: 0 0 14px;
+  max-width: 720px;
+}
+.loc-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  font-size: 12.5px;
+}
+.loc-banner > svg {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+/* fixed-layout tables: columns keep their widths, the table scrolls sideways when the pane is narrow */
+.loc-xtable .table {
+  table-layout: fixed;
+  min-width: var(--xt-minw, 0);
+}
+.loc-xtable .table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
