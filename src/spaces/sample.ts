@@ -6,8 +6,9 @@ import { backend } from '@/backend';
 import { addDays, todayISO } from '@/lib/dates';
 import { uid } from '@/lib/id';
 import { newBoard } from '@/lib/mind';
+import { makeSheet, parseValue } from './crm';
 import { createSpace, makeChannel, makeChecklistItem, makeContent, makePost, makeShot } from './defaults';
-import type { BrandAsset, Campaign, ContentPiece, ContentPost, Goal, Persona, PostMetrics, ShootSession, SpaceData, SpaceMilestone, Tactic } from './types';
+import type { BrandAsset, Campaign, CrmSheet, ContentPiece, ContentPost, Goal, Persona, PostMetrics, ShootSession, SpaceData, SpaceMilestone, Tactic } from './types';
 
 function esc(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -40,6 +41,78 @@ ${lines.map((l, i) => `<text x="${w / 2}" y="${y0 + i * fs * 1.05}" font-family=
 }
 
 const LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" width="600" height="240"><rect width="600" height="240" rx="24" fill="#16161a"/><circle cx="120" cy="120" r="62" fill="#e8590c"/><rect x="58" y="128" width="124" height="54" fill="#16161a"/><text x="210" y="112" font-family="Arial Black, Arial" font-weight="900" font-size="56" fill="#fff">THE LAST</text><text x="210" y="172" font-family="Arial Black, Arial" font-weight="900" font-size="56" fill="#e8590c">TAKE</text></svg>`;
+
+/** A one-page PDF (title band + paragraphs, '# ' lines are headings) for the demo resources. */
+async function simplePdf(title: string, lines: string[]): Promise<Uint8Array> {
+  const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+  const doc = await PDFDocument.create();
+  doc.setTitle(`The Last Take — ${title}`);
+  const page = doc.addPage([612, 792]);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  page.drawRectangle({ x: 0, y: 700, width: 612, height: 92, color: rgb(0.91, 0.35, 0.05) });
+  page.drawText('THE LAST TAKE', { x: 48, y: 760, size: 10, font: bold, color: rgb(1, 0.91, 0.8) });
+  page.drawText(title, { x: 48, y: 728, size: 24, font: bold, color: rgb(1, 1, 1) });
+  let y = 660;
+  for (const raw of lines) {
+    if (raw.startsWith('# ')) {
+      y -= 6;
+      page.drawText(raw.slice(2), { x: 48, y, size: 13, font: bold, color: rgb(0.09, 0.09, 0.1) });
+      y -= 20;
+      continue;
+    }
+    const words = raw.split(' ');
+    let line = '';
+    for (const w of words) {
+      const next = line ? `${line} ${w}` : w;
+      if (font.widthOfTextAtSize(next, 11) > 516) {
+        page.drawText(line, { x: 48, y, size: 11, font, color: rgb(0.2, 0.2, 0.24) });
+        y -= 15;
+        line = w;
+      } else line = next;
+    }
+    if (line) page.drawText(line, { x: 48, y, size: 11, font, color: rgb(0.2, 0.2, 0.24) });
+    y -= 21;
+  }
+  return doc.save();
+}
+
+const PLAYBOOK_MD = `# Trailer drop-day playbook
+
+Goal: the trailer reaches 50k views across channels in launch week.
+
+## The day (all times local)
+- 08:00  Final export check: 16:9 master, 9:16 cut-down, 1:1 for X
+- 12:00  Teaser countdown story on Instagram ("6 hours")
+- 17:30  Newsletter goes out with the private link (subscribers see it first)
+- 18:00  Premiere on YouTube + Instagram Reel + TikTok + X, all at golden hour
+- 18:15  Cast and crew share; pin the comment with the festival date
+- 21:00  Reply to every comment; save the best for the "reactions" carousel
+
+## Owners
+- Upload and captions: Sofia
+- Cut-downs: Chloe
+- Replies and community: everyone, 30 minutes each
+
+## After 48 hours
+- Post the reactions carousel
+- Log results in PrePro (Results → Log results)
+`;
+
+const SEQUENCE_MD = `# Release-week email sequence map
+
+Audience: newsletter subscribers + festival sign-ups.
+
+| Day | Email | Goal | CTA |
+| --- | --- | --- | --- |
+| -7 | "One week of light left" | Remind and build anticipation | Add the release to your calendar |
+| -3 | Behind the take: the stairs scene | Story + BTS clip | Watch the 60 s clip |
+| 0 | It's out: watch The Last Take | Views on release day | Watch the full film |
+| +2 | Thank you + director's note | Gratitude, shares | Share with one friend |
+| +7 | What's next | Keep the list warm | Reply with your favourite moment |
+
+Branch: anyone who did not open day 0 gets a resend with a new subject line on day +1.
+`;
 
 const m = (views: number, likes: number, comments: number, shares: number, saves: number, extra: Partial<PostMetrics> = {}): PostMetrics => ({ views, likes, comments, shares, saves, ...extra });
 
@@ -350,8 +423,68 @@ export async function createSampleSpace(): Promise<SpaceData> {
     asset('Inter', 'font', { value: 'Inter', notes: 'Body text and captions' }),
     asset('Poster artwork', 'image', { image: poster.thumbnail, tags: ['poster'] }),
     asset('Countdown story template', 'template', { url: 'https://www.canva.com/', tags: ['stories'] }),
-    asset('Press kit folder', 'link', { url: 'https://drive.google.com/', tags: ['press'] }),
+    asset('Press kit folder', 'link', { url: 'https://drive.google.com/', tags: ['press'], campaignId: cPremiere.id }),
     asset('Score stems (ticking clock)', 'audio', { notes: 'Ask Daniel for the 30 s loop' }),
+  ];
+
+  /* ---------------- campaign resources (downloadable files stored in the space) */
+  const enc = (t: string) => new TextEncoder().encode(t);
+  const file = async (fileName: string, bytes: Uint8Array) => ({ file: await backend.importAsset(s.id, bytes, fileName.split('.').pop() || 'bin'), fileName, fileSize: bytes.length });
+  const onePager = await file('The Last Take - press one-pager.pdf', await simplePdf('Press one-pager', [
+    '# Logline',
+    'A one-take short about a film crew racing the last twelve minutes of daylight.',
+    '# Details',
+    'Short film, 12 minutes, 2.39:1, stereo. Written and directed by Elena Ward. Produced by Golden Hour Pictures.',
+    '# Screenings',
+    'Festival premiere, then online release. Screener on request.',
+    '# Contact',
+    'press@example.com',
+  ]));
+  const guide = await file('Behind the light - lighting guide.pdf', await simplePdf('Behind the light', [
+    '# How we lit a film with twelve minutes of sun',
+    'Free guide for newsletter subscribers: the three setups we used on the rooftop, the stairwell and the final shot.',
+    '# 1. Water-tower bounce',
+    'A 4x4 bounce on the roof edge kept faces readable as the sun dropped behind the towers.',
+    '# 2. Stairwell practicals',
+    'Warm practical bulbs on every landing, dimmed to match the sky through the windows.',
+    '# 3. The last shot',
+    'No lights at all: the actors faced the sun and we waited for it.',
+  ]));
+  const playbook = await file('Trailer drop-day playbook.md', enc(PLAYBOOK_MD));
+  const sequence = await file('Release-week email sequence map.md', enc(SEQUENCE_MD));
+  s.assets.push(
+    asset('Behind the light (lighting guide)', 'resource', { ...guide, resourceType: 'guide', gated: true, campaignId: cTease.id, url: 'https://example.com/lighting-guide', notes: 'Free PDF for newsletter sign-ups; the link in bio goes to the opt-in page' }),
+    asset('Trailer drop-day playbook', 'resource', { ...playbook, resourceType: 'playbook', campaignId: cTrailer.id, notes: 'Hour-by-hour plan for launch day' }),
+    asset('Press one-pager', 'resource', { ...onePager, resourceType: 'one_pager', campaignId: cPremiere.id, notes: 'Attach to every festival and press pitch' }),
+    asset('Festival submission tracker', 'resource', { resourceType: 'template', campaignId: cPremiere.id, url: 'https://docs.google.com/spreadsheets/', notes: 'Shared sheet: deadlines, fees, status' }),
+    asset('Release-week email sequence map', 'resource', { ...sequence, resourceType: 'sequence_map', campaignId: cRelease.id, notes: '5 emails from day -7 to day +7' }),
+  );
+
+  /* ---------------- people & brands */
+  const sheet = (template: string, name: string, rows: Record<string, unknown>[]): CrmSheet => {
+    const sh = makeSheet(template, { name });
+    for (const r of rows) {
+      const values: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(r)) {
+        const col = sh.columns.find((c) => c.name === k);
+        if (col) values[col.id] = parseValue(col, v, { campaigns: s.campaigns, createOptions: true });
+      }
+      sh.rows.push({ id: uid('row'), values, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    }
+    return sh;
+  };
+  s.crm = [
+    sheet('press', 'Press & festivals', [
+      { Outlet: 'Short Film Weekly', Contact: 'Editor', 'Beat / topic': 'Shorts, indie', Status: 'Covered', 'Pitched on': d(-12), Coverage: 'https://example.com/short-film-weekly', Notes: 'Ran the poster + a 3-line review' },
+      { Outlet: 'Indie Lens Podcast', Contact: 'Host', 'Beat / topic': 'Filmmaking craft', Status: 'Replied', 'Pitched on': d(-5), Notes: 'Wants Elena for an episode after the premiere' },
+      { Outlet: 'City Arts Desk', Contact: 'Film writer', 'Beat / topic': 'Local culture', Status: 'Pitched', 'Pitched on': d(-2) },
+      { Outlet: 'Golden Hour Film Festival', Contact: 'Programming team', 'Beat / topic': 'Premiere', Status: 'To pitch', Notes: 'Send the press one-pager + screener link' },
+    ]),
+    sheet('brand_deals', 'Partners & sponsors', [
+      { Brand: 'Rooftop Coffee Co.', Contact: 'Marketing lead', Stage: 'Contracted', Deliverables: '2 stories + logo on the premiere poster', Fee: 500, Due: d(9), Campaign: 'Festival premiere' },
+      { Brand: 'LensRent', Contact: 'Partnerships', Stage: 'Negotiating', Deliverables: 'Gear discount code in the BTS reel caption', Fee: 300, Due: d(14), Campaign: 'Trailer launch' },
+      { Brand: 'Indie Cinema Club', Contact: 'Community manager', Stage: 'Paid', Deliverables: 'Members-only early screening', Fee: 250, Paid: true, Campaign: 'Release' },
+    ]),
   ];
 
   /* ---------------- ideas board */

@@ -358,7 +358,10 @@ export interface ShootSession {
 
 /* ---------------------------------------------------------------- brand kit & assets */
 
-export type AssetKind = 'logo' | 'image' | 'color' | 'font' | 'template' | 'video' | 'audio' | 'link' | 'doc' | 'other';
+export type AssetKind = 'logo' | 'image' | 'color' | 'font' | 'template' | 'video' | 'audio' | 'link' | 'doc' | 'resource' | 'other';
+
+/** What a downloadable resource is (lead magnets, sequence maps, templates …). */
+export type ResourceType = 'playbook' | 'template' | 'sequence_map' | 'one_pager' | 'guide' | 'checklist' | 'worksheet' | 'slides' | 'swipe_file' | 'other';
 
 export interface BrandAsset {
   id: ID;
@@ -371,6 +374,61 @@ export interface BrandAsset {
   url?: string;
   tags?: string[];
   notes?: string;
+  /** campaign it belongs to (Links & documents group resources per campaign) */
+  campaignId?: ID;
+  /** downloadable resources: what it is */
+  resourceType?: ResourceType;
+  /** given in exchange for an email / opt-in (lead magnet) */
+  gated?: boolean;
+  /** uploaded file stored in the space folder (asset name) */
+  file?: string;
+  /** original file name of the upload (used when downloading) */
+  fileName?: string;
+  /** size of the upload in bytes */
+  fileSize?: number;
+}
+
+/* ---------------------------------------------------------------- people & brands (CRM sheets) */
+
+export type CrmColumnType = 'text' | 'longtext' | 'select' | 'multi' | 'number' | 'money' | 'date' | 'email' | 'phone' | 'url' | 'checkbox' | 'campaign';
+
+export interface CrmOption {
+  /** stable id stored in rows */
+  id: ID;
+  label: string;
+  color?: string;
+}
+
+export interface CrmColumn {
+  id: ID;
+  name: string;
+  type: CrmColumnType;
+  /** choices of select / multi columns */
+  options?: CrmOption[];
+  /** column width in px */
+  width?: number;
+}
+
+export interface CrmRow {
+  id: ID;
+  /** column id → value (text, number, ISO date, option id(s), campaign id, boolean) */
+  values: Record<ID, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** One spreadsheet in People & Brands (relationships, leads, brand deals …). */
+export interface CrmSheet {
+  id: ID;
+  name: string;
+  color?: string;
+  description?: string;
+  columns: CrmColumn[];
+  rows: CrmRow[];
+  /** table or board (cards grouped by a select column) */
+  view?: 'table' | 'board';
+  /** select column used for the board */
+  boardColumnId?: ID;
 }
 
 /* ---------------------------------------------------------------- root */
@@ -392,6 +450,8 @@ export interface SpaceData {
   content: ContentPiece[];
   shoots: ShootSession[];
   assets: BrandAsset[];
+  /** People & Brands: CRM-style sheets (relationships, leads, brand deals …) */
+  crm: CrmSheet[];
   /** brainstorming board (same model as the script's Mind Dump) */
   mind: MindDump;
   /** linked production projects */

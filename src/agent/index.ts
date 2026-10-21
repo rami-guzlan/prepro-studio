@@ -20,8 +20,9 @@ import { visualTools } from './tools/visual';
 import { productionTools } from './tools/production';
 import { outputTools } from './tools/output';
 import { spaceTools } from './tools/spaces';
+import { crmTools } from './tools/crm';
 
-export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
+export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...crmTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 
 type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };

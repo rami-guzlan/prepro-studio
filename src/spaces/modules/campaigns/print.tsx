@@ -2,7 +2,7 @@
 import type { SpacePrintDocDef } from '@/spaces/print/types';
 import { SpaceDocHeader } from '@/spaces/print/components';
 import { Check, Dot, KV, PBadge, PSection, PTable, Pre } from '@/print/components';
-import { CAMPAIGN_STATUSES, FORMAT_BY_ID, POST_STATUSES, STAGE_BY_ID } from '@/spaces/constants';
+import { CAMPAIGN_STATUSES, FORMAT_BY_ID, POST_STATUSES, RESOURCE_TYPES, STAGE_BY_ID } from '@/spaces/constants';
 import { channelColor } from '@/spaces/derive';
 import { useSpaceUI } from '@/spaces/ui';
 import type { Campaign, SpaceMilestone } from '@/spaces/types';
@@ -240,6 +240,7 @@ export const spacePrintDocs: SpacePrintDocDef[] = [
                 ['Linked production', c.projectId ? projects.get(c.projectId) ?? 'Linked project' : ''],
                 ['Content', `${st.pieces.length} piece${st.pieces.length === 1 ? '' : 's'} · ${st.published}/${st.postsTotal} posts published`],
                 ['Milestones', st.msTotal ? `${st.msDone}/${st.msTotal} done` : ''],
+                ['Resources', s.assets.filter((a) => a.campaignId === c.id).map((a) => `${a.name || a.fileName || 'Resource'}${a.resourceType ? ` (${optionLabel(RESOURCE_TYPES, a.resourceType).toLowerCase()}${a.gated ? ', gated' : ''})` : a.gated ? ' (gated)' : ''}`).join(' · ')],
               ]}
             />
             {options.showDetails && (c.description || c.notes) && (

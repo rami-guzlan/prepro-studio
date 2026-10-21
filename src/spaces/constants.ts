@@ -21,7 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Option } from '@/lib/constants';
-import type { AssetKind, CampaignStatus, ContentFormat, ContentStage, GoalStatus, Platform, PostMetrics, PostStatus, ShotKind, SpaceType, TacticStatus } from './types';
+import type { AssetKind, CampaignStatus, ResourceType, ContentFormat, ContentStage, GoalStatus, Platform, PostMetrics, PostStatus, ShotKind, SpaceType, TacticStatus } from './types';
 
 export interface SpaceTypeDef extends Option<SpaceType> {
   icon: LucideIcon;
@@ -164,7 +164,22 @@ export const ASSET_KINDS: Option<AssetKind>[] = [
   { value: 'audio', label: 'Music / sound' },
   { value: 'link', label: 'Link' },
   { value: 'doc', label: 'Document' },
+  { value: 'resource', label: 'Resource (downloadable)' },
   { value: 'other', label: 'Other' },
+];
+
+/** Downloadable campaign resources: lead magnets, sequence maps, template docs, playbooks, one-pagers … */
+export const RESOURCE_TYPES: Option<ResourceType>[] = [
+  { value: 'playbook', label: 'Playbook', color: '#7c5cff' },
+  { value: 'template', label: 'Template doc', color: '#3e8ef7' },
+  { value: 'sequence_map', label: 'Sequence map', color: '#15aabf' },
+  { value: 'one_pager', label: 'One-pager', color: '#f08c00' },
+  { value: 'guide', label: 'Guide / e-book', color: '#2fb36d' },
+  { value: 'checklist', label: 'Checklist', color: '#e64980' },
+  { value: 'worksheet', label: 'Worksheet', color: '#a05eea' },
+  { value: 'slides', label: 'Slide deck', color: '#e5484d' },
+  { value: 'swipe_file', label: 'Swipe file', color: '#868e96' },
+  { value: 'other', label: 'Other', color: '#868e96' },
 ];
 
 export const METRICS: { key: keyof PostMetrics; label: string; short: string; unit?: string }[] = [

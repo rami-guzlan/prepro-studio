@@ -102,16 +102,17 @@ link production projects (a release campaign links its film and uses its poster 
 |---|---|
 | **Overview** | What's next (posts in the next 14 days), pipeline, goals progress, active campaigns, channel cadence this week, overdue / at-risk content, getting-started checklist. |
 | **Strategy** | Goals (metric, baseline → target), audience personas, content pillars (target vs actual share), positioning, value proposition, voice, key messages, tactics. |
-| **Campaigns & Milestones** | Roadmap timeline of campaign phases, milestones and posts; each campaign's objective, dates, channels, CTA and content. |
+| **Campaigns & Milestones** | Roadmap timeline of campaign phases, milestones and posts; each campaign's objective, dates, channels, CTA, content and **resources** (the downloadable gated resources, sequence maps, template docs, playbooks and one-pagers it uses — upload or drop files, open them in a viewer, download them). |
 | **Ideas** | The same brainstorm boards as the script's Mind Dump (one board per idea batch or category); turn notes into content ideas (short video, long-form, carousel, thread, newsletter …) or milestones. |
 | **Content** | Every piece from **idea → writing → planning → shooting → editing → ready → published** as a kanban board or list. The content editor has a brief (concept, hook, CTA, audience, goals), a script / copy editor (structure templates, two-column A/V, word and character counts vs platform limits), production (shoot day, shot list, checklist, references), publishing (one post per channel: date, time, title, caption, hashtags, link, status) and results. Repurpose a piece into cut-downs. |
 | **Production** | Batch shoot days: several pieces filmed together, combined shot list, run of show. |
 | **Calendar** | Month / week / agenda views of posts (coloured by channel), shoot days, milestones and campaigns; drag posts to reschedule, drag unscheduled content onto a day, weekly cadence per channel. |
 | **Channels** | Platforms and handles, cadence targets, best times, followers, per-channel stats and platform limits. |
 | **Results** | Views, engagement, clicks, followers gained by period, channel, format and pillar; top posts; quick results entry. |
-| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, music and links. |
+| **People & Brands** | CRM-style sheets: relationships, leads, brand deals, collaborators & guests, press — or your own. Typed columns (single / multi select with colours, money with totals, dates with follow-up reminders, email, links, checkbox, campaign), a spreadsheet and a pipeline board per sheet, CSV import / export. |
+| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, music and links. Links & documents also holds every campaign's downloadable resources, grouped per campaign (files are stored in the space folder). |
 | **Linked Projects** | Productions this space promotes, with their linked content and campaigns. |
-| **Print & Export** | One-sheet, strategy brief, campaign plan, content briefs, content plan, calendar, posting schedule, shoot plan, results report, brand kit, ideas board — or one merged **marketing plan** PDF. |
+| **Print & Export** | One-sheet, strategy brief, campaign plan, content briefs, content plan, calendar, posting schedule, shoot plan, results report, brand kit, ideas board, People & Brands sheets — or one merged **marketing plan** PDF. |
 
 Spaces are saved in `Documents\PrePro Studio Projects\Marketing Spaces\<name>__<id>\space.json` (+ `assets\`,
 `backups\`). **Help → Open Demo Marketing Space** opens *The Last Take — Release Campaign* with every screen filled in.

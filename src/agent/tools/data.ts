@@ -148,7 +148,9 @@ function enrichSpace(c: CollectionDef, items: any[], s: any): any[] {
     case 'pillars':
       return items.map((x) => ({ ...x, _content: s.content.filter((c: any) => c.pillarId === x.id).length }));
     case 'campaigns':
-      return items.map((x) => ({ ...x, _content: s.content.filter((c: any) => c.campaignId === x.id).length }));
+      return items.map((x) => ({ ...x, _content: s.content.filter((c: any) => c.campaignId === x.id).length, _resources: s.assets.filter((a: any) => a.campaignId === x.id).length || undefined }));
+    case 'assets':
+      return items.map((x) => ({ ...x, file: undefined, _campaign: name(s.campaigns, x.campaignId), _hasFile: x.file ? true : undefined }));
     default:
       return items;
   }
@@ -332,6 +334,8 @@ export const dataTools = [
                     calendar: 'get_space_calendar for everything scheduled in a date range',
                     reports: 'get_space_report (overview, pipeline, cadence, results)',
                     ideas: 'mind_add_notes / mind_organize / mind_send_notes work on the Ideas board',
+                    peopleAndBrands: 'crm_read / crm_sheet / crm_rows: CRM sheets (relationships, leads, brand deals, collaborators, press)',
+                    resources: 'add_resource uploads or writes downloadable files (playbooks, one-pagers, sequence maps …) into Brand Kit & Assets, optionally per campaign',
                     linkedProjects: 'link_projects',
                   },
                 }),

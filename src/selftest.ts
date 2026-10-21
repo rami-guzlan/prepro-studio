@@ -184,6 +184,56 @@ export async function runSelftest() {
       navigateSpace('ideas');
       await wait(1200);
       summary.spaceIdeaBoards = await checkMindBoards('space-ideas');
+      // campaign resources, the resource viewer, brand kit groups, People & Brands views
+      {
+        const premiere = getSpace().campaigns.find((c) => c.name === 'Festival premiere');
+        navigateSpace('campaigns', { campaignId: premiere?.id });
+        await wait(1100);
+        const sec = document.querySelector('.sp-res-section');
+        sec?.scrollIntoView({ block: 'center' });
+        await wait(300);
+        spaceResults.push({ screen: 'campaign-resources', ok: document.querySelectorAll('.sp-res-section .sp-res-row').length >= 2 });
+        await bridge.selftestCapture('space-campaign-resources.png');
+        const pdfRow = [...document.querySelectorAll<HTMLElement>('.sp-res-section .sp-res-main')].find((b) => /one-pager/i.test(b.textContent ?? ''));
+        pdfRow?.click();
+        await wait(1600);
+        spaceResults.push({ screen: 'resource-viewer', ok: !!document.querySelector('.sp-res-viewer iframe.sp-res-frame') });
+        await bridge.selftestCapture('space-resource-viewer.png');
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wait(300);
+        const trailer = getSpace().campaigns.find((c) => c.name === 'Trailer launch');
+        navigateSpace('campaigns', { campaignId: trailer?.id });
+        await wait(900);
+        document.querySelector('.sp-res-section')?.scrollIntoView({ block: 'center' });
+        ([...document.querySelectorAll<HTMLElement>('.sp-res-section .sp-res-main')][0])?.click();
+        await wait(1000);
+        spaceResults.push({ screen: 'resource-viewer-text', ok: !!document.querySelector('.sp-res-text-preview') });
+        await bridge.selftestCapture('space-resource-viewer-md.png');
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wait(300);
+        navigateSpace('assets');
+        await wait(1100);
+        document.getElementById('sp-assets-links')?.scrollIntoView({ block: 'start' });
+        await wait(300);
+        spaceResults.push({ screen: 'assets-campaign-groups', ok: document.querySelectorAll('.sp-res-group').length === getSpace().campaigns.length });
+        await bridge.selftestCapture('space-assets-links.png');
+        navigateSpace('people');
+        await wait(1100);
+        spaceResults.push({ screen: 'people-table', ok: document.querySelectorAll('.sp-crm-table tbody tr[data-row-id]').length > 0 });
+        await bridge.selftestCapture('space-people-table.png');
+        ([...document.querySelectorAll<HTMLElement>('.sp-crm-tab')][1])?.click();
+        await wait(500);
+        ([...document.querySelectorAll<HTMLButtonElement>('.module-toolbar .tabs button')].find((b) => b.textContent?.trim() === 'Board'))?.click();
+        await wait(700);
+        spaceResults.push({ screen: 'people-board', ok: document.querySelectorAll('.sp-crm-lane .sp-crm-card').length > 0 });
+        await bridge.selftestCapture('space-people-board.png');
+        (document.querySelector('.sp-crm-card') as HTMLElement | null)?.click();
+        await wait(600);
+        spaceResults.push({ screen: 'people-row-dialog', ok: !!document.querySelector('.sp-crm-form') });
+        await bridge.selftestCapture('space-people-row.png');
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wait(300);
+      }
       // content editor on every tab
       navigateSpace('content');
       await wait(900);

@@ -143,6 +143,11 @@ export function createElectronBackend(bridge: PreproBridge): Backend {
     },
     listBackups: (id) => bridge.listBackups(id),
     restoreBackup: (id, name) => bridge.restoreBackup(id, name),
+    assetPath: async (id, name) => {
+      const dir = await bridge.projectDir(id);
+      const sep = dir.includes('\\') ? '\\' : '/';
+      return `${dir}${sep}assets${sep}${name}`;
+    },
     openProjectFolder: async (id) => {
       await bridge.openProjectFolder(id);
     },

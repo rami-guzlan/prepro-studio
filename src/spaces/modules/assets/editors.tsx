@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Copy, ExternalLink, FolderOpen, Trash2 } fro
 import type { ID } from '@/types';
 import type { AssetKind, BrandAsset } from '@/spaces/types';
 import { ASSET_KINDS } from '@/spaces/constants';
+import { useSpace } from '@/store/space';
 import { assetUrl } from '@/backend';
 import { Button, ColorPicker, Field, IconButton, ImageDrop, Input, Modal, Select, Textarea } from '@/ui';
 import { assetOps, canOpenValue, copyText, deleteAsset, fontAvailable, HexInput, openUrl, openValue, TagInput } from './actions';
@@ -29,6 +30,8 @@ export function AssetEditor({ asset, allTags, onClose }: { asset: BrandAsset; al
   const hex = normalizeHex(asset.value);
   const fontOk = kind === 'font' && asset.value?.trim() ? fontAvailable(asset.value) : true;
   const kindLabel = ASSET_KINDS.find((k) => k.value === kind)?.label ?? 'Asset';
+  const campaigns = useSpace((s) => s.campaigns);
+  const linkish = kind === 'link' || kind === 'doc' || kind === 'other';
 
   return (
     <Modal
@@ -105,6 +108,11 @@ export function AssetEditor({ asset, allTags, onClose }: { asset: BrandAsset; al
                 <Input value={asset.url} placeholder="https://…" onChange={(url) => up({ url })} />
                 <IconButton icon={ExternalLink} label="Open link" variant="default" disabled={!asset.url?.trim()} onClick={() => openUrl(asset.url)} />
               </div>
+            </Field>
+          )}
+          {linkish && campaigns.length > 0 && (
+            <Field label="Campaign" span="all" hint="Shows it under the campaign’s resources">
+              <Select value={asset.campaignId ?? ''} options={campaigns.map((c) => ({ value: c.id, label: c.name || 'Untitled campaign' }))} placeholder="None (general)" onChange={(v) => up({ campaignId: v || undefined })} />
             </Field>
           )}
           <Field label="Tags" span="all">

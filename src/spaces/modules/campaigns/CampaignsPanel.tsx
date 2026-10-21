@@ -1,6 +1,7 @@
 /* Campaign list + detail editor (fields, stats, content pieces, milestones). */
 import { useMemo, useState, type ReactNode } from 'react';
-import { Copy, Flag, Megaphone, MoreHorizontal, Plus, Rocket, Trash2, X } from 'lucide-react';
+import { Copy, Flag, Link2, Megaphone, MoreHorizontal, Plus, Rocket, Trash2, Upload, X } from 'lucide-react';
+import type { ID } from '@/types';
 import type { Campaign, CampaignStatus, ContentPiece, SpaceMilestone } from '@/spaces/types';
 import { CAMPAIGN_STATUSES, STAGES, STAGE_BY_ID } from '@/spaces/constants';
 import { channelColor } from '@/spaces/derive';
@@ -29,6 +30,8 @@ import {
   sortCampaigns,
   stripYear,
 } from './shared';
+import { assetOps } from '../assets/actions';
+import { ResourceList, ResourceModal, addResourcePlaceholder, dropResources, isCampaignResource, pickResources, unassignResource, useFileDrop } from '../assets/resources';
 
 /** Focus and select a freshly created campaign's name (stable callback ref). */
 function focusSelect(el: HTMLInputElement | null) {
@@ -373,6 +376,8 @@ function CampaignDetail({ c, autoFocusName, onDeleted, onDuplicated }: { c: Camp
         )}
       </div>
 
+      <CampaignResources c={c} />
+
       <div className="sp-campaigns-section">
         <div className="sp-campaigns-section-head">
           <span>Milestones</span>
@@ -387,6 +392,61 @@ function CampaignDetail({ c, autoFocusName, onDeleted, onDuplicated }: { c: Camp
         )}
         <MilestoneQuickAdd campaignId={c.id} placeholder={`Add a milestone to ${c.name || 'this campaign'} and press Enter`} />
       </div>
+    </div>
+  );
+}
+
+/** Downloadable resources of the campaign (stored in Brand Kit & Assets → Links & documents). */
+function CampaignResources({ c }: { c: Campaign }) {
+  const assets = useSpace((s) => s.assets);
+  const campaigns = useSpace((s) => s.campaigns);
+  const [open, setOpen] = useState<ID | null>(null);
+  const mine = useMemo(() => assets.filter((a) => a.campaignId === c.id), [assets, c.id]);
+  const others = useMemo(() => assets.filter((a) => a.campaignId !== c.id && isCampaignResource(a)), [assets, c.id]);
+  const names = useMemo(() => new Map(campaigns.map((x) => [x.id, x.name])), [campaigns]);
+  const drop = useFileDrop((files) => void dropResources(files, { campaignId: c.id }));
+  const opened = open ? assets.find((a) => a.id === open) : undefined;
+  return (
+    <div className={`sp-campaigns-section sp-res-section ${drop.over ? 'over' : ''}`} {...drop.props}>
+      <div className="sp-campaigns-section-head">
+        <span>Resources in this campaign</span>
+        <Badge>{mine.length}</Badge>
+        <span className="spacer" />
+        {others.length > 0 && (
+          <Select
+            size="sm"
+            className="sp-campaigns-assign"
+            value=""
+            placeholder="Add existing…"
+            options={others.map((a) => ({ value: a.id, label: `${a.name?.trim() || a.fileName || 'Untitled resource'}${a.campaignId && names.get(a.campaignId) ? ` (in ${names.get(a.campaignId)})` : ''}` }))}
+            onChange={(id) => id && assetOps.update(id, { campaignId: c.id }, false)}
+            aria-label="Add an existing resource to this campaign"
+          />
+        )}
+        <Button size="sm" icon={Link2} onClick={() => setOpen(addResourcePlaceholder({ campaignId: c.id }))} title="A resource that lives at a link (Notion, Drive, landing page) or a placeholder to upload later">
+          Add link
+        </Button>
+        <Button size="sm" variant="primary" icon={Upload} onClick={() => void pickResources({ campaignId: c.id })}>
+          Upload files
+        </Button>
+      </div>
+      <ResourceList
+        items={mine}
+        onOpen={setOpen}
+        onRemove={unassignResource}
+        empty={
+          <>
+            No resources yet. Upload the gated resource, sequence map, template docs, playbooks or one-pagers this campaign uses, or drop the files here. They’re stored in{' '}
+            <button type="button" className="sp-campaigns-link" onClick={() => navigateSpace('assets')}>
+              Brand Kit &amp; Assets
+            </button>
+            .
+          </>
+        }
+      />
+      {mine.length > 0 && <div className="sp-res-hint">Drop files here to add more · all stored in Brand Kit &amp; Assets → Links &amp; documents</div>}
+      {drop.over && <div className="sp-res-dropmsg">Drop to add to {c.name || 'this campaign'}</div>}
+      {opened && <ResourceModal key={opened.id} asset={opened} onClose={() => setOpen(null)} />}
     </div>
   );
 }
