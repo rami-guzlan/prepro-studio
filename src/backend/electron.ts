@@ -7,6 +7,11 @@ export interface PreproBridge {
   isElectron: true;
   info(): Promise<any>;
   setDemosHidden(patch: { project?: boolean; space?: boolean }): Promise<{ project?: boolean; space?: boolean }>;
+  financePin: {
+    status(): Promise<{ set: boolean }>;
+    verify(pin: string): Promise<{ ok: boolean; error?: string }>;
+    set(current: string | null, next: string): Promise<{ ok: boolean; error?: string }>;
+  };
   listProjects(): Promise<any[]>;
   loadProject(id: string): Promise<any>;
   createProject(data: any): Promise<any>;
@@ -93,6 +98,7 @@ export function createElectronBackend(bridge: PreproBridge): Backend {
     kind: 'electron',
     info: () => bridge.info(),
     setDemosHidden: (patch) => bridge.setDemosHidden(patch),
+    financePin: bridge.financePin,
     listProjects: () => bridge.listProjects(),
     loadProject: (id) => bridge.loadProject(id) as Promise<ProjectData>,
     createProject: async (p) => {

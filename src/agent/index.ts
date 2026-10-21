@@ -21,8 +21,15 @@ import { productionTools } from './tools/production';
 import { outputTools } from './tools/output';
 import { spaceTools } from './tools/spaces';
 import { crmTools } from './tools/crm';
+import { businessTools } from './kinds/business';
+import { businessSalesTools } from './kinds/business-sales';
+import { businessWorkTools } from './kinds/business-work';
+import { businessLibraryTools } from './kinds/business-library';
+import { financeTools } from './kinds/finance';
+import { trainingTools } from './kinds/training';
+import { coachTools } from './tools/coach';
 
-export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...crmTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
+export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...crmTools, ...businessTools, ...businessSalesTools, ...businessWorkTools, ...businessLibraryTools, ...financeTools, ...trainingTools, ...coachTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 
 type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };

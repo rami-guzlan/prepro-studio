@@ -7,6 +7,7 @@ import '@fontsource/courier-prime/700.css';
 import '@fontsource/courier-prime/700-italic.css';
 import './styles/app.css';
 import './shell/shell.css';
+import './styles/phone.css';
 import { App } from './shell/App';
 
 createRoot(document.getElementById('root')!).render(

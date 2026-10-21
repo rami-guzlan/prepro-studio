@@ -84,6 +84,8 @@ export interface CollectionDef {
   addVia?: string;
   /** navigate params to show an item */
   navParam?: string;
+  /** add computed "_" fields to list / get output (totals, status, names) */
+  enrich?: (items: any[], doc: any) => any[];
 }
 
 const v = (opts: readonly Option[] | readonly string[]): string[] => opts.map((o: any) => (typeof o === 'string' ? o : o.value));

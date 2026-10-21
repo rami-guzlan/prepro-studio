@@ -4,7 +4,7 @@
 import type { PaperSize } from '@/types';
 import type { Formatters } from '@/lib/format';
 import type { Orientation, PrintOptionDef, PrintOutput } from '@/print/types';
-import type { SpaceData } from '../types';
+import type { SpaceData, SpaceKind } from '../types';
 
 export interface SpacePrintContext {
   space: SpaceData;
@@ -25,7 +25,9 @@ export interface SpacePrintDocDef {
   /** must start with "space-" */
   id: string;
   title: string;
-  group: 'Overview' | 'Strategy' | 'Content' | 'Calendar' | 'Production' | 'Results';
+  group: 'Overview' | 'Strategy' | 'Content' | 'Calendar' | 'Production' | 'Results' | 'Business' | 'Sales' | 'Work' | 'Library' | 'Money' | 'Finances' | 'Training';
+  /** kinds of space the document belongs to (default ['marketing']) */
+  kinds?: SpaceKind[];
   description?: string;
   orientation?: Orientation;
   options?: PrintOptionDef[];

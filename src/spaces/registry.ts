@@ -1,5 +1,8 @@
-/* Modules of a Marketing Space (sidebar). Each lives in src/spaces/modules/<id>/
-   with index.tsx (default export: the screen) and optionally print.tsx. */
+/* Sidebar modules of a space, per kind. Marketing modules live in
+   src/spaces/modules/<id>/ (index.tsx default export = the screen, optional
+   print.tsx); business / finance / training modules are declared by their kind
+   (src/spaces/<kind>/index.ts). "settings" is shared by every kind and "print"
+   (Print & Export) shows the documents of the open space's kind. */
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import {
   BarChart3,
@@ -19,16 +22,27 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SpaceModuleId } from '@/store/app';
+import type { SpaceKind } from './types';
+import type { SpaceKindDef } from './kinds';
+import { businessKind } from './business';
+import { financeKind } from './finance';
+import { trainingKind } from './training';
 
 export interface SpaceModuleDef {
   id: SpaceModuleId;
   label: string;
-  group: 'Plan' | 'Create' | 'Publish' | 'Measure' | 'Library' | 'Output' | 'Space';
+  /** sidebar group (see groupsFor(kind) for the order) */
+  group: string;
   icon: LucideIcon;
   description: string;
   component: LazyExoticComponent<ComponentType>;
 }
 
+/** Shared by every kind. */
+export const SETTINGS_MODULE: SpaceModuleDef = { id: 'settings', label: 'Space Settings', group: 'Space', icon: Settings, description: 'Name, look and formats', component: lazy(() => import('./modules/settings')) };
+export const PRINT_MODULE: SpaceModuleDef = { id: 'print', label: 'Print & Export', group: 'Output', icon: Printer, description: 'Documents of this space as PDF', component: lazy(() => import('./modules/print')) };
+
+/** Marketing Space modules. */
 export const SPACE_MODULES: SpaceModuleDef[] = [
   { id: 'overview', label: 'Overview', group: 'Plan', icon: Gauge, description: 'Goals, pipeline, what’s next', component: lazy(() => import('./modules/overview')) },
   { id: 'strategy', label: 'Strategy', group: 'Plan', icon: Compass, description: 'Goals, audiences, pillars, messaging, tactics', component: lazy(() => import('./modules/strategy')) },
@@ -42,9 +56,34 @@ export const SPACE_MODULES: SpaceModuleDef[] = [
   { id: 'people', label: 'People & Brands', group: 'Measure', icon: Handshake, description: 'Relationships, leads and brand deals', component: lazy(() => import('./modules/people')) },
   { id: 'assets', label: 'Brand Kit & Assets', group: 'Library', icon: Palette, description: 'Logos, colours, fonts, templates', component: lazy(() => import('./modules/assets')) },
   { id: 'projects', label: 'Linked Projects', group: 'Library', icon: Link2, description: 'Productions this space promotes', component: lazy(() => import('./modules/projects')) },
-  { id: 'print', label: 'Print & Export', group: 'Output', icon: Printer, description: 'Briefs, calendars, plans as PDF', component: lazy(() => import('./modules/print')) },
-  { id: 'settings', label: 'Space Settings', group: 'Space', icon: Settings, description: 'Name, type, look and formats', component: lazy(() => import('./modules/settings')) },
+  PRINT_MODULE,
+  SETTINGS_MODULE,
 ];
 
-export const SPACE_MODULE_BY_ID = Object.fromEntries(SPACE_MODULES.map((m) => [m.id, m])) as Record<SpaceModuleId, SpaceModuleDef>;
-export const SPACE_GROUPS: SpaceModuleDef['group'][] = ['Plan', 'Create', 'Publish', 'Measure', 'Library', 'Output'];
+export const SPACE_MODULE_BY_ID = Object.fromEntries(SPACE_MODULES.map((m) => [m.id, m])) as Record<string, SpaceModuleDef>;
+export const SPACE_GROUPS = ['Plan', 'Create', 'Publish', 'Measure', 'Library', 'Output'];
+
+const KIND_DEFS: Record<Exclude<SpaceKind, 'marketing'>, SpaceKindDef> = { business: businessKind, finance: financeKind, training: trainingKind };
+
+/** Modules of a kind (always ending with Print & Export and Space Settings). */
+export function modulesFor(kind: SpaceKind): SpaceModuleDef[] {
+  if (kind === 'marketing') return SPACE_MODULES;
+  const own = KIND_DEFS[kind].modules.filter((m) => m.id !== 'print' && m.id !== 'settings');
+  return [...own, PRINT_MODULE, SETTINGS_MODULE];
+}
+
+/** Sidebar group order of a kind (settings is drawn separately). */
+export function groupsFor(kind: SpaceKind): string[] {
+  if (kind === 'marketing') return SPACE_GROUPS;
+  const g = KIND_DEFS[kind].groups.filter((x) => x !== 'Output' && x !== 'Space');
+  return [...g, 'Output'];
+}
+
+export function moduleDefFor(kind: SpaceKind, id: string): SpaceModuleDef {
+  const list = modulesFor(kind);
+  return list.find((m) => m.id === id) ?? list[0];
+}
+
+export function kindDef(kind: Exclude<SpaceKind, 'marketing'>): SpaceKindDef {
+  return KIND_DEFS[kind];
+}

@@ -1,0 +1,321 @@
+/* Phone layout (≤ 760px, see src/ui/phone.ts): the sidebar becomes a slide-out
+   drawer, a bottom tab bar holds each workspace's main modules, module headers
+   get a menu button and let their actions scroll, dialogs become sheets.
+   Module-specific phone rules live next to each module's own CSS. */
+
+.phone-menu-btn,
+.phone-tabs,
+.phone-backdrop {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --header-h: 48px;
+    --phone-tabs-h: 58px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html,
+  body {
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ------------------------------------------------------------ shell */
+
+  .app,
+  .app.sidebar-collapsed {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+  .app > .main {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .app > .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(86vw, 320px);
+    z-index: 900;
+    transform: translateX(-104%);
+    visibility: hidden;
+    transition: transform 0.22s ease, visibility 0.22s;
+    box-shadow: var(--shadow-lg);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: var(--safe-bottom);
+  }
+  .app.nav-open > .sidebar {
+    transform: none;
+    visibility: visible;
+  }
+  .app > .phone-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 899;
+    background: var(--overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .app.nav-open > .phone-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* the desktop collapse toggle has no meaning in the drawer */
+  .sidebar .sidebar-bottom > :last-child {
+    display: none;
+  }
+  .sidebar .nav-item {
+    min-height: 42px;
+    font-size: 14px;
+  }
+  .sidebar .nav-item svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .phone-tabs {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    flex-shrink: 0;
+    height: calc(var(--phone-tabs-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+  }
+  .phone-tabs button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: var(--text-3);
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .phone-tabs button svg {
+    width: 21px;
+    height: 21px;
+  }
+  .phone-tabs button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 2px;
+  }
+  .phone-tabs button.on {
+    color: var(--accent);
+  }
+
+  /* ------------------------------------------------------------ module chrome */
+
+  .module-header {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 6px 10px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
+    min-height: var(--header-h);
+  }
+  .app .module-header .phone-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin-left: -4px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: var(--text);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .phone-menu-btn:active {
+    background: var(--bg-active);
+  }
+  .module-header .module-header-icon {
+    display: none !important;
+  }
+  .module-header .titles {
+    flex: 1 1 120px;
+  }
+  .module-header h1 {
+    font-size: 17px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* actions stay on the title row when they fit, otherwise get their own scrolling row */
+  .module-header .actions {
+    flex: 0 1 auto;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    justify-content: flex-start;
+  }
+  .module-header .actions > * {
+    flex-shrink: 0;
+  }
+  .module-header > :not(.titles):not(.actions):not(.phone-menu-btn):not(.module-header-icon) {
+    max-width: 100%;
+  }
+
+  .module-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 6px 10px;
+  }
+  .module-toolbar > * {
+    flex-shrink: 0;
+  }
+  .module-body.padded {
+    padding: 12px;
+  }
+  .underline-tabs {
+    padding: 0 6px;
+    scrollbar-width: none;
+  }
+  .underline-tabs button {
+    flex-shrink: 0;
+  }
+  .tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs button {
+    flex-shrink: 0;
+    height: 30px;
+  }
+
+  /* list / detail panes stack */
+  .split {
+    flex-direction: column;
+    overflow: auto;
+  }
+  .split > .pane-left {
+    width: auto;
+    max-height: 42dvh;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .split > .pane-main {
+    overflow: visible;
+    flex: 1 0 auto;
+  }
+  .split > .pane-right {
+    width: auto;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    overflow: visible;
+  }
+
+  /* ------------------------------------------------------------ overlays */
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal,
+  .modal.sm,
+  .modal.lg,
+  .modal.xl {
+    max-width: none;
+    max-height: calc(100dvh - 28px);
+    border-radius: 16px 16px 0 0;
+    border-bottom: 0;
+    padding-bottom: var(--safe-bottom);
+  }
+  .modal.lg,
+  .modal.xl,
+  .modal.full {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .modal-header {
+    padding: 10px 14px;
+  }
+  .modal-body {
+    padding: 14px;
+  }
+  .modal-footer {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+  .popover {
+    max-width: calc(100vw - 16px);
+    max-height: 60dvh;
+  }
+  .menu-item {
+    min-height: 38px;
+    font-size: 14px;
+  }
+  .toasts {
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--phone-tabs-h) + var(--safe-bottom) + 10px);
+    align-items: stretch;
+  }
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* ------------------------------------------------------------ library */
+
+  .home {
+    height: 100dvh;
+  }
+  .home-inner {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(40px + var(--safe-bottom));
+  }
+  .home-hero {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .home-hero > .spacer {
+    display: none;
+  }
+  .brand {
+    flex-basis: 100%;
+  }
+  .brand h1 {
+    font-size: 20px;
+  }
+  .home-tabs {
+    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .home-tabbar {
+    flex-wrap: nowrap;
+  }
+  .project-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+}
+
+/* finger-sized hit areas wherever the pointer is coarse, whatever the width */
+@media (pointer: coarse) {
+  .btn.sm {
+    min-height: 32px;
+    min-width: 32px;
+  }
+}

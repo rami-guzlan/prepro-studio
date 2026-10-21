@@ -23,21 +23,13 @@ export type ModuleId =
   | 'printcenter'
   | 'settings';
 
-export type SpaceModuleId =
-  | 'overview'
-  | 'strategy'
-  | 'ideas'
-  | 'content'
-  | 'calendar'
-  | 'production'
-  | 'campaigns'
-  | 'channels'
-  | 'assets'
-  | 'results'
-  | 'people'
-  | 'projects'
-  | 'print'
-  | 'settings';
+/** Module of the open space. Marketing: overview, strategy, ideas, content, calendar, production,
+    campaigns, channels, assets, results, people, projects; every kind: print, settings; other kinds
+    declare their own (src/spaces/<kind>/index.ts). */
+export type SpaceModuleId = string;
+
+/** Library tabs: Productions, Spaces (Marketing / Business), Personal Finances, Training. */
+export type HomeTab = 'projects' | 'spaces' | 'business' | 'finance' | 'training';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -52,13 +44,15 @@ interface AppState {
   /** module of the open Marketing Space */
   spaceModuleId: SpaceModuleId;
   /** library tab */
-  homeTab: 'projects' | 'spaces';
+  homeTab: HomeTab;
   /** optional parameters for the module, e.g. { sceneId } or { dayId } */
   params: Record<string, any>;
   /** increments on every navigate() so modules can react to repeated navigation */
   navKey: number;
   theme: Theme;
   sidebarCollapsed: boolean;
+  /** phone layout: the slide-out navigation drawer is open */
+  navOpen: boolean;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   saveError?: string;
   lastSavedAt?: number;
@@ -89,11 +83,12 @@ export const useApp = create<AppState>(() => ({
   view: 'home',
   moduleId: 'overview',
   spaceModuleId: 'overview',
-  homeTab: readLS<'projects' | 'spaces'>('prepro.homeTab', 'projects'),
+  homeTab: readLS<HomeTab>('prepro.homeTab', 'projects'),
   params: {},
   navKey: 0,
   theme: readLS<Theme>('prepro.theme', 'system'),
   sidebarCollapsed: readLS<boolean>('prepro.sidebarCollapsed', false),
+  navOpen: false,
   saveStatus: 'idle',
   print: null,
   shortcutsOpen: false,
@@ -101,25 +96,30 @@ export const useApp = create<AppState>(() => ({
 
 /** Go to a module of the open project, optionally with params (e.g. navigate('script', { sceneId })). */
 export function navigate(moduleId: ModuleId, params: Record<string, any> = {}) {
-  useApp.setState((s) => ({ view: 'project', moduleId, params, navKey: s.navKey + 1 }));
+  useApp.setState((s) => ({ view: 'project', moduleId, params, navKey: s.navKey + 1, navOpen: false }));
   const pid = (window as any).__preproProjectId as string | undefined;
   if (pid) writeLS(`prepro.lastModule.${pid}`, moduleId);
 }
 
 /** Go to a module of the open Marketing Space, optionally with params (e.g. navigateSpace('content', { contentId })). */
 export function navigateSpace(moduleId: SpaceModuleId, params: Record<string, any> = {}) {
-  useApp.setState((s) => ({ view: 'space', spaceModuleId: moduleId, params, navKey: s.navKey + 1 }));
+  useApp.setState((s) => ({ view: 'space', spaceModuleId: moduleId, params, navKey: s.navKey + 1, navOpen: false }));
   const sid = (window as any).__preproSpaceId as string | undefined;
   if (sid) writeLS(`prepro.lastSpaceModule.${sid}`, moduleId);
 }
 
-export function setHomeTab(tab: 'projects' | 'spaces') {
+export function setHomeTab(tab: HomeTab) {
   writeLS('prepro.homeTab', tab);
   useApp.setState({ homeTab: tab });
 }
 
 export function goHome() {
-  useApp.setState({ view: 'home', params: {} });
+  useApp.setState({ view: 'home', params: {}, navOpen: false });
+}
+
+/** Phone layout: open or close the navigation drawer. */
+export function setNavOpen(open: boolean) {
+  useApp.setState({ navOpen: open });
 }
 
 export function setTheme(theme: Theme) {

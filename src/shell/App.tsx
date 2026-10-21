@@ -1,7 +1,7 @@
 import { Component, Suspense, useEffect, type ReactNode } from 'react';
 import { Loader2, TriangleAlert } from 'lucide-react';
 import { MODULE_BY_ID } from '@/modules/registry';
-import { navigate, navigateSpace, toggleSidebar, useApp } from '@/store/app';
+import { navigate, navigateSpace, toggleSidebar, useApp, type ModuleId } from '@/store/app';
 import { redo, undo, useProjectStore } from '@/store/project';
 import { spaceRedo, spaceUndo, useSpaceStore } from '@/store/space';
 import { flushSave, startAutosave } from '@/store/autosave';
@@ -15,7 +15,15 @@ import { Sidebar } from './Sidebar';
 import { ShortcutsDialog } from './ShortcutsDialog';
 import { AgentDialog } from './AgentDialog';
 import { SpaceWorkspace } from './SpaceWorkspace';
-import { confirmResetDemoSpace, leaveSpace, openDemoSpace } from './spaceActions';
+import { PHONE_TABS, PhoneNavBackdrop, PhoneTabBar } from './PhoneNav';
+import { useIsPhone } from '@/ui/phone';
+import { FinanceLockHost, useFinanceLock } from '@/spaces/finance/lock';
+
+// automated tests (isolated data folder + explicit flag): start with the finances unlocked
+void backend.info().then((i) => {
+  if (i.testUnlockFinances || (window as any).prepro?.selftest) useFinanceLock.setState({ unlocked: true, lastActive: Date.now() });
+}).catch(() => {});
+import { confirmResetDemoSpace, leaveSpace, openDemoSpace, openSingleton } from './spaceActions';
 import { initAgentActivity, openAgentDialog } from '@/agent/state';
 import { confirmResetDemo, exportArchive, importArchive, importScriptAsNewProject, leaveProject, openDemo, reopenLastProject, revealCurrentProject } from './projectActions';
 
@@ -72,6 +80,17 @@ export function handleCommand(cmd: string) {
       if (inProject()) leaveProject().then(() => setTimeout(() => runCommand('new-space'), 50));
       else if (inSpace()) leaveSpace().then(() => setTimeout(() => runCommand('new-space'), 50));
       else runCommand('new-space');
+      break;
+    case 'new-business':
+      if (inProject()) leaveProject().then(() => setTimeout(() => runCommand('new-business'), 50));
+      else if (inSpace()) leaveSpace().then(() => setTimeout(() => runCommand('new-business'), 50));
+      else runCommand('new-business');
+      break;
+    case 'open-finances':
+      void openSingleton('finance');
+      break;
+    case 'open-training':
+      void openSingleton('training');
       break;
     case 'import-script':
       if (inProject()) navigate('script', { import: Date.now() });
@@ -243,12 +262,19 @@ class ModuleBoundary extends Component<{ children: ReactNode; moduleId: string }
 
 function Workspace() {
   const moduleId = useApp((s) => s.moduleId);
-  const collapsed = useApp((s) => s.sidebarCollapsed);
+  const phone = useIsPhone();
+  const collapsed = useApp((s) => s.sidebarCollapsed) && !phone;
+  const navOpen = useApp((s) => s.navOpen);
   const def = MODULE_BY_ID[moduleId] ?? MODULE_BY_ID.overview;
   const Comp = def.component;
+  const tabs = PHONE_TABS.project.map((t) => {
+    const m = MODULE_BY_ID[t.id as ModuleId];
+    return { id: t.id, label: t.label ?? m.label, icon: m.icon };
+  });
   return (
-    <div className={`app ${collapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`app ${collapsed ? 'sidebar-collapsed' : ''} ${navOpen ? 'nav-open' : ''}`}>
       <Sidebar />
+      <PhoneNavBackdrop />
       <main className="main">
         <ModuleBoundary moduleId={moduleId}>
           <Suspense
@@ -262,6 +288,7 @@ function Workspace() {
           </Suspense>
         </ModuleBoundary>
       </main>
+      {phone && <PhoneTabBar tabs={tabs} active={moduleId} onSelect={(id) => navigate(id as ModuleId)} />}
     </div>
   );
 }
@@ -289,6 +316,7 @@ export function App() {
       <PrintPreviewHost />
       <ShortcutsDialog />
       <AgentDialog />
+      <FinanceLockHost />
       <DialogHost />
       <ContextMenuHost />
       <ToastHost />

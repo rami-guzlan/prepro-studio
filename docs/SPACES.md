@@ -106,3 +106,15 @@ const fmt = useSpaceFormatters();   // fmt.date(iso) fmt.dateMedium fmt.time('18
 - Edits go through `src/spaces/modules/people/ops.ts` (one undo step each). The board groups by `boardColumnId`
   (a single-select column). Follow-up / due dates (`isFollowUpColumn`) feed `dueRows` (tab badge, subtitle, print).
 - Agents: `crm_read`, `crm_sheet`, `crm_rows` (values keyed by column name) and `add_resource` (src/agent/tools/crm.ts).
+
+## Space kinds
+Spaces have a kind (`meta.kind`): `marketing` (default), `business` (many), `finance` and `training` (one each).
+All kinds share the store, autosave, undo, folders (`KIND_FOLDERS` in electron/main.cjs), assets, print pipeline and the
+agent data tools. Each non-marketing kind lives in `src/spaces/<kind>/` and exports a `SpaceKindDef` from `index.ts`
+(sidebar modules, groups, print documents, `coachSummary` for the holistic coach, `navParams`), its data model and
+`normalize<Kind>()` from `types.ts` (stored in `SpaceData.business|finance|training`), and `sample<Kind>()` for the
+self-test. Agent collections, single fields and tools live in `src/agent/kinds/<kind>.ts`. `modulesFor(kind)` /
+`groupsFor(kind)` (registry) and `printDocsFor(kind)` (print registry) resolve per kind; Print & Export and Settings are
+shared. Personal Finances are gated by `src/spaces/finance/lock.tsx` (PIN hash in the app config; agents call
+`spaceOf('finance')` / `requireFinanceUnlocked()`). `studio_context` (src/agent/tools/coach.ts) aggregates every kind.
+

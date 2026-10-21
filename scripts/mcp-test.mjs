@@ -53,7 +53,7 @@ let app = null;
 async function startApp() {
   rmSync(DATA, { recursive: true, force: true });
   mkdirSync(DATA, { recursive: true });
-  app = spawn(electronExe, appArgs, { cwd: root, env: { ...process.env, PREPRO_DATA_DIR: DATA, PREPRO_MCP_PORT: String(PORT) }, stdio: 'ignore' });
+  app = spawn(electronExe, appArgs, { cwd: root, env: { ...process.env, PREPRO_DATA_DIR: DATA, PREPRO_MCP_PORT: String(PORT), PREPRO_TEST_UNLOCK_FINANCES: '1' }, stdio: 'ignore' });
   if (!(await waitHealthy(URL_))) throw new Error('app did not start');
 }
 
@@ -645,6 +645,128 @@ async function spaceScenario() {
   check('back to project', r.data?.openProject?.title === 'MCP Test Film' && !r.data?.openSpace, JSON.stringify(r.data?.openProject));
 }
 
+/* ------------------------------------------------------------ business, finances, training, coach */
+
+async function kindsScenario() {
+  let r;
+  const iso = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  // ---------------------------------------------------------------- business management
+  r = await call('create_business', { title: 'MCP Test Biz', type: 'freelance', legalName: 'MCP Test LLC', ownerName: 'Test Owner', jurisdiction: 'California' });
+  check('business created', !r.res.isError, r.text.slice(0, 200));
+  r = await call('list_spaces', { kind: 'business' });
+  check('list businesses', Array.isArray(r.data) && r.data.length === 1 && r.data[0].kind === 'business' && r.data[0].type === 'freelance', JSON.stringify(r.data));
+  r = await call('get_app_state', {});
+  check('business modules', /Business/.test(r.data?.openSpace?.kind ?? '') && ['invoices', 'expenses', 'time', 'legal', 'contractors'].every((m) => r.data?.modules?.some((x) => x.id === m)), JSON.stringify(r.data?.modules?.map((m) => m.id)));
+  r = await call('add_items', { collection: 'clients', items: [{ name: 'Ada Client', company: 'Analytical Co', email: 'ada@example.com', defaultRate: 100 }] });
+  r = await call('add_items', { collection: 'time_entries', items: [{ date: iso(0), minutes: 90, clientId: 'Ada Client', billable: true, description: 'Trailer edit session' }] });
+  check('time entry added', !r.res.isError, r.text.slice(0, 200));
+  r = await call('biz_invoice', { action: 'create', client: 'Ada Client', lines: [{ description: 'Trailer edit', qty: 1, unitPrice: 500 }], includeUnbilledTime: true });
+  check('invoice created', !r.res.isError, r.text.slice(0, 300));
+  r = await call('list_items', { collection: 'invoices' });
+  const inv = r.data?.items?.[0];
+  check('invoice total incl. unbilled time', r.data?.total === 1 && inv?._total === 650 && String(inv?._client).startsWith('Ada Client'), JSON.stringify(r.data?.items));
+  r = await call('biz_invoice', { action: 'status', invoice: inv?.number ?? inv?.id, status: 'paid' });
+  r = await call('biz_report', { period: 'this_month' });
+  check('report shows the paid invoice', !r.res.isError && r.text.includes('650'), r.text.slice(0, 300));
+  r = await call('biz_generate_document', { template: 'nda', party: { kind: 'client', id: 'Ada Client' } });
+  check('legal document generated', !r.res.isError && /Ada/.test(r.text) && /MCP Test LLC/.test(r.text), r.text.slice(0, 300));
+  r = await call('biz_timer', { action: 'start' });
+  r = await call('biz_timer', { action: 'stop' });
+  check('timer stop', !r.res.isError, r.text.slice(0, 200));
+  r = await call('show_in_app', { module: 'invoices' });
+  await call('show_in_app', { module: 'content' }, { expectError: true });
+
+  // strategy, growth, sales pipeline, projects, SOPs, resources
+  r = await call('set_fields', { values: { 'business.strategy.mission': 'Make trailers that sell films', 'business.strategy.positioning': 'The trailer studio for indie films' } });
+  check('strategy fields', !r.res.isError, r.text.slice(0, 200));
+  r = await call('add_items', { collection: 'offers', items: [{ name: 'Trailer package', price: 2500, active: true }] });
+  r = await call('add_items', { collection: 'goals', items: [{ title: 'Revenue this year', metric: 'revenue', target: 10000, period: 'ytd' }] });
+  r = await call('list_items', { collection: 'goals' });
+  check('goal progress computed', r.data?.items?.[0]?._current === 650, JSON.stringify(r.data?.items?.[0]));
+  r = await call('add_items', { collection: 'initiatives', items: [{ title: 'Festival outreach', status: 'in_progress', kpi: 'Inbound leads / month', baseline: 2, target: 10 }] });
+  check('initiative added', !r.res.isError, r.text.slice(0, 200));
+  r = await call('add_items', { collection: 'deals', items: [{ title: 'Indie feature trailer', clientId: 'Ada Client', value: 4000, stage: 'proposal', nextStep: 'Follow up on proposal', nextStepDate: iso(0) }] });
+  check('deal added', !r.res.isError, r.text.slice(0, 200));
+  r = await call('biz_pipeline', { action: 'summary' });
+  check('pipeline summary', !r.res.isError && r.text.includes('4000'), r.text.slice(0, 300));
+  r = await call('biz_pipeline', { action: 'log_activity', deal: 'Indie feature trailer', kind: 'call', text: 'Talked budget' });
+  check('deal activity', !r.res.isError, r.text.slice(0, 200));
+  r = await call('biz_pipeline', { action: 'move', deal: 'Indie feature trailer', stage: 'won' });
+  check('deal won', !r.res.isError, r.text.slice(0, 300));
+  r = await call('list_items', { collection: 'biz_projects' });
+  const proj = r.data?.items?.find((x) => x.name === 'Indie feature trailer');
+  check('winning creates a project', !!proj && proj.fee === 4000, JSON.stringify(r.data?.items));
+  r = await call('add_items', { collection: 'project_tasks', parentId: proj?.id, items: [{ title: 'Rough cut', due: iso(7) }, { title: 'Final delivery', due: iso(14), milestone: true }] });
+  check('project tasks', !r.res.isError, r.text.slice(0, 200));
+  r = await call('biz_project', { action: 'summary', project: proj?.id });
+  check('project summary', !r.res.isError && r.text.includes('4000'), r.text.slice(0, 300));
+  r = await call('add_items', { collection: 'testimonials', items: [{ quote: 'Best trailer we ever had.', author: 'Ada', permission: 'granted' }] });
+  check('testimonial added', !r.res.isError, r.text.slice(0, 200));
+  r = await call('add_items', { collection: 'portfolio', items: [{ title: 'Showreel 2026', kind: 'showreel', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }] });
+  check('portfolio added', !r.res.isError, r.text.slice(0, 200));
+  r = await call('add_items', { collection: 'resources', items: [{ title: 'Follow-up email', section: 'enablement', kind: 'text', text: 'Hi {name}, following up on the proposal.' }, { title: 'Brand kit', section: 'library', kind: 'link', url: 'https://example.com/brand' }] });
+  check('resources added', !r.res.isError, r.text.slice(0, 200));
+  r = await call('add_items', { collection: 'sops', items: [{ title: 'Client onboarding', kind: 'checklist' }] });
+  r = await call('list_items', { collection: 'sops' });
+  const sop = r.data?.items?.[0];
+  r = await call('add_items', { collection: 'sop_steps', parentId: sop?.id, items: [{ text: 'Send welcome email' }, { text: 'Share the brief form' }] });
+  r = await call('biz_sop', { action: 'start_run', sop: sop?.id, label: 'Ada' });
+  check('sop run started', !r.res.isError, r.text.slice(0, 200));
+  r = await call('biz_strategy', { action: 'report' });
+  check('strategy report', !r.res.isError && r.text.includes('Festival outreach'), r.text.slice(0, 300));
+  r = await call('list_documents', {});
+  const bizDocs = (r.data ?? []).map((d) => d.id);
+  check('business documents', ['space-biz-pipeline', 'space-biz-projects', 'space-biz-strategy', 'space-biz-sops', 'space-biz-growth', 'space-biz-portfolio'].every((id) => bizDocs.includes(id)), JSON.stringify(bizDocs));
+  r = await call('preview_document', { docId: 'space-biz-strategy' });
+  check('strategy preview image', r.images.length === 1);
+  r = await call('show_in_app', { module: 'pipeline' });
+  check('show pipeline', !r.res.isError, r.text.slice(0, 200));
+
+  // ---------------------------------------------------------------- personal finances (this test instance starts unlocked)
+  r = await call('open_finances', {});
+  check('open finances', !r.res.isError, r.text.slice(0, 200));
+  const CSV = 'Date,Description,Amount\n2026-10-01,NETFLIX.COM,-15.99\n2026-10-02,Paycheck ACME,2500.00\n2026-10-03,WHOLE FOODS MARKET,-82.10\n';
+  r = await call('finance_import_transactions', { createAccount: { name: 'Test Checking', type: 'checking' }, csvText: CSV });
+  check('statement imported', !r.res.isError, r.text.slice(0, 300));
+  r = await call('finance_import_transactions', { accountId: 'Test Checking', csvText: CSV });
+  r = await call('list_items', { collection: 'transactions' });
+  check('duplicates skipped', r.data?.total === 3, JSON.stringify(r.data?.total));
+  r = await call('finance_report', { period: 'all' });
+  check('finance report', !r.res.isError && r.text.includes('2500'), r.text.slice(0, 300));
+  r = await call('finance_add_advice', { title: 'Test advice', body: 'Keep three months of expenses as a buffer.' });
+  check('advice saved', !r.res.isError, r.text.slice(0, 200));
+  r = await call('finance_budget', { action: 'read' });
+  check('budget read', !r.res.isError && /ready/i.test(r.text), r.text.slice(0, 300));
+  r = await call('list_items', { collection: 'categories' });
+  const cat = r.data?.items?.find((c) => c.kind !== 'income' && c.kind !== 'transfer') ?? r.data?.items?.[0];
+  r = await call('finance_budget', { action: 'assign', category: cat?.id, amount: 100 });
+  check('budget assign', !r.res.isError, r.text.slice(0, 300));
+  r = await call('finance_budget', { action: 'auto_assign', mode: 'underfunded', dryRun: true });
+  check('budget auto-assign dry run', !r.res.isError, r.text.slice(0, 300));
+  r = await call('show_in_app', { module: 'budgets' });
+  check('show budget', !r.res.isError, r.text.slice(0, 200));
+
+  // ---------------------------------------------------------------- training
+  r = await call('open_training', {});
+  check('open training', !r.res.isError, r.text.slice(0, 200));
+  r = await call('training_log', { weight: 80, weightUnit: 'kg', checkIn: { text: 'Feeling strong today', mood: 4, energy: 4 }, workout: { name: 'Test session', exercises: [{ exercise: 'Bench Press', sets: [{ weight: 60, reps: 8 }, { weight: 62.5, reps: 6 }] }] } });
+  check('training logged', !r.res.isError, r.text.slice(0, 300));
+  r = await call('list_items', { collection: 'check_ins' });
+  check('check-in stored', r.data?.total >= 1, JSON.stringify(r.data?.total));
+  r = await call('list_items', { collection: 'sessions' });
+  check('session stored', r.data?.total >= 1, JSON.stringify(r.data?.total));
+  r = await call('training_report', { period: '28d' });
+  check('training report', !r.res.isError, r.text.slice(0, 200));
+
+  // ---------------------------------------------------------------- holistic coach
+  r = await call('studio_context', {});
+  check('studio context', !!r.data?.training && !r.data?.finance?.locked && Array.isArray(r.data?.business) && r.data.business.length === 1 && Array.isArray(r.data?.productions), JSON.stringify(r.data).slice(0, 400));
+}
+
 /* ------------------------------------------------------------ main */
 
 async function main() {
@@ -658,6 +780,7 @@ async function main() {
   try {
     await scenario();
     await spaceScenario();
+    await kindsScenario();
   } finally {
     await client.close().catch(() => {});
   }

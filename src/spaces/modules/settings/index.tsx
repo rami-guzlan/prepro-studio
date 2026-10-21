@@ -1,6 +1,7 @@
 /* Space Settings: identity, look, formats, print defaults, backups. */
 import { useEffect, useState } from 'react';
-import { Copy, History, RotateCcw, Settings, Trash2 } from 'lucide-react';
+import { Copy, History, KeyRound, Lock, RotateCcw, Settings, Trash2 } from 'lucide-react';
+import { lockFinances, requestPinChange } from '@/spaces/finance/lock';
 import type { SpaceType } from '@/spaces/types';
 import { SPACE_TYPES } from '@/spaces/constants';
 import { normalizeSpace } from '@/spaces/defaults';
@@ -18,7 +19,7 @@ export default function SpaceSettingsModule() {
 
   return (
     <div className="module">
-      <ModuleHeader title="Space Settings" icon={Settings} subtitle="Name, look, formats and print defaults of this space" />
+      <ModuleHeader title={(meta.kind ?? 'marketing') === 'marketing' ? 'Space Settings' : 'Settings'} icon={Settings} subtitle="Name, look, formats and print defaults" />
       <div className="module-body padded">
         <div className="col" style={{ gap: 16, maxWidth: 920 }}>
           <Card title="Identity">
@@ -26,9 +27,11 @@ export default function SpaceSettingsModule() {
               <Field label="Name">
                 <Input value={meta.title} onChange={(v) => set((d) => void (d.meta.title = v), 'title')} onBlur={() => backend.setWindowTitle?.(meta.title)} />
               </Field>
-              <Field label="Type">
-                <Select value={meta.type} onChange={(v) => set((d) => void (d.meta.type = v as SpaceType), 'type')} options={SPACE_TYPES.map((t) => ({ value: t.value, label: t.label }))} />
-              </Field>
+              {(meta.kind ?? 'marketing') === 'marketing' && (
+                <Field label="Type">
+                  <Select value={meta.type} onChange={(v) => set((d) => void (d.meta.type = v as SpaceType), 'type')} options={SPACE_TYPES.map((t) => ({ value: t.value, label: t.label }))} />
+                </Field>
+              )}
               <Field label="Owner">
                 <Input value={meta.owner ?? ''} onChange={(v) => set((d) => void (d.meta.owner = v || undefined), 'owner')} placeholder="You, your team or the client" />
               </Field>
@@ -132,11 +135,31 @@ export default function SpaceSettingsModule() {
 
           <Backups spaceId={id} />
 
-          <Card title="Space">
+          {meta.kind === 'finance' && (
+            <Card title="Security">
+              <div className="col" style={{ gap: 10 }}>
+                <p className="muted small" style={{ margin: 0 }}>
+                  Your finances unlock with a PIN for this app session and lock again after 15 idle minutes or when the app closes. Connected AI agents can only read them while unlocked. This is an access lock: the files on disk are not encrypted.
+                </p>
+                <div className="row wrap" style={{ gap: 10 }}>
+                  <Button icon={KeyRound} onClick={async () => { if (await requestPinChange()) toast('PIN changed'); }}>
+                    Change PIN
+                  </Button>
+                  <Button icon={Lock} onClick={() => lockFinances()}>
+                    Lock now
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          <Card title={(meta.kind ?? 'marketing') === 'marketing' ? 'Space' : 'Data'}>
             <div className="row wrap" style={{ gap: 10 }}>
-              <Button icon={Copy} onClick={() => duplicateSpace(id, meta.title)}>
-                Duplicate space
-              </Button>
+              {(meta.kind === 'marketing' || meta.kind === 'business' || !meta.kind) && (
+                <Button icon={Copy} onClick={() => duplicateSpace(id, meta.title)}>
+                  Duplicate
+                </Button>
+              )}
               <Button
                 variant="danger"
                 icon={Trash2}
@@ -150,7 +173,7 @@ export default function SpaceSettingsModule() {
                   if (ok) await deleteSpace(id);
                 }}
               >
-                Delete space
+                Delete {(meta.kind ?? 'marketing') === 'marketing' ? 'space' : (meta.kind === 'business' ? 'business' : 'all data')}
               </Button>
             </div>
           </Card>

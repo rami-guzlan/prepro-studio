@@ -1,9 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { Download, FileDown, Printer, Sheet, type LucideIcon } from 'lucide-react';
+import { Download, FileDown, Menu as MenuIcon, Printer, Sheet, type LucideIcon } from 'lucide-react';
 import type { Option } from '@/lib/constants';
 import { initials } from '@/lib/text';
 import { assetUrl } from '@/backend';
-import { openPrint } from '@/store/app';
+import { openPrint, setNavOpen } from '@/store/app';
 import { Button } from './Button';
 import { Menu, type MenuItem } from './Menu';
 
@@ -12,8 +12,11 @@ import { Menu, type MenuItem } from './Menu';
 export function ModuleHeader({ title, subtitle, icon: Icon, actions, children }: { title: ReactNode; subtitle?: ReactNode; icon?: LucideIcon; actions?: ReactNode; children?: ReactNode }) {
   return (
     <div className="module-header">
+      <button type="button" className="phone-menu-btn" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+        <MenuIcon size={20} />
+      </button>
       {Icon && (
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div className="module-header-icon" style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon size={17} />
         </div>
       )}

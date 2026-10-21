@@ -5,7 +5,9 @@ import { backend } from '@/backend';
 import { navigate, navigateSpace, openPrint, useApp, type ModuleId, type SpaceModuleId } from '@/store/app';
 import { redo as storeRedo, undo as storeUndo, update, useProjectStore } from '@/store/project';
 import { spaceRedo, spaceUndo, useSpaceStore } from '@/store/space';
-import { SPACE_MODULES } from '@/spaces/registry';
+import { SPACE_MODULES, kindDef, modulesFor, moduleDefFor } from '@/spaces/registry';
+import { KIND_INFO } from '@/spaces/kinds';
+import type { SpaceKind } from '@/spaces/types';
 import { getSpacePrintDoc } from '@/spaces/print/registry';
 import { openContent, type ContentTab } from '@/spaces/ui';
 import { syncCharactersDraft } from '@/derived/script';
@@ -29,6 +31,11 @@ function boardNames(): string[] | undefined {
 
 const MODULE_IDS = MODULES.map((m) => m.id) as ModuleId[];
 const SPACE_MODULE_IDS = SPACE_MODULES.map((m) => m.id) as SpaceModuleId[];
+const ALL_SPACE_MODULE_IDS = [...new Set((['marketing', 'business', 'finance', 'training'] as SpaceKind[]).flatMap((k) => modulesFor(k).map((m) => m.id)))];
+
+function navParamsFor(kind: SpaceKind, id: string): string | undefined {
+  return kind === 'marketing' ? SPACE_NAV_PARAMS[id] : kindDef(kind).navParams?.[id];
+}
 const SPACE_NAV_PARAMS: Partial<Record<SpaceModuleId, string>> = {
   strategy: 'tab ("goals" | "audience" | "pillars" | "messaging" | "tactics" | "notes")',
   content: 'stage, contentId',
@@ -83,12 +90,12 @@ export const appTools = [
         return {
           data: clean({
             app: { version: info.version, projectsFolder: info.projectsDir },
-            screen: { module: app.spaceModuleId, label: SPACE_MODULES.find((x) => x.id === app.spaceModuleId)?.label, params: Object.keys(app.params ?? {}).length ? app.params : undefined },
-            openSpace: clean({ id: s.id, title: s.meta.title, type: s.meta.type, description: s.meta.description, content: s.content.length, channels: s.channels.map((c) => c.name), linkedProjects: s.projectIds.length || undefined, ideaBoards: boardNames(), demo: s.meta.demo || undefined }),
+            screen: { module: app.spaceModuleId, label: moduleDefFor(s.meta.kind ?? 'marketing', app.spaceModuleId).label, params: Object.keys(app.params ?? {}).length ? app.params : undefined },
+            openSpace: clean({ id: s.id, title: s.meta.title, kind: KIND_INFO[s.meta.kind ?? 'marketing'].label, type: (s.meta.kind ?? 'marketing') === 'marketing' ? s.meta.type : undefined, description: s.meta.description, content: s.content.length, channels: s.channels.map((c) => c.name), linkedProjects: s.projectIds.length || undefined, ideaBoards: boardNames(), demo: s.meta.demo || undefined }),
             saved: sp.version === sp.savedVersion ? 'all changes saved' : 'saving soon',
             undo: { canUndo: sp.past.length > 0, canRedo: sp.future.length > 0 },
             recentAgentChanges: journal.slice(-6).map((j) => j.summary),
-            modules: SPACE_MODULES.map((x) => clean({ id: x.id, label: x.label, about: x.description, showParams: SPACE_NAV_PARAMS[x.id] })),
+            modules: modulesFor(s.meta.kind ?? 'marketing').map((x) => clean({ id: x.id, label: x.label, about: x.description, showParams: navParamsFor(s.meta.kind ?? 'marketing', x.id) })),
             note: 'A Marketing Space is open: the generic data tools work on its collections (content, posts, channels, pillars, goals, campaigns, milestones, shoots, assets …). Project tools (script, lighting, schedule, call sheets) need a project open.',
           }),
         };
@@ -256,7 +263,7 @@ export const appTools = [
     noStep: true,
     global: true,
     input: obj({
-      module: opt(enm([...new Set([...MODULE_IDS, ...SPACE_MODULE_IDS])] as string[])),
+      module: opt(enm([...new Set([...MODULE_IDS, ...ALL_SPACE_MODULE_IDS])] as string[])),
       params: opt(anyObj('module parameters (see get_app_state → modules.showParams)')),
       content: opt(obj({ contentId: str(), tab: opt(enm(['brief', 'write', 'produce', 'publish', 'results'] as const)) }, 'spaces: open a content piece in the editor')),
       document: opt(obj({ docId: str(), options: opt(anyObj()) })),
@@ -267,7 +274,8 @@ export const appTools = [
       if (!a.module && !a.document && !a.content) fail('Pass a module, a content piece or a document.');
       if (kind === 'space') {
         if (a.module) {
-          if (!SPACE_MODULE_IDS.includes(a.module as SpaceModuleId)) fail(`"${a.module}" is not a space module. Space modules: ${SPACE_MODULE_IDS.join(', ')}`);
+          const ids = modulesFor(useSpaceStore.getState().space?.meta.kind ?? 'marketing').map((m) => m.id);
+          if (!ids.includes(a.module)) fail(`"${a.module}" is not a module of the open space. Modules: ${ids.join(', ')}`);
           navigateSpace(a.module as SpaceModuleId, a.params ?? {});
         }
         if (a.content) {

@@ -5,9 +5,13 @@ short films, commercials, corporate and training videos, social content, music v
 Write the script, build storyboards and shot lists, draw lighting plots, manage cast, crew and locations,
 break down the script, schedule the shoot, send call sheets, plan gear, budget and post. Run your marketing in
 **Marketing Spaces**: strategy, ideas, multiformat content from first draft to published post, a visual content
-calendar and results. Then **print or export everything as PDF**.
+calendar and results. Run the business side in **Business Management**, keep your money in a PIN-locked
+**Personal Finances** space and your health in **Training**. Then **print or export everything as PDF**.
 
-Nothing goes to the cloud. Every project is a normal folder on your computer.
+Nothing goes to the cloud. Everything is a normal folder on your computer.
+
+The library has four tabs: **Productions** · **Spaces ▾** (Marketing Spaces / Business Management) ·
+**Personal Finances** · **Training**.
 
 ---
 
@@ -45,6 +49,11 @@ npm run mcp-test    # drives every AI-agent (MCP) tool through the official MCP 
 - **Export project archive (.zip)** to back up or move a project to another computer, and **Import archive** to bring it back.
 - Saving is automatic. *Project Settings → Automatic backups* restores an earlier snapshot.
 - Deleting a project moves its folder to the Windows Recycle Bin.
+- Spaces live next to them: `Marketing Spaces\`, `Businesses\`, `Personal Finances\` and `Training\` (each `<name>__<id>\space.json`
+  + `assets\` + `backups\`).
+- **Personal Finances are locked with a PIN** (stored only as a salted hash in the app's settings, never in this repository).
+  They unlock for the session, lock again after 15 idle minutes or when the app closes, and connected AI agents can only read
+  them while unlocked. This is an access lock — the files themselves are not encrypted.
 
 ## Demo project
 *The Last Take* is a complete sample production with every module filled in (script, mind dump, storyboard, lighting
@@ -118,6 +127,36 @@ Spaces are saved in `Documents\PrePro Studio Projects\Marketing Spaces\<name>__<
 `backups\`). **Help → Open Demo Marketing Space** opens *The Last Take — Release Campaign* with every screen filled in.
 AI agents connected over MCP can open, create and fill spaces too (content with posts, the calendar, strategy, ideas,
 reports and PDFs).
+
+## Business Management
+One space per side hustle, business you're part of or income stream (Spaces ▾ → Business Management → **New business**).
+Link the Marketing Spaces and Productions it runs (Work → Marketing & Productions). Inside:
+- **Overview** — income first (month / year, profit, receivables), then the sales pipeline and open projects, goals and
+  growth initiatives, due dates and the 12-month chart.
+- **Strategy** (mission, positioning, offers and prices, goals with live progress, priorities, SWOT, competitors) and
+  **Growth** (initiatives with a KPI from baseline to target, check-ins, budget vs spend, steps).
+- **Sales** — a pipeline board from lead to won (winning a deal creates the project), Sales Enablement (pitch decks, case
+  studies, pricing, scripts and email templates to copy), Testimonials (with permission to use them) and Portfolio & Reels.
+- **Work** — Projects with tasks and milestones, fee, invoices, money received, costs, contractors and legal documents
+  linked together; Marketing & Productions.
+- **Money / People / Legal** — invoices with PDF, income streams, expenses with receipts, time tracking, clients,
+  contractors and the pay you agreed, legal documents generated from templates (contractor agreement, NDA, statement of
+  work, services, revenue share, release, sponsorship …).
+- **Library** — Workflows & SOPs you can run as checklists, and Resources (templates, brand assets, files and links).
+Every section exports to PDF (and CSV where it is a list) from its Print / Export menu and from Print & Export.
+Generated documents are templates, not legal advice: have a lawyer review them before signing.
+
+## Personal Finances
+Import debit and credit card statements (CSV, OFX/QFX, PDF), categorise transactions with rules, and get a dashboard,
+budgets, goals, a debt payoff and savings planner, and insights. Connected AI agents can import statements they find in your
+email (with their own email connector), report on spending and save advice — only while you have unlocked the finances.
+Not financial advice.
+
+## Training
+Goals, a macro calculator, a meal library with a weekly meal plan and generated grocery lists, a workout program with
+session logging and progress charts, body metrics, daily check-ins, and daily progress photos with a timelapse player
+(adjustable speed, export as video). Log conversationally through any connected AI; the `studio_context` tool lets it coach
+holistically across work, money and training. Not medical advice.
 
 ## Writing the script (Final Draft-style)
 

@@ -15,6 +15,12 @@ import { defaultChecklist, makeChecklistItem, makeContent, makePost, makeShot } 
 import { goalProgress } from '@/spaces/derive';
 import { COLLECTION_NAMES, type CollectionDef, type FieldSpec } from '../collections';
 import { SPACE_COLLECTIONS, SPACE_COLLECTION_BY_NAME } from '../spaceCollections';
+import { BUSINESS_COLLECTIONS } from '../kinds/business';
+import { BUSINESS_SALES_COLLECTIONS } from '../kinds/business-sales';
+import { BUSINESS_WORK_COLLECTIONS } from '../kinds/business-work';
+import { BUSINESS_LIBRARY_COLLECTIONS } from '../kinds/business-library';
+import { FINANCE_COLLECTIONS } from '../kinds/finance';
+import { TRAINING_COLLECTIONS } from '../kinds/training';
 import { asCollection, type SingletonDef } from '../singletons';
 import { activeDoc, clean, coerceField, fail, itemsOf, model, plural, resolveParent, resolveRef, sceneLabel, type ActiveDoc } from '../ctx';
 import { liveDoc, stripMarks, writeDoc } from '../docops';
@@ -23,14 +29,14 @@ import { anyObj, arr, enm, int, obj, opt, str } from '../schema';
 
 type D = Draft<ProjectData>;
 
-const ALL_COLLECTION_NAMES = [...new Set([...COLLECTION_NAMES, ...SPACE_COLLECTIONS.map((c) => c.name)])];
+const ALL_COLLECTION_NAMES = [...new Set([...COLLECTION_NAMES, ...[...SPACE_COLLECTIONS, ...BUSINESS_COLLECTIONS, ...BUSINESS_SALES_COLLECTIONS, ...BUSINESS_WORK_COLLECTIONS, ...BUSINESS_LIBRARY_COLLECTIONS, ...FINANCE_COLLECTIONS, ...TRAINING_COLLECTIONS].map((c) => c.name)])];
 
 function coll(a: ActiveDoc, name: string): CollectionDef {
   const c = a.byName[name];
   if (!c) {
     const other = a.kind === 'project' ? SPACE_COLLECTION_BY_NAME[name] : undefined;
     fail(
-      `Unknown collection "${name}" for the open ${a.kind}.${other ? ' That collection belongs to Marketing Spaces (open_space first).' : ''} Collections: ${a.collections.map((x) => x.name).join(', ')}`,
+      `Unknown collection "${name}" for the open ${a.kind === 'space' ? `${a.spaceKind} space` : 'project'}.${other ? ' That collection belongs to Marketing Spaces (open_space first).' : ''} Collections: ${a.collections.map((x) => x.name).join(', ')}`,
     );
   }
   return c;
@@ -157,6 +163,7 @@ function enrichSpace(c: CollectionDef, items: any[], s: any): any[] {
 }
 
 function enrich(a: ActiveDoc, c: CollectionDef, items: any[]): any[] {
+  if (c.enrich) return c.enrich(items, a.doc);
   if (c.name === 'mind_boards') {
     const active = activeBoardId();
     const words = (t?: string) => ((t ?? '').trim() ? (t as string).trim().split(/\s+/).length : undefined);

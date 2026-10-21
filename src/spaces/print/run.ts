@@ -57,7 +57,8 @@ export async function buildSpaceBookPdf(parts: SpaceBookPart[], onProgress?: (do
 
 export async function exportSpaceBook(parts: SpaceBookPart[], onProgress?: (done: number, total: number) => void) {
   const space = getSpace();
-  const fileName = `${safeFileName(space.meta.title)} - Marketing Plan.pdf`;
+  const k = space.meta.kind ?? 'marketing';
+  const fileName = `${safeFileName(space.meta.title)} - ${k === 'business' ? 'Business Book' : k === 'finance' ? 'Finance Report' : k === 'training' ? 'Training Report' : 'Marketing Plan'}.pdf`;
   if (backend.kind !== 'electron') {
     for (const p of parts) await printSpaceDoc(p.docId, p.options ?? {});
     return;
