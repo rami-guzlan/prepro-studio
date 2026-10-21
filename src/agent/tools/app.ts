@@ -35,6 +35,7 @@ const SPACE_NAV_PARAMS: Partial<Record<SpaceModuleId, string>> = {
   calendar: 'date (YYYY-MM-DD)',
   campaigns: 'campaignId',
   production: 'shootId',
+  people: 'sheetId (name or id), rowId',
 };
 
 const NAV_PARAMS: Partial<Record<ModuleId, string>> = {

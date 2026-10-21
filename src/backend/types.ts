@@ -99,6 +99,8 @@ export interface Backend {
   restoreBackup(id: string, name: string): Promise<ProjectData>;
 
   openProjectFolder?(id: string): Promise<void>;
+  /** Desktop: absolute path of a stored asset (to open it in its default app). */
+  assetPath?(docId: string, name: string): Promise<string>;
   reveal?(path: string): void;
   openPath?(path: string): void;
   openExternal?(url: string): void;

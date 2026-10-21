@@ -6,6 +6,7 @@ import { addDays, todayISO } from '@/lib/dates';
 import { defaultSettings } from '@/store/defaults';
 import { FORMAT_BY_ID, PILLAR_COLORS } from './constants';
 import type {
+  BrandAsset,
   Campaign,
   Channel,
   ChecklistItem,
@@ -20,6 +21,7 @@ import type {
   SpaceData,
   SpaceMilestone,
   SpaceType,
+  ResourceType,
 } from './types';
 import { SPACE_SCHEMA_VERSION } from './types';
 
@@ -100,6 +102,8 @@ interface Template {
   goals: Partial<Goal>[];
   campaigns?: { name: string; objective: string; offsetStart: number; days: number }[];
   milestones?: { name: string; offset: number; campaign?: number }[];
+  /** starter resources (placeholders to upload or link), per campaign */
+  resources?: { name: string; type: ResourceType; campaign: number; gated?: boolean; notes?: string }[];
   content: ContentSeed[];
 }
 
@@ -191,6 +195,14 @@ const TEMPLATES: Record<SpaceType, Template> = {
       { name: 'Premiere', offset: 30, campaign: 2 },
       { name: 'Release day', offset: 54, campaign: 3 },
     ],
+    resources: [
+      { name: 'Teaser email sequence map', type: 'sequence_map', campaign: 0, notes: '3 emails: mystery → poster → teaser date' },
+      { name: 'Behind-the-scenes guide (lead magnet)', type: 'guide', campaign: 0, gated: true, notes: 'Free download for email sign-ups' },
+      { name: 'Trailer launch playbook', type: 'playbook', campaign: 1, notes: 'Hour-by-hour plan for drop day: who posts what, where' },
+      { name: 'Press kit one-pager', type: 'one_pager', campaign: 2, notes: 'Synopsis, stills, credits, contact, screener link' },
+      { name: 'Festival submission tracker template', type: 'template', campaign: 2 },
+      { name: 'Release-week email sequence map', type: 'sequence_map', campaign: 3, notes: 'Countdown → release day → thank-you' },
+    ],
     content: [
       { title: 'Poster reveal', format: 'image', pillar: 3, campaign: 0, project: true },
       { title: 'Teaser (15 s)', format: 'teaser', pillar: 0, campaign: 0, project: true },
@@ -252,6 +264,13 @@ const TEMPLATES: Record<SpaceType, Template> = {
       { name: 'Event day', offset: 28, campaign: 1 },
       { name: 'Recap film out', offset: 35, campaign: 2 },
     ],
+    resources: [
+      { name: 'Announcement one-pager', type: 'one_pager', campaign: 0, notes: 'Date, place, line-up, ticket link' },
+      { name: 'Ticket-push email sequence map', type: 'sequence_map', campaign: 1 },
+      { name: 'Partner promo kit', type: 'template', campaign: 1, notes: 'Copy and graphics partners can post' },
+      { name: 'Event-day checklist', type: 'checklist', campaign: 1 },
+      { name: 'Recap highlights guide (lead magnet)', type: 'guide', campaign: 2, gated: true },
+    ],
     content: [
       { title: 'Save the date', format: 'image', pillar: 0, campaign: 0 },
       { title: 'Countdown stories', format: 'story', pillar: 1, campaign: 1 },
@@ -303,6 +322,9 @@ export function createSpace(opts: NewSpaceOptions): SpaceData {
     : [];
   const milestones: SpaceMilestone[] = withT ? (t.milestones ?? []).map((m) => ({ id: uid('sms'), name: m.name, date: addDays(start, m.offset), campaignId: m.campaign != null ? campaigns[m.campaign]?.id : undefined })) : [];
   const goals: Goal[] = withT ? t.goals.map((g) => makeGoal(g)) : [];
+  const assets: BrandAsset[] = withT
+    ? (t.resources ?? []).map((r) => ({ id: uid('asset'), kind: 'resource', name: r.name, resourceType: r.type, gated: r.gated || undefined, notes: r.notes, campaignId: campaigns[r.campaign]?.id }))
+    : [];
   const content: ContentPiece[] = withT
     ? t.content.map((c) =>
         makeContent({
@@ -336,6 +358,7 @@ export function createSpace(opts: NewSpaceOptions): SpaceData {
     campaigns,
     milestones,
     content,
+    assets,
     projectIds: opts.projectIds ?? [],
   });
 }
@@ -359,7 +382,12 @@ export function normalizeSpace(raw: Partial<SpaceData> & Record<string, any>): S
     print: { ...ps.print, ...(s.settings?.print ?? {}) },
   };
   s.strategy = { positioning: '', valueProp: '', voice: '', keyMessages: '', notes: '', ...(s.strategy ?? {}) };
-  for (const k of ['goals', 'personas', 'pillars', 'tactics', 'channels', 'campaigns', 'milestones', 'content', 'shoots', 'assets', 'projectIds']) if (!Array.isArray(s[k])) s[k] = [];
+  for (const k of ['goals', 'personas', 'pillars', 'tactics', 'channels', 'campaigns', 'milestones', 'content', 'shoots', 'assets', 'crm', 'projectIds']) if (!Array.isArray(s[k])) s[k] = [];
+  for (const sh of s.crm) {
+    sh.columns = Array.isArray(sh.columns) ? sh.columns : [];
+    sh.rows = Array.isArray(sh.rows) ? sh.rows : [];
+    for (const r of sh.rows) r.values = r.values && typeof r.values === 'object' ? r.values : {};
+  }
   for (const c of s.content) {
     c.shots = Array.isArray(c.shots) ? c.shots : [];
     c.checklist = Array.isArray(c.checklist) ? c.checklist : [];

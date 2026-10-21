@@ -34,6 +34,7 @@ export type SpaceModuleId =
   | 'channels'
   | 'assets'
   | 'results'
+  | 'people'
   | 'projects'
   | 'print'
   | 'settings';

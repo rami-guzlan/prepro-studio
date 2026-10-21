@@ -649,7 +649,10 @@ function claudeDesktopState() {
   });
 }
 
-const READ_EXT = /\.(png|jpe?g|webp|gif|bmp|svg|fountain|spmd|fdx|txt|md)$/i;
+/* Files an AI agent may read (images, scripts, and documents / media it can attach as campaign resources).
+   An allowlist on purpose: no config, key or code files. */
+const READ_EXT = /\.(png|jpe?g|webp|gif|bmp|svg|fountain|spmd|fdx|txt|md|markdown|pdf|docx?|pptx?|xlsx?|csv|tsv|rtf|odt|ods|odp|key|pages|numbers|epub|html?|mp4|mov|webm|m4v|mp3|wav|m4a|aac|ogg|flac|zip)$/i;
+const READ_EXT_HINT = 'images, scripts (fountain, fdx, txt, md), documents (pdf, doc/docx, ppt/pptx, xls/xlsx, csv, rtf, odt, key, pages, numbers, epub, html), audio / video and zip';
 
 function registerMcpIpc() {
   ipcMain.on('mcp:ready', (_e, describe) => {
@@ -715,7 +718,7 @@ function registerMcpIpc() {
 
   ipcMain.handle('mcp:readFile', async (_e, p) => {
     if (typeof p !== 'string' || !path.isAbsolute(p)) throw new Error('Use an absolute file path');
-    if (!READ_EXT.test(p)) throw new Error('Only images (png, jpg, webp, gif, bmp, svg) and script files (fountain, fdx, txt) can be read');
+    if (!READ_EXT.test(p)) throw new Error(`This file type can't be read. Allowed: ${READ_EXT_HINT}`);
     const st = await fsp.stat(p);
     if (st.size > 40 * 1024 * 1024) throw new Error('File is larger than 40 MB');
     return { name: path.basename(p), data: new Uint8Array(await fsp.readFile(p)) };

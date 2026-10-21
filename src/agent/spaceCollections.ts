@@ -1,6 +1,6 @@
 /* Collections and single fields of a Marketing Space, for the agent's generic
    data tools (same CollectionDef / SingletonDef shapes as for projects). */
-import { ASSET_KINDS, CAMPAIGN_STATUSES, FORMATS, GOAL_STATUSES, PILLAR_COLORS, PLATFORMS, POST_STATUSES, SHOT_KINDS, SPACE_TYPES, STAGES, TACTIC_STATUSES } from '@/spaces/constants';
+import { ASSET_KINDS, RESOURCE_TYPES, CAMPAIGN_STATUSES, FORMATS, GOAL_STATUSES, PILLAR_COLORS, PLATFORMS, POST_STATUSES, SHOT_KINDS, SPACE_TYPES, STAGES, TACTIC_STATUSES } from '@/spaces/constants';
 import { BOARD_COLORS, NOTE_COLORS, NOTE_H, NOTE_W, boardDraftFor, boardFor } from '@/modules/script/mind/ops';
 import type { CollectionDef, FieldSpec } from './collections';
 import type { SingletonDef } from './singletons';
@@ -296,13 +296,27 @@ export const SPACE_COLLECTIONS: CollectionDef[] = [
     name: 'assets',
     label: 'Brand kit & assets',
     module: 'assets' as any,
-    description: 'Logos, colours (value = hex), fonts (value = font name), images, templates, links, footage, music.',
+    description:
+      'Logos, colours (value = hex), fonts (value = font name), images, templates, links, footage, music — and downloadable resources (kind "resource": playbooks, sequence maps, template docs, one-pagers, gated lead magnets …). A resource with campaignId shows in that campaign’s "Resources in this campaign". Upload or write resource files with add_resource.',
     kind: 'array',
     get: (s: S) => s.assets,
     draft: (d: S) => d.assets,
     idPrefix: 'ast',
     nameField: 'name',
-    fields: [F('name', 'string', req), F('kind', 'enum', { ...req, values: v(ASSET_KINDS) }), F('image', 'image'), F('value', 'string'), F('url', 'string'), F('tags', 'string[]'), NOTES],
+    fields: [
+      F('name', 'string', req),
+      F('kind', 'enum', { ...req, values: v(ASSET_KINDS) }),
+      F('image', 'image'),
+      F('value', 'string'),
+      F('url', 'string'),
+      F('campaignId', 'ref', { ref: 'campaigns', desc: 'campaign the resource belongs to' }),
+      F('resourceType', 'enum', { values: v(RESOURCE_TYPES) }),
+      F('gated', 'boolean', { desc: 'given in exchange for an email / opt-in' }),
+      F('fileName', 'string', { readOnly: true, desc: 'uploaded file (add_resource)' }),
+      F('fileSize', 'number', { readOnly: true }),
+      F('tags', 'string[]'),
+      NOTES,
+    ],
     defaults: () => ({ kind: 'other' }),
   },
   {

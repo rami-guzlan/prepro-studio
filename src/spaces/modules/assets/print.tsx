@@ -1,7 +1,8 @@
 /* Printable brand kit: logos, colours, fonts, voice & key messages, references. */
 import type { SpacePrintDocDef } from '@/spaces/print/types';
 import type { BrandAsset } from '@/spaces/types';
-import { ASSET_KINDS } from '@/spaces/constants';
+import { ASSET_KINDS, RESOURCE_TYPES } from '@/spaces/constants';
+import { optionLabel } from '@/lib/constants';
 import { SpaceDocHeader } from '@/spaces/print/components';
 import { PSection, PTable, Pre } from '@/print/components';
 import { assetsOfSection, fontStack, hexToRgb, inkOn, keyMessageLines, normalizeHex } from './util';
@@ -184,14 +185,15 @@ export const spacePrintDocs: SpacePrintDocDef[] = [
             )}
 
             {options.showFiles && files.length > 0 && (
-              <PSection title="Templates, media & links">
+              <PSection title="Templates, media, links & resources">
                 <PTable
                   zebra
                   rows={files}
                   columns={[
-                    { header: 'Type', width: '14%', cell: (a) => kindLabel(a.kind) },
-                    { header: 'Name', width: '24%', cell: (a) => <span className="pp-strong">{a.name || '—'}</span> },
-                    { header: 'File / link', width: '34%', cell: (a) => <span style={{ wordBreak: 'break-all' }}>{[a.value, a.url].filter((x) => x?.trim()).join(' · ') || '—'}</span> },
+                    { header: 'Type', width: '14%', cell: (a) => (a.resourceType ? optionLabel(RESOURCE_TYPES, a.resourceType) : kindLabel(a.kind)) + (a.gated ? ' · gated' : '') },
+                    { header: 'Name', width: '22%', cell: (a) => <span className="pp-strong">{a.name || '—'}</span> },
+                    { header: 'Campaign', width: '14%', cell: (a) => (a.campaignId ? space.campaigns.find((c) => c.id === a.campaignId)?.name ?? '' : '') },
+                    { header: 'File / link', width: '26%', cell: (a) => <span style={{ wordBreak: 'break-all' }}>{[a.fileName, a.value, a.url].filter((x) => x?.trim()).join(' · ') || '—'}</span> },
                     { header: 'Notes', cell: (a) => <>{a.notes}{a.tags?.length ? <div className="bk-tags">{tagText(a)}</div> : null}</> },
                   ]}
                 />

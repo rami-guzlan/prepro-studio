@@ -2,7 +2,7 @@
    links of the space, plus a read-only view of the brand voice from Strategy. */
 import './assets.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, FileText, Film, ImagePlus, LayoutTemplate, Link2, Loader2, Music, Palette, Plus, Quote, Shapes, Type, X } from 'lucide-react';
+import { ArrowRight, FilePlus2, FileText, Film, ImagePlus, LayoutTemplate, Link2, Loader2, Music, Palette, Plus, Quote, Shapes, Type, Upload, X } from 'lucide-react';
 import type { ID } from '@/types';
 import type { AssetKind, BrandAsset } from '@/spaces/types';
 import { ASSET_KINDS } from '@/spaces/constants';
@@ -15,7 +15,8 @@ import { isImageFile } from '@/lib/images';
 import { Button, ExportMenu, Input, isModalOpen, Menu, ModuleHeader, SearchInput, toast, Toolbar, type MenuItem } from '@/ui';
 import { addAssets, addColor, addImageAssets, copyText, makeAsset } from './actions';
 import { AssetEditor, ImageLightbox } from './editors';
-import { ColorsGrid, FileList, FontsList, ImagesGallery, LogosGrid, SectionShell, type TileHandlers } from './sections';
+import { ColorsGrid, FileList, FontsList, ImagesGallery, LinksSection, LogosGrid, SectionShell, type TileHandlers } from './sections';
+import { ResourceModal, addResourcePlaceholder, dropResources, pickResources } from './resources';
 import { assetsOfSection, inkOn, keyMessageLines, normalizeHex, SECTIONS, type SectionId } from './util';
 
 const kindLabel = (k: AssetKind) => ASSET_KINDS.find((x) => x.value === k)?.label ?? k;
@@ -30,6 +31,8 @@ async function exportAssetsCsv() {
     const path = await exportCsv(safeFileName(`${s.meta.title || 'Space'} - Brand assets`), s.assets, [
       { header: 'Type', value: (a: BrandAsset) => kindLabel(a.kind) },
       { header: 'Name', value: (a) => a.name },
+      { header: 'Campaign', value: (a) => (a.campaignId ? s.campaigns.find((c) => c.id === a.campaignId)?.name : '') },
+      { header: 'File', value: (a) => a.fileName },
       { header: 'Value', value: (a) => a.value },
       { header: 'Link', value: (a) => a.url },
       { header: 'Tags', value: (a) => (a.tags ?? []).join(', ') },
@@ -211,6 +214,24 @@ export default function AssetsModule() {
     }
   };
 
+  /** Dropped files: images go to Images & references, everything else becomes a resource. */
+  const importFiles = (files: File[]) => {
+    const imgs = files.filter(isImageFile);
+    const other = files.filter((f) => !isImageFile(f));
+    if (imgs.length) void importImages(imgs);
+    if (other.length) {
+      clearFilters();
+      expand('links');
+      void dropResources(other);
+    }
+  };
+
+  const uploadResources = () => {
+    clearFilters();
+    expand('links');
+    void pickResources();
+  };
+
   const pickInto = async (kind: 'image' | 'logo') => {
     try {
       const names = await pickImages(true);
@@ -268,6 +289,8 @@ export default function AssetsModule() {
     { label: 'Music / sound', icon: Music, onClick: () => add('audio') },
     { label: 'Link', icon: Link2, onClick: () => add('link') },
     { label: 'Document', icon: FileText, onClick: () => add('doc') },
+    { separator: true },
+    { label: 'Resource files (upload)…', icon: Upload, onClick: uploadResources },
   ];
 
   const editingAsset = editing ? assets.find((a) => a.id === editing) : undefined;
@@ -288,6 +311,8 @@ export default function AssetsModule() {
         return <FontsList items={items} h={h} sample={sampleText} onAdd={filtering ? undefined : () => add('font')} />;
       case 'images':
         return <ImagesGallery items={items} h={h} onOpen={setViewing} canAdd={!filtering} />;
+      case 'links':
+        return <LinksSection items={items} h={h} def={def} filtering={filtering} onAdd={filtering ? undefined : () => add(def.addKind)} />;
       default:
         return <FileList items={items} h={h} def={def} onAdd={filtering ? undefined : () => add(def.addKind)} />;
     }
@@ -309,6 +334,9 @@ export default function AssetsModule() {
             </Button>
           }
           items={[
+            { label: 'Upload resource files…', icon: Upload, onClick: uploadResources },
+            { label: 'Resource link / placeholder', icon: FilePlus2, onClick: () => setEditing(addResourcePlaceholder()) },
+            { separator: true },
             { label: 'Link', icon: Link2, onClick: () => add('link') },
             { label: 'Document', icon: FileText, onClick: () => add('doc') },
             { label: 'Other', icon: Plus, onClick: () => add('other') },
@@ -343,7 +371,7 @@ export default function AssetsModule() {
         setFileOver(false);
         if (e.nativeEvent.defaultPrevented || !e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
-        void importImages(Array.from(e.dataTransfer.files));
+        importFiles(Array.from(e.dataTransfer.files));
       }}
     >
       <ModuleHeader
@@ -390,7 +418,7 @@ export default function AssetsModule() {
               <Loader2 size={14} className="spin" /> Importing…
             </span>
           ) : (
-            <span className="muted small">Drop or paste images anywhere to add them</span>
+            <span className="muted small">Drop images or files anywhere to add them</span>
           )}
         </Toolbar>
       )}
@@ -404,7 +432,7 @@ export default function AssetsModule() {
                 </div>
                 <div className="grow">
                   <h3>Build your brand kit</h3>
-                  <p>Drop your logo, add your colours and fonts, and collect the references, templates, music and links you reuse. It all stays in this space and prints as a brand sheet for collaborators.</p>
+                  <p>Drop your logo, add your colours and fonts, and collect the references, templates, music and links you reuse — plus the downloadable resources (playbooks, one-pagers, sequence maps …) of each campaign. It all stays in this space and prints as a brand sheet for collaborators.</p>
                   <div className="row wrap" style={{ gap: 6 }}>
                     <Button icon={Shapes} onClick={() => add('logo')}>
                       Add logo
@@ -417,6 +445,9 @@ export default function AssetsModule() {
                     </Button>
                     <Button icon={ImagePlus} onClick={() => add('image')}>
                       Add images
+                    </Button>
+                    <Button icon={Upload} onClick={uploadResources}>
+                      Upload resources
                     </Button>
                   </div>
                 </div>
@@ -454,11 +485,16 @@ export default function AssetsModule() {
         <div className="sp-assets-dropzone" aria-hidden>
           <div>
             <ImagePlus />
-            <span>Drop to add to Images & references</span>
+            <span>Drop images → Images & references · other files → Links & documents</span>
           </div>
         </div>
       )}
-      {editingAsset && <AssetEditor key={editingAsset.id} asset={editingAsset} allTags={allTags} onClose={() => setEditing(null)} />}
+      {editingAsset &&
+        (editingAsset.kind === 'resource' || editingAsset.file ? (
+          <ResourceModal key={editingAsset.id} asset={editingAsset} onClose={() => setEditing(null)} />
+        ) : (
+          <AssetEditor key={editingAsset.id} asset={editingAsset} allTags={allTags} onClose={() => setEditing(null)} />
+        ))}
       {viewing && images.some((a) => a.id === viewing) && <ImageLightbox images={images} id={viewing} onId={setViewing} onClose={() => setViewing(null)} allTags={allTags} />}
     </div>
   );

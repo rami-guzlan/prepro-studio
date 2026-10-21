@@ -19,6 +19,8 @@ the differences for spaces are below.
 | `src/spaces/derive.ts` | pure helpers: `channelColor`, `channelById`, `contentById`, `allPosts` (→ `PostRef {post, content, channel, sortKey}`), `postsInRange`, `upcomingPosts`, `overduePosts`, `atRiskContent`, `firstPostDate`, `countByStage`, `sumMetrics`, `engagement`, `goalProgress`, `weekStart`, `cadenceForWeek`, `isFullyPublished` |
 | `src/spaces/ui.ts` | `openContent(id, tab?)` opens the content editor over any screen (tabs `brief` `write` `produce` `publish` `results`), `closeContent()`, `useSpaceUI`, `useProjectList()` (production projects for linking) |
 | `src/spaces/mind.ts` | connects the shared Mind Dump board to the space; `notesToContent(notes, {format, stage})` |
+| `src/spaces/crm.ts` | People & Brands model: `CRM_TEMPLATES`, `CRM_COLUMN_TYPES`, `makeSheet` / `makeColumn` / `makeRow`, `displayValue`, `parseValue` (labels → option ids, dates, money …), `convertColumn`, `dueRows`, CSV `sheetFromCsv` / `sheetCsvColumns` |
+| `src/spaces/modules/assets/resources.tsx` | downloadable campaign resources: `uploadResources` / `pickResources` / `dropResources`, `downloadResource`, `openResourceExternally`, `ResourceModal` (viewer: PDF, image, text, media), `ResourceList`, `useFileDrop` |
 | `src/store/space.ts` | the space store (below) |
 | `src/spaces/registry.ts` | sidebar modules; each screen is `src/spaces/modules/<id>/index.tsx` (default export) |
 | `src/spaces/print/*` | `SpacePrintDocDef`, `SpacePrintContext`, `SpaceDocHeader`, registry |
@@ -88,3 +90,19 @@ const fmt = useSpaceFormatters();   // fmt.date(iso) fmt.dateMedium fmt.time('18
    doc CSS in `render(...).css` with prefixed classes. Put a print / export button in your module header:
    `<Button icon={Printer} onClick={() => openPrint('space-…', { …options })}>` (`openPrint` from `@/store/app`).
 7. Never call the project store (`@/store/project`) from space modules.
+
+## Campaign resources
+- A resource is a `BrandAsset` with `kind: 'resource'` (or any links-section asset with an uploaded `file`): `file`
+  (stored asset name), `fileName`, `fileSize`, `resourceType` (`RESOURCE_TYPES`), `gated`, `url`, and `campaignId`.
+- Brand Kit → Links & documents shows general items, then one collapsible group per campaign. The campaign detail
+  shows the same assets in "Resources in this campaign". Both use `ResourceList` + `ResourceModal`.
+- Deleting a campaign keeps its resources (their `campaignId` is cleared). Starter templates (`campaign`, `event`)
+  create placeholder resources per campaign; the demo space has real files (PDFs made with pdf-lib, Markdown).
+
+## People & Brands
+- `space.crm: CrmSheet[]`; a sheet has `columns: CrmColumn[]` (`type`: text, longtext, select, multi, number, money,
+  date, email, phone, url, checkbox, campaign; select / multi have `options` with stable ids) and `rows: CrmRow[]`
+  with `values: { [columnId]: value }` (option ids for selects, campaign id for campaign columns, ISO dates).
+- Edits go through `src/spaces/modules/people/ops.ts` (one undo step each). The board groups by `boardColumnId`
+  (a single-select column). Follow-up / due dates (`isFollowUpColumn`) feed `dueRows` (tab badge, subtitle, print).
+- Agents: `crm_read`, `crm_sheet`, `crm_rows` (values keyed by column name) and `add_resource` (src/agent/tools/crm.ts).

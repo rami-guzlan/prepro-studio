@@ -23,7 +23,7 @@ export const SECTIONS: SectionDef[] = [
   { id: 'templates', title: 'Templates', kinds: ['template'], addKind: 'template', icon: LayoutTemplate, hint: 'Thumbnail, carousel and caption templates', addLabel: 'Add template' },
   { id: 'video', title: 'Video / footage', kinds: ['video'], addKind: 'video', icon: Film, hint: 'Intros, stingers, b-roll libraries, trailers', addLabel: 'Add video' },
   { id: 'audio', title: 'Music / sound', kinds: ['audio'], addKind: 'audio', icon: Music, hint: 'Theme music, licensed tracks, sound logos', addLabel: 'Add audio' },
-  { id: 'links', title: 'Links & documents', kinds: ['link', 'doc', 'other'], addKind: 'link', icon: Link2, hint: 'Press kit, brand guidelines, shared drives', addLabel: 'Add link' },
+  { id: 'links', title: 'Links & documents', kinds: ['link', 'doc', 'resource', 'other'], addKind: 'link', icon: Link2, hint: 'Guidelines, shared drives and every campaign’s downloadable resources', addLabel: 'Add link' },
 ];
 
 export const SECTION_OF_KIND: Record<AssetKind, SectionId> = Object.fromEntries(SECTIONS.flatMap((s) => s.kinds.map((k) => [k, s.id]))) as Record<AssetKind, SectionId>;
@@ -40,6 +40,7 @@ export const DEFAULT_NAMES: Record<AssetKind, string> = {
   audio: 'New track',
   link: 'New link',
   doc: 'New document',
+  resource: 'New resource',
   other: 'New asset',
 };
 

@@ -1,12 +1,18 @@
 /* Brand Kit & Assets: one component per section (logos, colours, fonts, images, files & links). */
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ChevronDown, ChevronRight, Copy, ExternalLink, FileText, FolderOpen, GripVertical, Link2, Maximize2, Pencil, Pipette, Plus, Trash2, TriangleAlert } from 'lucide-react';
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { ChevronDown, ChevronRight, Copy, Download, ExternalLink, FileText, FolderOpen, GripVertical, Link2, Maximize2, Megaphone, Pencil, Pipette, Plus, Trash2, TriangleAlert, Upload } from 'lucide-react';
 import type { ID } from '@/types';
 import type { BrandAsset } from '@/spaces/types';
 import { assetUrl } from '@/backend';
-import { ColorPicker, IconButton, ImageDrop, Input, Popover, type AnchorRect } from '@/ui';
+import { Button, ColorPicker, IconButton, ImageDrop, Input, Popover, type AnchorRect } from '@/ui';
+import { useSpace } from '@/store/space';
+import { navigateSpace, readLS, writeLS } from '@/store/app';
+import { RESOURCE_TYPES } from '@/spaces/constants';
+import { optionColor, optionLabel } from '@/lib/constants';
+import { sortCampaigns } from '@/spaces/modules/campaigns/logic';
 import { addImageAssets, assetOps, canOpenValue, copyText, deleteAsset, fontAvailable, HexInput, openUrl, openValue, useTileDrag } from './actions';
 import { fontStack, hexToRgb, inkOn, normalizeHex, type SectionDef } from './util';
+import { GatedBadge, ResourceIcon, ResourceList, downloadResource, dropResources, formatBytes, pickResources, useFileDrop } from './resources';
 
 export interface TileHandlers {
   onEdit: (id: ID) => void;
@@ -319,22 +325,32 @@ export function FileList({ items, h, def, onAdd }: { items: BrandAsset[]; h: Til
     <div className="sp-assets-files">
       {items.map((a) => {
         const RowIcon = a.kind === 'doc' ? FileText : a.kind === 'link' ? Link2 : Icon;
-        const where = a.kind === 'link' ? a.url : a.value || a.url;
+        const isRes = a.kind === 'resource' || !!a.file;
+        const where = a.file ? [a.fileName, formatBytes(a.fileSize), a.url].filter((x) => x?.trim()).join(' · ') : a.kind === 'link' || a.kind === 'resource' ? a.url : a.value || a.url;
+        const typeColor = a.resourceType ? optionColor(RESOURCE_TYPES, a.resourceType) : undefined;
         return (
           <div key={a.id} data-tile data-id={a.id} className={`sp-assets-tile sp-assets-file ${drag.tileClass(a.id)}`} tabIndex={0} onKeyDown={tileKeys(a, h.onEdit)} onDoubleClick={(e) => {
               if (!(e.target as HTMLElement).closest('input, button')) h.onEdit(a.id);
             }} {...drag.targetProps(a.id)}>
-            <div className="sp-assets-file-thumb">{a.image ? <img src={assetUrl(a.image)} alt="" draggable={false} /> : <RowIcon size={18} />}</div>
+            <div className="sp-assets-file-thumb">{a.image ? <img src={assetUrl(a.image)} alt="" draggable={false} /> : isRes ? <ResourceIcon a={a} /> : <RowIcon size={18} />}</div>
             <div className="sp-assets-file-main">
               <Input bare size="sm" className="strong" value={a.name} placeholder="Name" aria-label="Name" onChange={(name) => assetOps.update(a.id, { name })} />
               <div className="sp-assets-file-where ellipsis" title={where}>
-                {where?.trim() ? where : <span className="muted">{a.kind === 'link' ? 'No link yet: click the pencil to add one' : 'No file or link yet'}</span>}
+                {where?.trim() ? where : <span className="muted">{a.kind === 'link' ? 'No link yet: click the pencil to add one' : isRes ? 'No file yet: click the pencil to upload one' : 'No file or link yet'}</span>}
               </div>
               {a.notes?.trim() && <div className="sp-assets-note ellipsis" title={a.notes}>{a.notes}</div>}
             </div>
+            {a.resourceType && (
+              <span className="sp-res-type" style={{ ['--rt' as string]: typeColor }}>
+                {optionLabel(RESOURCE_TYPES, a.resourceType)}
+              </span>
+            )}
+            {a.gated && <GatedBadge />}
             <Tags tags={a.tags} h={h} />
             <div className="sp-assets-file-open">
-              {canOpenValue(a.value) && a.kind !== 'link' && <IconButton icon={FolderOpen} label="Open file" size="sm" onClick={() => openValue(a.value)} />}
+              {a.file && <IconButton icon={Maximize2} label="Open" size="sm" onClick={() => h.onEdit(a.id)} />}
+              {a.file && <IconButton icon={Download} label="Download" size="sm" onClick={() => void downloadResource(a)} />}
+              {!a.file && canOpenValue(a.value) && a.kind !== 'link' && <IconButton icon={FolderOpen} label="Open file" size="sm" onClick={() => openValue(a.value)} />}
               {a.url?.trim() && <IconButton icon={ExternalLink} label="Open link" size="sm" onClick={() => openUrl(a.url)} />}
             </div>
             <TileActions a={a} h={h} drag={items.length > 1 ? drag.handleProps(a.id) : undefined} />
@@ -346,6 +362,65 @@ export function FileList({ items, h, def, onAdd }: { items: BrandAsset[]; h: Til
           <Plus />
           <span>{def.addLabel}</span>
         </button>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- links & documents: general + per campaign */
+
+function CampaignGroup({ c, items, closed, onToggle, onOpen }: { c: { id: string; name: string; color: string }; items: BrandAsset[]; closed: boolean; onToggle: () => void; onOpen: (id: ID) => void }) {
+  const drop = useFileDrop((files) => void dropResources(files, { campaignId: c.id }));
+  const gated = items.filter((a) => a.gated).length;
+  return (
+    <div className={`sp-res-group ${closed ? 'closed' : ''} ${drop.over ? 'over' : ''}`} style={{ ['--cc' as string]: c.color || 'var(--accent)' }} {...drop.props} data-campaign-group={c.id}>
+      <div className="sp-res-group-head">
+        <button type="button" className="sp-res-group-toggle" aria-expanded={!closed} onClick={onToggle}>
+          {closed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          <span className="sp-res-group-dot" />
+          <span className="sp-res-group-name ellipsis">{c.name || 'Untitled campaign'}</span>
+          <span className="badge">{items.length}</span>
+          {gated > 0 && <span className="muted small">{gated} gated</span>}
+        </button>
+        <div className="spacer" />
+        <Button size="sm" variant="ghost" icon={Upload} onClick={() => void pickResources({ campaignId: c.id })}>
+          Upload
+        </Button>
+        <IconButton icon={Megaphone} size="sm" label="Open the campaign" onClick={() => navigateSpace('campaigns', { campaignId: c.id })} />
+      </div>
+      {!closed && (
+        <div className="sp-res-group-body">
+          <ResourceList items={items} onOpen={onOpen} empty={drop.over ? 'Drop to add' : 'No resources yet: upload files or drop them here.'} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Links & documents: general items, then a dropdown per campaign with its resources. */
+export function LinksSection({ items, h, def, onAdd, filtering }: { items: BrandAsset[]; h: TileHandlers; def: SectionDef; onAdd?: () => void; filtering: boolean }) {
+  const campaigns = useSpace((s) => s.campaigns);
+  const sorted = useMemo(() => sortCampaigns(campaigns ?? []), [campaigns]);
+  const known = useMemo(() => new Set(sorted.map((c) => c.id)), [sorted]);
+  const general = items.filter((a) => !a.campaignId || !known.has(a.campaignId));
+  const [closed, setClosed] = useState<string[]>(() => readLS<string[]>('prepro.sp-assets.campaignsClosed', []));
+  const toggle = (id: string) =>
+    setClosed((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      writeLS('prepro.sp-assets.campaignsClosed', next);
+      return next;
+    });
+  const groups = sorted.map((c) => ({ c, list: items.filter((a) => a.campaignId === c.id) })).filter((g) => !filtering || g.list.length > 0);
+  return (
+    <div className="sp-res-links">
+      {(general.length > 0 || onAdd) && <FileList items={general} h={h} def={def} onAdd={onAdd} />}
+      {groups.length > 0 && (
+        <div className="sp-res-groups">
+          <div className="sp-res-groups-title">Resources by campaign</div>
+          {groups.map(({ c, list }) => (
+            <CampaignGroup key={c.id} c={c} items={list} closed={!filtering && closed.includes(c.id)} onToggle={() => toggle(c.id)} onOpen={h.onEdit} />
+          ))}
+        </div>
       )}
     </div>
   );

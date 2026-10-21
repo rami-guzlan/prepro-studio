@@ -78,7 +78,8 @@ export async function deleteCampaign(c: Campaign): Promise<boolean> {
   const s = getSpace();
   const pieces = s.content.filter((x) => x.campaignId === c.id).length;
   const ms = s.milestones.filter((x) => x.campaignId === c.id).length;
-  const extra = [pieces ? plural(pieces, 'content piece') : '', ms ? plural(ms, 'milestone') : ''].filter(Boolean).join(' and ');
+  const res = s.assets.filter((x) => x.campaignId === c.id).length;
+  const extra = [pieces ? plural(pieces, 'content piece') : '', ms ? plural(ms, 'milestone') : '', res ? plural(res, 'resource') : ''].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' and $1');
   const ok = await confirmDialog({
     title: 'Delete campaign?',
     message: `“${c.name || 'Untitled campaign'}” will be removed.${extra ? ` Its ${extra} stay in the space, just without a campaign.` : ''}`,
@@ -92,6 +93,11 @@ export async function deleteCampaign(c: Campaign): Promise<boolean> {
     for (const x of d.milestones) if (x.campaignId === c.id) delete x.campaignId;
     for (const x of d.goals) if (x.campaignId === c.id) delete x.campaignId;
     for (const x of d.tactics) if (x.campaignId === c.id) delete x.campaignId;
+    for (const x of d.assets) if (x.campaignId === c.id) delete x.campaignId;
+    for (const sh of d.crm ?? []) {
+      const cols = sh.columns.filter((col) => col.type === 'campaign').map((col) => col.id);
+      if (cols.length) for (const r of sh.rows) for (const k of cols) if (r.values[k] === c.id) delete r.values[k];
+    }
   });
   return true;
 }

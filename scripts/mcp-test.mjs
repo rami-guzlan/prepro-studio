@@ -531,6 +531,70 @@ async function spaceScenario() {
   r = await call('mind_add_notes', { notes: ['POV: you only get one take'] });
   check('notes land on the active space board', r.data?.board === 'Hooks', JSON.stringify(r.data));
 
+  // ---------------------------------------------------------------- people & brands (CRM sheets)
+  r = await call('crm_read', {});
+  check('crm templates listed', r.data?.templates?.length >= 5 && r.data?.sheets?.length === 0, JSON.stringify(r.data?.sheets));
+  r = await call('crm_sheet', { action: 'create', template: 'brand_deals' });
+  check('crm sheet from template', r.data?.name === 'Brand deals' && r.data?.columns?.some((c) => c.name === 'Stage' && c.options?.includes('Negotiating')), JSON.stringify(r.data));
+  r = await call('crm_rows', { sheet: 'Brand deals', add: [{ Brand: 'Acme Lights', Stage: 'Pitched', Fee: '1,500', Due: '2026-11-20', Paid: false, Campaign: 'Lighting series launch' }, { Brand: 'Gear Co', Stage: 'Brand new stage', Fee: 200, Due: '2000-01-01' }] });
+  check('crm rows added', r.data?.added?.length === 2, JSON.stringify(r.data));
+  r = await call('crm_read', { sheet: 'brand deals', where: { Stage: 'Pitched' } });
+  check('crm where filter', r.data?.total === 1 && r.data.rows[0].Fee === 1500 && r.data.rows[0].Campaign === 'Lighting series launch' && r.data.rows[0].Due === '2026-11-20', JSON.stringify(r.data));
+  const dealId = r.data?.rows?.[0]?.id;
+  r = await call('crm_read', { sheet: 'Brand deals', due: true });
+  check('crm due rows', r.data?.total === 1 && r.data.rows[0].Brand === 'Gear Co', JSON.stringify(r.data?.rows));
+  check('crm new option', r.data?.sheet?.columns?.find((c) => c.name === 'Stage')?.options?.includes('Brand new stage'), JSON.stringify(r.data?.sheet?.columns));
+  await call('crm_rows', { sheet: 'Brand deals', add: [{ Nope: 1 }] }, { expectError: true });
+  await call('crm_rows', { sheet: 'Brand deals', add: [{ Brand: 'x', Fee: 'lots' }] }, { expectError: true });
+  await call('crm_rows', { sheet: 'Brand deals', add: [{ Brand: 'x', Campaign: 'No such campaign' }] }, { expectError: true });
+  r = await call('crm_rows', { sheet: 'Brand deals', update: [{ id: dealId, Stage: 'Contracted', Notes: 'Signed', Paid: true }] });
+  r = await call('crm_read', { sheet: 'Brand deals', search: 'signed' });
+  check('crm update + search', r.data?.total === 1 && r.data.rows[0].Stage === 'Contracted' && r.data.rows[0].Paid === true, JSON.stringify(r.data?.rows));
+  r = await call('crm_sheet', { action: 'update', sheet: 'Brand deals', addColumns: [{ name: 'Priority', type: 'select', options: ['High', 'Low'] }], updateColumns: [{ column: 'Contact', type: 'select' }], view: 'board', boardColumn: 'Stage' });
+  check('crm sheet update', r.data?.view === 'board' && r.data?.boardGroupsBy === 'Stage' && r.data?.columns?.some((c) => c.name === 'Priority' && c.options?.length === 2) && r.data?.columns?.find((c) => c.name === 'Contact')?.type === 'select', JSON.stringify(r.data));
+  await call('crm_sheet', { action: 'update', sheet: 'Brand deals', boardColumn: 'Fee' }, { expectError: true });
+  r = await call('crm_sheet', { action: 'create', name: 'Podcast guests', columns: [{ name: 'Guest' }, { name: 'Status', type: 'select', options: ['Asked', 'Booked'] }, { name: 'Date', type: 'date' }] });
+  check('crm custom sheet', r.data?.columns?.length === 3 && r.data?.boardGroupsBy === 'Status', JSON.stringify(r.data));
+  r = await call('crm_rows', { sheet: 'Podcast guests', add: [{ Guest: 'Test Guest', Status: 'Booked', Date: '2026-12-01', Topic: 'AI agents' }], createColumns: true });
+  r = await call('crm_read', { sheet: 'Podcast guests' });
+  check('crm createColumns', r.data?.sheet?.columns?.some((c) => c.name === 'Topic') && r.data?.rows?.[0]?.Topic === 'AI agents', JSON.stringify(r.data));
+  r = await call('crm_rows', { sheet: 'Podcast guests', delete: [r.data?.rows?.[0]?.id] });
+  check('crm delete row', r.data?.deleted === 1, JSON.stringify(r.data));
+  r = await call('crm_sheet', { action: 'delete', sheet: 'Podcast guests' });
+  r = await call('crm_read', {});
+  check('crm sheets after delete', r.data?.sheets?.length === 1 && r.data.sheets[0].rows === 2, JSON.stringify(r.data?.sheets));
+  r = await call('show_in_app', { module: 'people', params: { sheetId: 'Brand deals' } });
+  check('show people', !r.res.isError, r.text.slice(0, 200));
+
+  // ---------------------------------------------------------------- downloadable campaign resources
+  r = await call('add_resource', { name: 'Lighting series playbook', campaignId: 'Lighting series launch', resourceType: 'playbook', fileName: 'playbook.md', text: '# Playbook\n\nStep 1: light it.' });
+  check('add_resource from text', !!r.data?.id && r.data.file === 'playbook.md' && r.data.campaign === 'Lighting series launch', JSON.stringify(r.data));
+  r = await call('add_resource', { name: 'Free lighting cheatsheet', gated: true, url: 'https://example.com/optin', campaignId: 'Lighting series launch' });
+  check('add_resource link', !!r.data?.id, JSON.stringify(r.data));
+  r = await call('add_resource', { fileName: 'one-pager.pdf', base64: PNG_1PX, resourceType: 'one_pager' });
+  check('add_resource base64', r.data?.file === 'one-pager.pdf' && !r.data?.campaign, JSON.stringify(r.data));
+  r = await call('list_items', { collection: 'assets', where: { kind: 'resource' } });
+  check('resources listed', r.data?.total === 3 && r.data.items.some((a) => a._campaign === 'Lighting series launch' && a._hasFile && a.resourceType === 'playbook') && r.data.items.some((a) => a.gated === true), JSON.stringify(r.data?.items));
+  r = await call('list_items', { collection: 'campaigns', where: { name: 'Lighting series launch' } });
+  check('campaign resource count', r.data?.items?.[0]?._resources === 2, JSON.stringify(r.data?.items));
+  await call('add_resource', { name: 'x', fileName: 'noext', text: 'hi' }, { expectError: true });
+  await call('add_resource', { name: 'x', campaignId: 'No such campaign' }, { expectError: true });
+  await call('add_resource', { text: 'a', base64: 'b', fileName: 'x.txt' }, { expectError: true });
+  // documents from disk (the agent file reader accepts documents, not config / key files)
+  const pdfPath = path.join(DATA, 'Brief one-pager.pdf');
+  writeFileSync(pdfPath, '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
+  r = await call('add_resource', { path: pdfPath, campaignId: 'Lighting series launch', resourceType: 'one_pager' });
+  check('add_resource pdf from path', r.data?.file === 'Brief one-pager.pdf' && r.data?.size > 10 && r.data?.campaign === 'Lighting series launch', JSON.stringify(r.data));
+  const docxPath = path.join(DATA, 'Sequence map.docx');
+  writeFileSync(docxPath, Buffer.from('PK fake docx', 'binary'));
+  r = await call('add_resource', { path: docxPath, assetId: 'Free lighting cheatsheet' });
+  check('add_resource attach docx to existing', r.data?.file === 'Sequence map.docx', JSON.stringify(r.data));
+  r = await call('get_items', { collection: 'assets', ids: ['Free lighting cheatsheet'] });
+  check('attached file on asset', r.data?.items?.[0]?.fileName === 'Sequence map.docx' && r.data.items[0].gated === true, JSON.stringify(r.data?.items?.[0]));
+  const envPath = path.join(DATA, 'secrets.env');
+  writeFileSync(envPath, 'KEY=1');
+  await call('add_resource', { path: envPath, name: 'nope' }, { expectError: true });
+
   r = await call('import_image', { svg: SVG, attachTo: { collection: 'content', id: piece, field: 'thumbnail' } });
   check('thumbnail attached', !!r.data?.asset);
   r = await call('import_image', { svg: SVG, attachTo: { field: 'meta.cover' } });
@@ -545,7 +609,9 @@ async function spaceScenario() {
 
   r = await call('list_documents', {});
   const spaceDocs = (r.data ?? []).map((d) => d.id);
-  check('space documents', spaceDocs.includes('space-ideas') && spaceDocs.every((id) => id.startsWith('space-')), JSON.stringify(spaceDocs));
+  check('space documents', spaceDocs.includes('space-ideas') && spaceDocs.includes('space-people') && spaceDocs.every((id) => id.startsWith('space-')), JSON.stringify(spaceDocs));
+  r = await call('preview_document', { docId: 'space-people' });
+  check('people preview image', r.images.length === 1);
   r = await call('preview_document', { docId: 'space-ideas' });
   check('space preview image', r.images.length === 1);
   r = await call('export_pdf', { documents: spaceDocs.slice(0, 3).map((docId) => ({ docId })), merge: true, fileName: 'Space plan' });
