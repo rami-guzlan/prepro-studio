@@ -282,6 +282,63 @@ export async function runSelftest() {
       summary.spaces = { checked: spaceResults.length, docs: SPACE_PRINT_DOCS.length, failed: spaceResults.filter((r) => !r.ok) };
     }
 
+    // Business Management, Personal Finances and Training: every screen and document with sample data, then empty
+    {
+      const { createSpace } = await import('@/spaces/defaults');
+      const { modulesFor } = await import('@/spaces/registry');
+      const { printDocsFor } = await import('@/spaces/print/registry');
+      const { buildSpaceDoc } = await import('@/spaces/print/run');
+      const { openSpaceById } = await import('@/shell/spaceActions');
+      const { navigateSpace } = await import('@/store/app');
+      const { sampleBusiness } = await import('@/spaces/business/sample');
+      const { sampleFinance } = await import('@/spaces/finance/sample');
+      const { sampleTraining } = await import('@/spaces/training/sample');
+      const kinds = [
+        { kind: 'business' as const, title: 'Selftest Studio LLC', data: sampleBusiness },
+        { kind: 'finance' as const, title: 'Personal Finances', data: sampleFinance },
+        { kind: 'training' as const, title: 'Training', data: sampleTraining },
+      ];
+      const results: any[] = [];
+      for (const k of kinds) {
+        for (const variant of ['sample', 'empty'] as const) {
+          const sp = createSpace({ title: variant === 'empty' ? `${k.title} (empty)` : k.title, kind: k.kind, type: k.kind === 'business' ? 'business' : 'other', kindData: variant === 'sample' ? k.data() : undefined });
+          await backend.createSpace(sp);
+          if (k.kind === 'training' && variant === 'sample') {
+            const { seedSamplePhotos } = await import('@/spaces/training/sample');
+            await seedSamplePhotos(sp.id, sp.training!);
+            await backend.saveSpace(sp);
+          }
+          await openSpaceById(sp.id, 'overview');
+          await wait(900);
+          for (const m of modulesFor(k.kind)) {
+            try {
+              navigateSpace(m.id);
+              await wait(variant === 'sample' ? 1100 : 600);
+              const broken = document.body.innerText.includes('Something went wrong in this screen');
+              results.push({ kind: k.kind, variant, screen: m.id, ok: !broken });
+              if (variant === 'sample' || broken) await bridge.selftestCapture(`${k.kind}-${variant}-${m.id}.png`);
+            } catch (e) {
+              results.push({ kind: k.kind, variant, screen: m.id, ok: false, error: String(e) });
+            }
+          }
+          for (const def of printDocsFor(k.kind)) {
+            try {
+              const doc = buildSpaceDoc(def.id, {});
+              if (variant === 'sample') {
+                await bridge.selftestWrite(`${def.id}.html`, doc.html);
+                const bytes = await backend.renderPdfBytes!(toJob(doc));
+                await bridge.selftestWrite(`${def.id}.pdf`, bytes);
+                results.push({ kind: k.kind, doc: def.id, ok: true, kb: Math.round(bytes.length / 1024) });
+              } else results.push({ kind: k.kind, emptyDoc: def.id, ok: doc.html.includes('</html>') });
+            } catch (e) {
+              results.push({ kind: k.kind, variant, doc: def.id, ok: false, error: e instanceof Error ? e.stack ?? e.message : String(e) });
+            }
+          }
+        }
+      }
+      summary.kinds = { checked: results.length, docs: kinds.map((k) => `${k.kind}: ${printDocsFor(k.kind).length}`).join(', '), failed: results.filter((r) => !r.ok) };
+    }
+
     // the library: demo cards until removed (they stay in the Help menu)
     {
       const { leaveSpace } = await import('@/shell/spaceActions');
@@ -308,6 +365,12 @@ export async function runSelftest() {
       runCommand('demos-changed');
       await wait(700);
       home.restored = demoCards();
+      for (const tab of ['business', 'finance', 'training'] as const) {
+        setHomeTab(tab);
+        await wait(1200);
+        await bridge.selftestCapture(`home-${tab}.png`);
+      }
+      setHomeTab('projects');
       summary.home = home;
     }
   } catch (e) {

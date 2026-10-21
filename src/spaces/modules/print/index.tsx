@@ -3,7 +3,7 @@
 import '@/modules/printcenter/printcenter.css';
 import { useMemo, useState } from 'react';
 import { BookOpen, Check, Eye, FileDown, FileText, GripVertical, Loader2, Printer } from 'lucide-react';
-import { SPACE_PRINT_DOCS, SPACE_PRINT_GROUPS } from '@/spaces/print/registry';
+import { SPACE_PRINT_GROUPS, printDocsFor } from '@/spaces/print/registry';
 import type { SpacePrintDocDef } from '@/spaces/print/types';
 import { exportSpaceBook, exportSpaceDocPdf, printSpaceDoc } from '@/spaces/print/run';
 import { openPrint, readLS, writeLS } from '@/store/app';
@@ -16,8 +16,12 @@ const BOOK_DEFAULT = ['space-overview', 'space-strategy', 'space-campaign-plan',
 export default function SpacePrintModule() {
   const space = useSpaceData();
   const spaceId = useSpace((s) => s.id);
+  const kind = useSpace((s) => s.meta.kind ?? 'marketing');
+  const DOCS = useMemo(() => printDocsFor(kind), [kind]);
+  const bookName = kind === 'marketing' ? 'marketing plan' : kind === 'business' ? 'business book' : kind === 'finance' ? 'finance report' : 'training report';
+  const BookName = bookName[0].toUpperCase() + bookName.slice(1);
   const [busy, setBusy] = useState<string | null>(null);
-  const [book, setBook] = useState<string[]>(() => readLS<string[]>(`prepro.spacebook.${spaceId}`, BOOK_DEFAULT).filter((id) => SPACE_PRINT_DOCS.some((d) => d.id === id)));
+  const [book, setBook] = useState<string[]>(() => readLS<string[]>(`prepro.spacebook.${spaceId}`, kind === 'marketing' ? BOOK_DEFAULT : DOCS.map((d) => d.id)).filter((id) => DOCS.some((d) => d.id === id)));
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [drag, setDrag] = useState<string | null>(null);
 
@@ -28,7 +32,7 @@ export default function SpacePrintModule() {
 
   const empty = useMemo(() => {
     const m = new Map<string, string | false>();
-    for (const d of SPACE_PRINT_DOCS) {
+    for (const d of DOCS) {
       try {
         m.set(d.id, d.emptyReason ? d.emptyReason(space) : false);
       } catch {
@@ -36,9 +40,9 @@ export default function SpacePrintModule() {
       }
     }
     return m;
-  }, [space]);
+  }, [space, DOCS]);
 
-  const groups = SPACE_PRINT_GROUPS.map((g) => [g, SPACE_PRINT_DOCS.filter((d) => d.group === g)] as const).filter(([, docs]) => docs.length);
+  const groups = SPACE_PRINT_GROUPS.map((g) => [g, DOCS.filter((d) => d.group === g)] as const).filter(([, docs]) => docs.length);
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
     try {
@@ -47,7 +51,7 @@ export default function SpacePrintModule() {
       setBusy(null);
     }
   };
-  const bookDocs = book.map((id) => SPACE_PRINT_DOCS.find((d) => d.id === id)).filter(Boolean) as SpacePrintDocDef[];
+  const bookDocs = book.map((id) => DOCS.find((d) => d.id === id)).filter(Boolean) as SpacePrintDocDef[];
   const bookReady = bookDocs.filter((d) => !empty.get(d.id));
 
   const exportTheBook = () =>
@@ -63,7 +67,7 @@ export default function SpacePrintModule() {
           (done, total) => setProgress({ done, total }),
         );
       } catch (e) {
-        toast(`Marketing plan failed: ${e instanceof Error ? e.message : e}`, 'error');
+        toast(`${BookName} failed: ${e instanceof Error ? e.message : e}`, 'error');
       } finally {
         setProgress(null);
       }
@@ -71,9 +75,9 @@ export default function SpacePrintModule() {
 
   return (
     <div className="module">
-      <ModuleHeader title="Print & Export" icon={Printer} subtitle={`${SPACE_PRINT_DOCS.length} documents · PDF and print`} />
+      <ModuleHeader title="Print & Export" icon={Printer} subtitle={`${DOCS.length} documents · PDF and print`} />
       <div className="module-body">
-        {SPACE_PRINT_DOCS.length === 0 ? (
+        {DOCS.length === 0 ? (
           <EmptyState icon={Printer} title="No documents yet" />
         ) : (
           <div className="pc-layout">
@@ -105,7 +109,7 @@ export default function SpacePrintModule() {
                               Print
                             </Button>
                             <div className="spacer" />
-                            <Checkbox checked={inBook} onChange={(v) => saveBook(v ? [...book, d.id] : book.filter((x) => x !== d.id))} title="Include in the marketing plan PDF" />
+                            <Checkbox checked={inBook} onChange={(v) => saveBook(v ? [...book, d.id] : book.filter((x) => x !== d.id))} title={`Include in the ${bookName} PDF`} />
                           </div>
                         </div>
                       );
@@ -119,7 +123,7 @@ export default function SpacePrintModule() {
               <div className="card">
                 <div className="card-header">
                   <BookOpen size={16} />
-                  <h3>Marketing plan</h3>
+                  <h3>{BookName}</h3>
                 </div>
                 <div className="card-body col" style={{ gap: 10 }}>
                   <div className="muted small">One PDF with every checked document, in this order — to share with collaborators, clients or the team. Drag to reorder.</div>
@@ -153,11 +157,11 @@ export default function SpacePrintModule() {
                     </div>
                   )}
                   <Button variant="primary" icon={FileDown} disabled={!!busy} onClick={exportTheBook}>
-                    {busy === 'book' ? 'Building…' : `Export marketing plan (${bookReady.length})`}
+                    {busy === 'book' ? 'Building…' : `Export ${bookName} (${bookReady.length})`}
                   </Button>
                   {backend.kind !== 'electron' && <div className="tiny muted">In the browser each document opens its own print dialog. The desktop app merges them into one PDF.</div>}
                   <div className="row" style={{ gap: 6 }}>
-                    <Button size="sm" variant="ghost" onClick={() => saveBook(BOOK_DEFAULT.filter((id) => SPACE_PRINT_DOCS.some((d) => d.id === id)))}>
+                    <Button size="sm" variant="ghost" onClick={() => saveBook(BOOK_DEFAULT.filter((id) => DOCS.some((d) => d.id === id)))}>
                       Reset selection
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => saveBook([])}>

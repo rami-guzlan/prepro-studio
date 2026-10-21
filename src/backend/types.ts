@@ -41,11 +41,20 @@ export interface AppInfo {
   projectsDir?: string;
   electron?: string;
   hiddenDemos?: HiddenDemos;
+  /** automated tests with an isolated data folder only */
+  testUnlockFinances?: boolean;
 }
 
 export interface Backend {
   kind: 'electron' | 'web';
   info(): Promise<AppInfo>;
+  /** Personal Finances PIN (stored as a salted hash, never the PIN itself). */
+  financePin: {
+    status(): Promise<{ set: boolean }>;
+    verify(pin: string): Promise<{ ok: boolean; error?: string }>;
+    /** current is required when a PIN is already set */
+    set(current: string | null, next: string): Promise<{ ok: boolean; error?: string }>;
+  };
   /** Show / hide the demo cards on the home screen. */
   setDemosHidden(patch: HiddenDemos): Promise<HiddenDemos>;
 

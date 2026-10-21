@@ -24,6 +24,11 @@ import type {
   ResourceType,
 } from './types';
 import { SPACE_SCHEMA_VERSION } from './types';
+import type { SpaceKind } from './types';
+import { KIND_INFO } from './kinds';
+import { normalizeBusiness } from './business/types';
+import { normalizeFinance } from './finance/types';
+import { normalizeTraining } from './training/types';
 
 /* ---------------------------------------------------------------- item factories */
 
@@ -295,6 +300,12 @@ export const PLATFORM_NAMES: Partial<Record<Platform, string>> = {};
 
 export interface NewSpaceOptions {
   title: string;
+  /** workspace kind (default 'marketing'); non-marketing kinds ignore the marketing template */
+  kind?: SpaceKind;
+  /** initial data of the kind (e.g. business profile) */
+  kindData?: unknown;
+  /** linked Marketing Spaces (business spaces) */
+  spaceIds?: ID[];
   type: SpaceType;
   /** true (default) = starting channels, pillars, goals, phases and content ideas for the type */
   withTemplate?: boolean;
@@ -309,8 +320,9 @@ export interface NewSpaceOptions {
 
 export function createSpace(opts: NewSpaceOptions): SpaceData {
   const now = new Date().toISOString();
+  const kind: SpaceKind = opts.kind ?? 'marketing';
   const t = TEMPLATES[opts.type] ?? TEMPLATES.other;
-  const withT = opts.withTemplate !== false;
+  const withT = kind === 'marketing' && opts.withTemplate !== false;
   const start = opts.startDate || todayISO();
   const ps = defaultSettings();
   const channels: Channel[] = withT ? t.channels.map(([platform, name, cadence, unit]) => makeChannel(platform, { name, cadence, cadenceUnit: cadence ? unit ?? 'week' : undefined })) : [];
@@ -343,10 +355,11 @@ export function createSpace(opts: NewSpaceOptions): SpaceData {
     id: uid('spc'),
     meta: {
       title: opts.title || 'Untitled Space',
+      kind,
       type: opts.type,
       description: opts.description ?? (withT ? t.description : ''),
-      color: opts.color ?? t.color,
-      emoji: opts.emoji ?? t.emoji,
+      color: opts.color ?? (kind === 'marketing' ? t.color : KIND_INFO[kind].color),
+      emoji: opts.emoji ?? (kind === 'marketing' ? t.emoji : undefined),
       startDate: opts.type === 'campaign' || opts.type === 'event' ? start : undefined,
       createdAt: now,
       updatedAt: now,
@@ -360,6 +373,10 @@ export function createSpace(opts: NewSpaceOptions): SpaceData {
     content,
     assets,
     projectIds: opts.projectIds ?? [],
+    spaceIds: opts.spaceIds ?? [],
+    ...(kind === 'business' ? { business: normalizeBusiness(opts.kindData) } : {}),
+    ...(kind === 'finance' ? { finance: normalizeFinance(opts.kindData) } : {}),
+    ...(kind === 'training' ? { training: normalizeTraining(opts.kindData) } : {}),
   });
 }
 
@@ -403,5 +420,10 @@ export function normalizeSpace(raw: Partial<SpaceData> & Record<string, any>): S
   for (const ch of s.channels) ch.active = ch.active !== false;
   s.mind = normalizeMind(s.mind, 'Ideas');
   s.notes = s.notes ?? '';
+  s.meta.kind = KIND_INFO[s.meta.kind as SpaceKind] ? s.meta.kind : 'marketing';
+  if (!Array.isArray(s.spaceIds)) s.spaceIds = [];
+  if (s.meta.kind === 'business') s.business = normalizeBusiness(s.business);
+  if (s.meta.kind === 'finance') s.finance = normalizeFinance(s.finance);
+  if (s.meta.kind === 'training') s.training = normalizeTraining(s.training);
   return s as SpaceData;
 }

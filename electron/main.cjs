@@ -128,9 +128,21 @@ async function findProjectDir(id) {
   throw new Error('Project not found: ' + id);
 }
 
-/* Marketing Spaces: <projectsDir>/Marketing Spaces/<slug>__<id>/space.json (+ assets/, backups/) */
-function spacesDir() {
-  return path.join(config.projectsDir, 'Marketing Spaces');
+/* Spaces: <projectsDir>/<kind folder>/<slug>__<id>/space.json (+ assets/, backups/).
+   Kinds: Marketing Spaces, Businesses, Personal Finances, Training (meta.kind). */
+const KIND_FOLDERS = { marketing: 'Marketing Spaces', business: 'Businesses', finance: 'Personal Finances', training: 'Training' };
+
+function spacesDir(kind) {
+  return path.join(config.projectsDir, KIND_FOLDERS[kind] || KIND_FOLDERS.marketing);
+}
+
+function allSpaceRoots() {
+  return Object.keys(KIND_FOLDERS).map((k) => spacesDir(k));
+}
+
+function kindOf(data) {
+  const k = data && data.meta && data.meta.kind;
+  return KIND_FOLDERS[k] ? k : 'marketing';
 }
 
 const spaceDirCache = new Map();
@@ -139,24 +151,29 @@ async function findSpaceDir(id) {
   if (!isSafeName(id)) throw new Error('Invalid space id');
   const cached = spaceDirCache.get(id);
   if (cached && fs.existsSync(path.join(cached, 'space.json'))) return cached;
-  const entries = await fsp.readdir(spacesDir(), { withFileTypes: true }).catch(() => []);
-  for (const e of entries) {
-    if (e.isDirectory() && e.name.endsWith(`__${id}`) && fs.existsSync(path.join(spacesDir(), e.name, 'space.json'))) {
-      spaceDirCache.set(id, path.join(spacesDir(), e.name));
-      return path.join(spacesDir(), e.name);
+  for (const root of allSpaceRoots()) {
+    const entries = await fsp.readdir(root, { withFileTypes: true }).catch(() => []);
+    for (const e of entries) {
+      if (e.isDirectory() && e.name.endsWith(`__${id}`) && fs.existsSync(path.join(root, e.name, 'space.json'))) {
+        spaceDirCache.set(id, path.join(root, e.name));
+        return path.join(root, e.name);
+      }
     }
   }
-  for (const e of entries) {
-    if (!e.isDirectory()) continue;
-    const dir = path.join(spacesDir(), e.name);
-    try {
-      const data = await readJson(path.join(dir, 'space.json'));
-      if (data && data.id === id) {
-        spaceDirCache.set(id, dir);
-        return dir;
+  for (const root of allSpaceRoots()) {
+    const entries = await fsp.readdir(root, { withFileTypes: true }).catch(() => []);
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const dir = path.join(root, e.name);
+      try {
+        const data = await readJson(path.join(dir, 'space.json'));
+        if (data && data.id === id) {
+          spaceDirCache.set(id, dir);
+          return dir;
+        }
+      } catch {
+        /* not a space */
       }
-    } catch {
-      /* not a space */
     }
   }
   throw new Error('Space not found: ' + id);
@@ -186,6 +203,8 @@ function spaceSummaryFrom(data, dir) {
   return {
     id: data.id,
     title: m.title || 'Untitled Space',
+    kind: kindOf(data),
+    subtype: (data.business && data.business.profile && data.business.profile.type) || undefined,
     type: m.type || 'other',
     color: m.color || '#e64980',
     emoji: m.emoji,
@@ -422,19 +441,22 @@ function buildMenu() {
     {
       label: '&File',
       submenu: [
-        cmd('New Project…', 'new-project', 'CmdOrCtrl+Shift+N'),
+        cmd('New Production…', 'new-project', 'CmdOrCtrl+Shift+N'),
         cmd('New Marketing Space…', 'new-space', 'CmdOrCtrl+Shift+M'),
+        cmd('New Business…', 'new-business', 'CmdOrCtrl+Shift+B'),
+        cmd('Personal Finances', 'open-finances'),
+        cmd('Training', 'open-training'),
         cmd('Library', 'home', 'CmdOrCtrl+Shift+H'),
         { type: 'separator' },
         cmd('Import Script (Fountain / FDX / TXT)…', 'import-script'),
-        cmd('Export Project Archive…', 'export-archive'),
-        cmd('Import Project Archive…', 'import-archive'),
+        cmd('Export Production Archive…', 'export-archive'),
+        cmd('Import Production Archive…', 'import-archive'),
         { type: 'separator' },
         cmd('Print & Export Center', 'print-center', 'CmdOrCtrl+P'),
-        cmd('Open Project Folder', 'project-folder'),
+        cmd('Open Folder', 'project-folder'),
         { type: 'separator' },
         cmd('Save Now', 'save', 'CmdOrCtrl+S'),
-        cmd('Project Settings', 'settings', 'CmdOrCtrl+,'),
+        cmd('Settings', 'settings', 'CmdOrCtrl+,'),
         { type: 'separator' },
         { role: 'quit', label: 'Exit' },
       ],
@@ -476,9 +498,9 @@ function buildMenu() {
         cmd('User Guide', 'guide'),
         cmd('Connect an AI Agent (MCP)…', 'agent-connect'),
         { type: 'separator' },
-        cmd('Open Demo Project', 'open-demo'),
+        cmd('Open Demo Production', 'open-demo'),
         cmd('Open Demo Marketing Space', 'open-demo-space'),
-        cmd('Reset Demo Project…', 'reset-demo'),
+        cmd('Reset Demo Production…', 'reset-demo'),
         cmd('Reset Demo Marketing Space…', 'reset-demo-space'),
         {
           label: 'Show Demos on the Home Screen',
@@ -488,7 +510,7 @@ function buildMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Open Projects Folder',
+          label: 'Open Studio Folder',
           click: () => shell.openPath(config.projectsDir),
         },
         {
@@ -651,8 +673,8 @@ function claudeDesktopState() {
 
 /* Files an AI agent may read (images, scripts, and documents / media it can attach as campaign resources).
    An allowlist on purpose: no config, key or code files. */
-const READ_EXT = /\.(png|jpe?g|webp|gif|bmp|svg|fountain|spmd|fdx|txt|md|markdown|pdf|docx?|pptx?|xlsx?|csv|tsv|rtf|odt|ods|odp|key|pages|numbers|epub|html?|mp4|mov|webm|m4v|mp3|wav|m4a|aac|ogg|flac|zip)$/i;
-const READ_EXT_HINT = 'images, scripts (fountain, fdx, txt, md), documents (pdf, doc/docx, ppt/pptx, xls/xlsx, csv, rtf, odt, key, pages, numbers, epub, html), audio / video and zip';
+const READ_EXT = /\.(png|jpe?g|webp|gif|bmp|svg|fountain|spmd|fdx|txt|md|markdown|pdf|docx?|pptx?|xlsx?|csv|tsv|ofx|qfx|qbo|rtf|odt|ods|odp|key|pages|numbers|epub|html?|mp4|mov|webm|m4v|mp3|wav|m4a|aac|ogg|flac|zip)$/i;
+const READ_EXT_HINT = 'images, scripts (fountain, fdx, txt, md), documents (pdf, doc/docx, ppt/pptx, xls/xlsx, csv, ofx/qfx, rtf, odt, key, pages, numbers, epub, html), audio / video and zip';
 
 function registerMcpIpc() {
   ipcMain.on('mcp:ready', (_e, describe) => {
@@ -790,8 +812,38 @@ function registerIpc() {
     projectsDir: config.projectsDir,
     electron: process.versions.electron,
     hiddenDemos: { ...config.hiddenDemos },
+    // automated tests only: an isolated data folder AND an explicit flag unlock the finances
+    testUnlockFinances: !!(ISOLATED_DIR && process.env.PREPRO_TEST_UNLOCK_FINANCES === '1'),
   }));
   ipcMain.handle('demos:setHidden', (_e, patch) => setHiddenDemos(patch));
+
+  /* ---------------- Personal Finances PIN */
+  const pinHash = (pin, salt) => crypto.pbkdf2Sync(String(pin), salt, 120000, 32, 'sha256').toString('hex');
+  const pinTries = { fails: 0, until: 0 };
+  ipcMain.handle('finance:pinStatus', () => ({ set: !!(config.financePin && config.financePin.hash) }));
+  ipcMain.handle('finance:pinVerify', async (_e, pin) => {
+    if (!config.financePin || !config.financePin.hash) return { ok: false, error: 'No PIN set' };
+    if (Date.now() < pinTries.until) return { ok: false, error: `Too many attempts. Try again in ${Math.ceil((pinTries.until - Date.now()) / 1000)} s.` };
+    const ok = crypto.timingSafeEqual(Buffer.from(pinHash(pin, config.financePin.salt), 'hex'), Buffer.from(config.financePin.hash, 'hex'));
+    if (ok) pinTries.fails = 0;
+    else if (++pinTries.fails >= 5) {
+      pinTries.until = Date.now() + 30000;
+      pinTries.fails = 0;
+    }
+    return { ok };
+  });
+  ipcMain.handle('finance:pinSet', async (_e, current, next) => {
+    const nextPin = String(next || '');
+    if (!/^\d{4,12}$/.test(nextPin)) return { ok: false, error: 'Use 4 to 12 digits' };
+    if (config.financePin && config.financePin.hash) {
+      const ok = crypto.timingSafeEqual(Buffer.from(pinHash(current, config.financePin.salt), 'hex'), Buffer.from(config.financePin.hash, 'hex'));
+      if (!ok) return { ok: false, error: 'The current PIN is wrong' };
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    config.financePin = { salt, hash: pinHash(nextPin, salt) };
+    saveConfig();
+    return { ok: true };
+  });
 
   ipcMain.on('app:close-ready', (e) => {
     try {
@@ -901,19 +953,21 @@ function registerIpc() {
   /* ---------------- Marketing Spaces */
   ipcMain.handle('spaces:list', async () => {
     const out = [];
-    const entries = await fsp.readdir(spacesDir(), { withFileTypes: true }).catch(() => []);
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      const dir = path.join(spacesDir(), e.name);
-      const file = path.join(dir, 'space.json');
-      if (!fs.existsSync(file)) continue;
-      try {
-        const data = await readJson(file);
-        if (!data || !data.id) continue;
-        spaceDirCache.set(data.id, dir);
-        out.push(spaceSummaryFrom(data, dir));
-      } catch (err) {
-        console.error('Could not read', file, err);
+    for (const root of allSpaceRoots()) {
+      const entries = await fsp.readdir(root, { withFileTypes: true }).catch(() => []);
+      for (const e of entries) {
+        if (!e.isDirectory()) continue;
+        const dir = path.join(root, e.name);
+        const file = path.join(dir, 'space.json');
+        if (!fs.existsSync(file)) continue;
+        try {
+          const data = await readJson(file);
+          if (!data || !data.id) continue;
+          spaceDirCache.set(data.id, dir);
+          out.push(spaceSummaryFrom(data, dir));
+        } catch (err) {
+          console.error('Could not read', file, err);
+        }
       }
     }
     out.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
@@ -924,7 +978,7 @@ function registerIpc() {
 
   ipcMain.handle('space:create', async (_e, data) => {
     if (!data || !isSafeName(data.id)) throw new Error('Invalid space');
-    const dir = path.join(spacesDir(), `${slugify(data.meta && data.meta.title)}__${data.id}`);
+    const dir = path.join(spacesDir(kindOf(data)), `${slugify(data.meta && data.meta.title)}__${data.id}`);
     await fsp.mkdir(path.join(dir, 'assets'), { recursive: true });
     await writeFileAtomic(path.join(dir, 'space.json'), JSON.stringify(data, null, 1));
     spaceDirCache.set(data.id, dir);
@@ -937,7 +991,7 @@ function registerIpc() {
     try {
       dir = await findSpaceDir(data.id);
     } catch {
-      dir = path.join(spacesDir(), `${slugify(data.meta && data.meta.title)}__${data.id}`);
+      dir = path.join(spacesDir(kindOf(data)), `${slugify(data.meta && data.meta.title)}__${data.id}`);
       await fsp.mkdir(path.join(dir, 'assets'), { recursive: true });
       spaceDirCache.set(data.id, dir);
     }
@@ -959,7 +1013,7 @@ function registerIpc() {
     const data = await readJson(path.join(src, 'space.json'));
     data.id = newId;
     data.meta = { ...(data.meta || {}), title: newTitle, demo: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    const dir = path.join(spacesDir(), `${slugify(newTitle)}__${newId}`);
+    const dir = path.join(spacesDir(kindOf(data)), `${slugify(newTitle)}__${newId}`);
     await fsp.mkdir(path.join(dir, 'assets'), { recursive: true });
     if (fs.existsSync(path.join(src, 'assets'))) await fsp.cp(path.join(src, 'assets'), path.join(dir, 'assets'), { recursive: true });
     await writeFileAtomic(path.join(dir, 'space.json'), JSON.stringify(data, null, 1));

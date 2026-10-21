@@ -1,0 +1,31 @@
+/* Personal Finances lock dialog */
+.fin-lock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fin-lock-icon {
+  align-self: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--success-soft);
+  color: var(--success);
+}
+.fin-pin-input.input {
+  font-size: 22px;
+  letter-spacing: 0.4em;
+  text-align: center;
+  height: 46px;
+}
+.fin-lock-error {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+}

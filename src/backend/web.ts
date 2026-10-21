@@ -76,6 +76,8 @@ function spaceSummary(s: SpaceData): SpaceSummary {
   return {
     id: s.id,
     title: s.meta.title,
+    kind: s.meta.kind ?? 'marketing',
+    subtype: s.business?.profile?.type,
     type: s.meta.type,
     color: s.meta.color,
     emoji: s.meta.emoji,
@@ -135,11 +137,43 @@ function readHiddenDemos(): { project?: boolean; space?: boolean } {
   }
 }
 
+async function webPinHash(pin: string, salt: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(salt), iterations: 120000, hash: 'SHA-256' }, key, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function webPinRecord(): { salt: string; hash: string } | null {
+  try {
+    return JSON.parse(localStorage.getItem('prepro.financePin') || 'null');
+  } catch {
+    return null;
+  }
+}
+
 export function createWebBackend(): Backend {
   return {
     kind: 'web',
     async info() {
       return { version: '1.0.0', platform: 'browser', hiddenDemos: readHiddenDemos() };
+    },
+    financePin: {
+      async status() {
+        return { set: !!webPinRecord() };
+      },
+      async verify(pin) {
+        const r = webPinRecord();
+        if (!r) return { ok: false, error: 'No PIN set' };
+        return { ok: (await webPinHash(pin, r.salt)) === r.hash };
+      },
+      async set(current, next) {
+        if (!/^\d{4,12}$/.test(next)) return { ok: false, error: 'Use 4 to 12 digits' };
+        const r = webPinRecord();
+        if (r && (await webPinHash(current ?? '', r.salt)) !== r.hash) return { ok: false, error: 'The current PIN is wrong' };
+        const salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('prepro.financePin', JSON.stringify({ salt, hash: await webPinHash(next, salt) }));
+        return { ok: true };
+      },
     },
     async setDemosHidden(patch) {
       const next = { ...readHiddenDemos(), ...patch };

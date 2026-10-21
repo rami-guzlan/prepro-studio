@@ -16,13 +16,24 @@
    times 'HH:MM' (24h), optional fields may be missing.
    ========================================================================== */
 import type { AVRow, ID, ISODate, MindDump, PaperSize, PrintSettings, TimeStr } from '@/types';
+import type { BusinessData } from './business/types';
+import type { FinanceData } from './finance/types';
+import type { TrainingData } from './training/types';
 
 export const SPACE_SCHEMA_VERSION = 1;
 
 export type SpaceType = 'personal_brand' | 'channel' | 'campaign' | 'business' | 'event' | 'other';
 
+/** Which kind of workspace a space file is. Marketing Spaces and Business spaces can be many;
+    Personal Finances and Training are one per user. All share the space store, autosave,
+    folders, assets and agent tooling; each kind has its own modules and data (`business`,
+    `finance`, `training`). Missing = 'marketing' (files from before kinds existed). */
+export type SpaceKind = 'marketing' | 'business' | 'finance' | 'training';
+
 export interface SpaceMeta {
   title: string;
+  /** workspace kind (default 'marketing') */
+  kind?: SpaceKind;
   type: SpaceType;
   /** what this space is about / mission */
   description: string;
@@ -456,13 +467,24 @@ export interface SpaceData {
   mind: MindDump;
   /** linked production projects */
   projectIds: ID[];
+  /** linked Marketing Spaces (business spaces link the marketing they run) */
+  spaceIds?: ID[];
   notes: string;
+  /** business spaces: income, contractors, agreements, invoices, expenses, time … */
+  business?: BusinessData;
+  /** the Personal Finances space: accounts, statements, transactions, budgets, plans */
+  finance?: FinanceData;
+  /** the Training space: goals, meals, workouts, body metrics, progress photos, check-ins */
+  training?: TrainingData;
 }
 
 /** Library card. */
 export interface SpaceSummary {
   id: ID;
   title: string;
+  kind?: SpaceKind;
+  /** business spaces: the business type */
+  subtype?: string;
   type: SpaceType;
   color: string;
   emoji?: string;

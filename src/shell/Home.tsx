@@ -1,6 +1,7 @@
-/* Project library: create, open, import, duplicate, archive and delete projects. */
-import { useCallback, useEffect, useState } from 'react';
-import { Archive, Bot, CircleHelp, Clapperboard, Copy, EyeOff, FileInput, FolderOpen, Megaphone, Moon, MoreHorizontal, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload, Monitor } from 'lucide-react';
+/* The library: Productions, Spaces (Marketing Spaces / Business Management), Personal
+   Finances and Training — create, open, import, duplicate, archive and delete. */
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Archive, Bot, BriefcaseBusiness, ChevronDown, CircleHelp, Clapperboard, Dumbbell, Wallet, Copy, EyeOff, FileInput, FolderOpen, Megaphone, Moon, MoreHorizontal, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload, Monitor } from 'lucide-react';
 import type { SpaceSummary } from '@/spaces/types';
 import { SPACE_TYPES } from '@/spaces/constants';
 import { openAgentDialog } from '@/agent/state';
@@ -8,11 +9,16 @@ import type { ProjectSummary } from '@/types';
 import { backend, type HiddenDemos } from '@/backend';
 import { PROJECT_STATUSES, PROJECT_TYPES, optionLabel } from '@/lib/constants';
 import { makeFormatters } from '@/lib/format';
-import { setHomeTab, setTheme, useApp } from '@/store/app';
+import { readLS, setHomeTab, setTheme, useApp, writeLS, type HomeTab } from '@/store/app';
 import { Badge, Button, EmptyState, Menu, Tabs, confirmDialog, toast, type MenuItem } from '@/ui';
 import { useCommand } from '@/lib/commands';
 import { NewProjectDialog } from './NewProjectDialog';
 import { NewSpaceDialog } from './NewSpaceDialog';
+import { NewBusinessDialog } from './NewBusinessDialog';
+import { BUSINESS_TYPES } from '@/spaces/business/constants';
+
+const FinanceHomePanel = lazy(() => import('@/spaces/finance/HomePanel'));
+const TrainingHomePanel = lazy(() => import('@/spaces/training/HomePanel'));
 import { confirmResetDemoSpace, deleteSpace, duplicateSpace, openDemoSpace, openSpaceById } from './spaceActions';
 import { confirmResetDemo, deleteProject, duplicateProject, exportArchive, importArchive, importScriptAsNewProject, openDemo, openProjectById, removeDemoFromHome } from './projectActions';
 
@@ -28,6 +34,7 @@ export function Home() {
   const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newSpaceOpen, setNewSpaceOpen] = useState(false);
+  const [newBizOpen, setNewBizOpen] = useState(false);
   const tab = useApp((s) => s.homeTab);
   const [projectsDir, setProjectsDir] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -62,6 +69,11 @@ export function Home() {
     refresh();
     return true;
   });
+  useCommand('new-business', () => {
+    setHomeTab('business');
+    setNewBizOpen(true);
+    return true;
+  });
   useCommand('new-space', () => {
     setHomeTab('spaces');
     setNewSpaceOpen(true);
@@ -78,8 +90,10 @@ export function Home() {
     }
   };
   // demo cards: on the home screen until the user removes them; always in the Help menu
-  const otherSpaces = spaces?.filter((s) => !s.demo) ?? [];
-  const demoSpace = spaces?.find((s) => s.demo);
+  const marketing = spaces?.filter((s) => (s.kind ?? 'marketing') === 'marketing') ?? [];
+  const businesses = spaces?.filter((s) => s.kind === 'business') ?? [];
+  const otherSpaces = marketing.filter((s) => !s.demo);
+  const demoSpace = marketing.find((s) => s.demo);
   const showDemo = !hiddenDemos.project;
   const showDemoSpace = !hiddenDemos.space;
 
@@ -175,31 +189,61 @@ export function Home() {
                 Import archive
               </Button>
               <Button variant="primary" icon={Plus} onClick={() => setNewOpen(true)}>
-                New project
+                New production
               </Button>
             </>
-          ) : (
+          ) : tab === 'spaces' ? (
             <Button variant="primary" icon={Plus} onClick={() => setNewSpaceOpen(true)}>
               New marketing space
             </Button>
-          )}
+          ) : tab === 'business' ? (
+            <Button variant="primary" icon={Plus} onClick={() => setNewBizOpen(true)}>
+              New business
+            </Button>
+          ) : null}
         </div>
 
         <div className="home-tabs">
-          <Tabs<'projects' | 'spaces'>
-            value={tab}
-            onChange={setHomeTab}
-            tabs={[
-              { id: 'projects', label: 'Projects', icon: Clapperboard, count: others.length },
-              { id: 'spaces', label: 'Marketing Spaces', icon: Megaphone, count: otherSpaces.length },
-            ]}
-          />
-          <span className="muted small">
-            {tab === 'projects' ? 'Productions: one video or film, its script, team, shoot and post.' : 'Ongoing marketing: strategy, multiformat content, calendar and results.'}
-          </span>
+          <HomeTabBar tab={tab} counts={{ projects: others.length, spaces: otherSpaces.length, business: businesses.length }} />
+          <span className="muted small">{TAB_HINTS[tab]}</span>
         </div>
 
-        {tab === 'spaces' ? (
+        {tab === 'business' ? (
+          spaces === null ? (
+            <div className="muted">Loading…</div>
+          ) : businesses.length === 0 ? (
+            <div className="card" style={{ padding: 12 }}>
+              <EmptyState
+                icon={BriefcaseBusiness}
+                title="Run the business side of things"
+                description="A space for each side hustle, business you're part of or income stream: income and clients, contractors and what you agreed to pay, legal documents, invoices, expenses and time — linked to the Marketing Spaces and Productions it runs."
+                action={
+                  <Button variant="primary" icon={Plus} onClick={() => setNewBizOpen(true)}>
+                    New business
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="project-grid">
+              <button className="new-card" onClick={() => setNewBizOpen(true)}>
+                <Plus size={26} />
+                New business
+              </button>
+              {businesses.map((sp) => (
+                <SpaceCard key={sp.id} sp={sp} menu={spaceMenu(sp)} hint={sp.description?.trim() || BUSINESS_TYPES.find((t) => t.value === sp.subtype)?.description} badge={BUSINESS_TYPES.find((t) => t.value === sp.subtype)?.label ?? 'Business'} />
+              ))}
+            </div>
+          )
+        ) : tab === 'finance' ? (
+          <Suspense fallback={<div className="muted">Loading…</div>}>
+            <FinanceHomePanel />
+          </Suspense>
+        ) : tab === 'training' ? (
+          <Suspense fallback={<div className="muted">Loading…</div>}>
+            <TrainingHomePanel />
+          </Suspense>
+        ) : tab === 'spaces' ? (
           spaces === null ? (
             <div className="muted">Loading spaces…</div>
           ) : otherSpaces.length === 0 && !showDemoSpace ? (
@@ -236,16 +280,16 @@ export function Home() {
         <>
 
         {projects === null ? (
-          <div className="muted">Loading projects…</div>
+          <div className="muted">Loading productions…</div>
         ) : others.length === 0 && !showDemo ? (
           <div className="card" style={{ padding: 12 }}>
             <EmptyState
               icon={Clapperboard}
               title="Start your first production"
-              description={`Create a project for each video. Write the script, build storyboards and shot lists, plan lighting, cast and crew, schedule the shoot, send call sheets and plan post — then print or export everything as PDF.${DEMO_HINT_PROJECT}`}
+              description={`Create a production for each video. Write the script, build storyboards and shot lists, plan lighting, cast and crew, schedule the shoot, send call sheets and plan post — then print or export everything as PDF.${DEMO_HINT_PROJECT}`}
               action={
                 <Button variant="primary" icon={Plus} onClick={() => setNewOpen(true)}>
-                  New project
+                  New production
                 </Button>
               }
             />
@@ -254,7 +298,7 @@ export function Home() {
           <div className="project-grid">
             <button className="new-card" onClick={() => setNewOpen(true)}>
               <Plus size={26} />
-              New project
+              New production
             </button>
             {showDemo &&
               (demo ? (
@@ -298,7 +342,7 @@ export function Home() {
           <div className="spacer" />
           {projectsDir && (
             <span className="muted small row" style={{ gap: 6 }}>
-              Projects folder: <span className="mono">{projectsDir}</span>
+              Studio folder: <span className="mono">{projectsDir}</span>
               {backend.openPath && (
                 <Button size="sm" variant="ghost" icon={FolderOpen} onClick={() => backend.openPath!(projectsDir)}>
                   Open
@@ -311,7 +355,7 @@ export function Home() {
                   onClick={async () => {
                     const dir = await backend.chooseProjectsDir!();
                     if (dir) {
-                      toast('Projects folder changed');
+                      toast('Studio folder changed');
                       refresh();
                     }
                   }}
@@ -334,6 +378,7 @@ export function Home() {
       </div>
       <NewProjectDialog open={newOpen} onClose={() => setNewOpen(false)} />
       <NewSpaceDialog open={newSpaceOpen} onClose={() => setNewSpaceOpen(false)} />
+      <NewBusinessDialog open={newBizOpen} onClose={() => setNewBizOpen(false)} />
     </div>
   );
 }
@@ -388,7 +433,7 @@ function DemoCard({ kind, busy, onOpen, menu }: { kind: 'project' | 'space'; bus
   );
 }
 
-function SpaceCard({ sp, menu, hint }: { sp: SpaceSummary; menu: any[]; hint?: string }) {
+function SpaceCard({ sp, menu, hint, badge }: { sp: SpaceSummary; menu: any[]; hint?: string; badge?: string }) {
   const cover = sp.cover ? backend.assetUrl(sp.id, sp.cover) : '';
   const type = SPACE_TYPES.find((t) => t.value === sp.type);
   const stats = [
@@ -408,11 +453,67 @@ function SpaceCard({ sp, menu, hint }: { sp: SpaceSummary; menu: any[]; hint?: s
       <div className="info">
         <h3 className="ellipsis">{sp.title}</h3>
         <div className="row" style={{ gap: 6 }}>
-          <Badge color={sp.color}>{type?.label ?? 'Space'}</Badge>
+          <Badge color={sp.color}>{badge ?? type?.label ?? 'Space'}</Badge>
           {sp.demo && <Badge tone="accent">Demo</Badge>}
         </div>
         <div className={hint ? 'meta' : 'meta ellipsis'}>{hint ?? stats.join(' · ')}</div>
       </div>
+    </div>
+  );
+}
+
+const TAB_HINTS: Record<HomeTab, string> = {
+  projects: 'Productions: one video or film, its script, team, shoot and post.',
+  spaces: 'Ongoing marketing: strategy, multiformat content, calendar and results.',
+  business: 'The business side: income, clients, contractors, agreements, invoices, expenses and time.',
+  finance: 'Your money: statements, spending, budgets, plans and advice. Locked with your PIN.',
+  training: 'Meals, macros, workouts, body metrics, daily progress photos and your coach.',
+};
+
+/** Productions · Spaces ▾ (Marketing Spaces / Business Management) · Personal Finances · Training */
+function HomeTabBar({ tab, counts }: { tab: HomeTab; counts: { projects: number; spaces: number; business: number } }) {
+  const spacesSub: 'spaces' | 'business' = tab === 'business' || tab === 'spaces' ? tab : readLS<'spaces' | 'business'>('prepro.homeSpacesSub', 'spaces');
+  const go = (t: HomeTab) => {
+    if (t === 'spaces' || t === 'business') writeLS('prepro.homeSpacesSub', t);
+    setHomeTab(t);
+  };
+  const inSpaces = tab === 'spaces' || tab === 'business';
+  const Count = ({ n }: { n: number }) => (n > 0 ? <span className="count">{n}</span> : null);
+  return (
+    <div className="tabs home-tabbar" role="tablist">
+      <button type="button" role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => go('projects')}>
+        <Clapperboard />
+        Productions
+        <Count n={counts.projects} />
+      </button>
+      <span className={`home-tab-split ${inSpaces ? 'on' : ''}`}>
+        <button type="button" role="tab" aria-selected={inSpaces} className={inSpaces ? 'on' : ''} onClick={() => go(spacesSub)}>
+          {spacesSub === 'business' ? <BriefcaseBusiness /> : <Megaphone />}
+          {spacesSub === 'business' ? 'Business Management' : 'Marketing Spaces'}
+          <Count n={spacesSub === 'business' ? counts.business : counts.spaces} />
+        </button>
+        <Menu
+          align="start"
+          trigger={
+            <button type="button" className={`home-tab-caret ${inSpaces ? 'on' : ''}`} aria-label="Choose spaces">
+              <ChevronDown />
+            </button>
+          }
+          items={[
+            { header: 'Spaces' },
+            { label: `Marketing Spaces${counts.spaces ? ` (${counts.spaces})` : ''}`, icon: Megaphone, checked: tab === 'spaces', onClick: () => go('spaces') },
+            { label: `Business Management${counts.business ? ` (${counts.business})` : ''}`, icon: BriefcaseBusiness, checked: tab === 'business', onClick: () => go('business') },
+          ]}
+        />
+      </span>
+      <button type="button" role="tab" aria-selected={tab === 'finance'} className={tab === 'finance' ? 'on' : ''} onClick={() => go('finance')}>
+        <Wallet />
+        Personal Finances
+      </button>
+      <button type="button" role="tab" aria-selected={tab === 'training'} className={tab === 'training' ? 'on' : ''} onClick={() => go('training')}>
+        <Dumbbell />
+        Training
+      </button>
     </div>
   );
 }

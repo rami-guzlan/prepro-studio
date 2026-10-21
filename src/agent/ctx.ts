@@ -11,6 +11,14 @@ import { makeFormatters } from '@/lib/format';
 import { COLLECTIONS, COLLECTION_BY_NAME, type CollectionDef, type FieldSpec } from './collections';
 import { SINGLETONS, type SingletonDef } from './singletons';
 import { SPACE_COLLECTIONS, SPACE_COLLECTION_BY_NAME, SPACE_SINGLETONS } from './spaceCollections';
+import { BUSINESS_COLLECTIONS, BUSINESS_SINGLETONS } from './kinds/business';
+import { BUSINESS_SALES_COLLECTIONS, BUSINESS_SALES_SINGLETONS } from './kinds/business-sales';
+import { BUSINESS_WORK_COLLECTIONS, BUSINESS_WORK_SINGLETONS } from './kinds/business-work';
+import { BUSINESS_LIBRARY_COLLECTIONS, BUSINESS_LIBRARY_SINGLETONS } from './kinds/business-library';
+import { FINANCE_COLLECTIONS, FINANCE_SINGLETONS } from './kinds/finance';
+import { TRAINING_COLLECTIONS, TRAINING_SINGLETONS } from './kinds/training';
+import type { SpaceKind } from '@/spaces/types';
+import { isFinanceUnlocked } from '@/spaces/finance/lock';
 
 export class AgentError extends Error {}
 
@@ -45,9 +53,42 @@ export function space(): SpaceData {
   return s;
 }
 
+const KIND_HINT: Record<SpaceKind, string> = {
+  marketing: 'a Marketing Space (list_spaces / open_space)',
+  business: 'a business (list_spaces {kind:"business"} / open_space, or create_business)',
+  finance: 'Personal Finances (open_finances)',
+  training: 'Training (open_training)',
+};
+
+/** The open space when it is of this kind (finance also requires the finances to be unlocked). */
+export function spaceOf(kind: SpaceKind): SpaceData {
+  const s = useSpaceStore.getState().space;
+  if (!s || openKind() !== 'space' || (s.meta.kind ?? 'marketing') !== kind) fail(`This tool works in ${KIND_HINT[kind]}. Open it first.`);
+  if (kind === 'finance') requireFinanceUnlocked();
+  return s;
+}
+
+export function requireFinanceUnlocked() {
+  if (!isFinanceUnlocked()) fail('Personal Finances are locked. Ask the user to unlock them in PrePro Studio (Library → Personal Finances, enter the PIN); agents can read them only while they are unlocked.');
+}
+
+/** Collections and single fields of a kind of space. */
+export function spaceRegistry(kind: SpaceKind): { collections: CollectionDef[]; byName: Record<string, CollectionDef>; singletons: SingletonDef[] } {
+  const pick = (collections: CollectionDef[], singletons: SingletonDef[]) => ({ collections, byName: Object.fromEntries(collections.map((c) => [c.name, c])), singletons });
+  if (kind === 'business') return BUSINESS_REG ?? (BUSINESS_REG = pick([...BUSINESS_COLLECTIONS, ...BUSINESS_SALES_COLLECTIONS, ...BUSINESS_WORK_COLLECTIONS, ...BUSINESS_LIBRARY_COLLECTIONS], [...BUSINESS_SINGLETONS, ...BUSINESS_SALES_SINGLETONS, ...BUSINESS_WORK_SINGLETONS, ...BUSINESS_LIBRARY_SINGLETONS]));
+  if (kind === 'finance') return FINANCE_REG ?? (FINANCE_REG = pick(FINANCE_COLLECTIONS, FINANCE_SINGLETONS));
+  if (kind === 'training') return TRAINING_REG ?? (TRAINING_REG = pick(TRAINING_COLLECTIONS, TRAINING_SINGLETONS));
+  return { collections: SPACE_COLLECTIONS, byName: SPACE_COLLECTION_BY_NAME, singletons: SPACE_SINGLETONS };
+}
+let BUSINESS_REG: ReturnType<typeof spaceRegistry> | undefined;
+let FINANCE_REG: ReturnType<typeof spaceRegistry> | undefined;
+let TRAINING_REG: ReturnType<typeof spaceRegistry> | undefined;
+
 /** The open document (project or space) with its collections, single fields and writer. */
 export interface ActiveDoc {
   kind: 'project' | 'space';
+  /** kind of the open space ('marketing' for projects too, unused there) */
+  spaceKind: SpaceKind;
   doc: any;
   collections: CollectionDef[];
   byName: Record<string, CollectionDef>;
@@ -57,15 +98,19 @@ export interface ActiveDoc {
 
 export function activeDoc(): ActiveDoc {
   const kind = openKind();
-  if (kind === 'space')
-    return { kind, doc: useSpaceStore.getState().space!, collections: SPACE_COLLECTIONS, byName: SPACE_COLLECTION_BY_NAME, singletons: SPACE_SINGLETONS, update: (r, o) => updateSpace(r as any, o) };
+  if (kind === 'space') {
+    const doc = useSpaceStore.getState().space!;
+    const sk: SpaceKind = doc.meta.kind ?? 'marketing';
+    if (sk === 'finance') requireFinanceUnlocked();
+    return { kind, spaceKind: sk, doc, ...spaceRegistry(sk), update: (r, o) => updateSpace(r as any, o) };
+  }
   if (kind === 'project')
-    return { kind, doc: useProjectStore.getState().project!, collections: COLLECTIONS, byName: COLLECTION_BY_NAME, singletons: SINGLETONS, update: (r, o) => projectUpdate(r as any, o) };
+    return { kind, spaceKind: 'marketing', doc: useProjectStore.getState().project!, collections: COLLECTIONS, byName: COLLECTION_BY_NAME, singletons: SINGLETONS, update: (r, o) => projectUpdate(r as any, o) };
   fail('Nothing is open. Open a project (list_projects / open_project) or a Marketing Space (list_spaces / open_space) first.');
 }
 
 function registryFor(doc: any): Record<string, CollectionDef> {
-  return doc && doc.kind === 'space' ? SPACE_COLLECTION_BY_NAME : COLLECTION_BY_NAME;
+  return doc && doc.kind === 'space' ? spaceRegistry((doc.meta?.kind ?? 'marketing') as SpaceKind).byName : COLLECTION_BY_NAME;
 }
 
 export function model(p: ProjectData = project()): ScriptModel {

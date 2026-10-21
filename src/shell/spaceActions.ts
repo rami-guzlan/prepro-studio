@@ -1,10 +1,13 @@
-/* Opening, creating, duplicating and deleting Marketing Spaces. */
-import type { SpaceData } from '@/spaces/types';
+/* Opening, creating, duplicating and deleting spaces of every kind (Marketing Spaces,
+   Business Management, Personal Finances, Training). */
+import type { SpaceData, SpaceKind } from '@/spaces/types';
+import { KIND_INFO } from '@/spaces/kinds';
+import { isFinanceUnlocked, onFinanceLock, requestFinanceUnlock } from '@/spaces/finance/lock';
 import { backend } from '@/backend';
 import { closeProject, useProjectStore } from '@/store/project';
 import { closeSpaceData, openSpaceData, useSpaceStore } from '@/store/space';
 import { flushSave } from '@/store/autosave';
-import { goHome, navigateSpace, readLS, setHomeTab, writeLS, type SpaceModuleId } from '@/store/app';
+import { goHome, navigateSpace, readLS, setHomeTab, writeLS, type HomeTab, type SpaceModuleId } from '@/store/app';
 import { createSpace, normalizeSpace, type NewSpaceOptions } from '@/spaces/defaults';
 import { closeContent, refreshProjectList } from '@/spaces/ui';
 import { uid } from '@/lib/id';
@@ -15,6 +18,7 @@ export async function openSpaceById(id: string, moduleId?: SpaceModuleId) {
   try {
     await flushSave();
     const s = normalizeSpace(await backend.loadSpace(id));
+    if (s.meta.kind === 'finance' && !isFinanceUnlocked() && !(await requestFinanceUnlock())) return;
     if (useProjectStore.getState().project) {
       closeProject();
       (window as any).__preproProjectId = undefined;
@@ -35,15 +39,42 @@ export async function openSpaceById(id: string, moduleId?: SpaceModuleId) {
   }
 }
 
+const HOME_TAB: Record<SpaceKind, HomeTab> = { marketing: 'spaces', business: 'business', finance: 'finance', training: 'training' };
+
 export async function leaveSpace() {
+  const kind = useSpaceStore.getState().space?.meta.kind ?? 'marketing';
   await flushSave();
   closeContent();
   closeSpaceData();
   (window as any).__preproSpaceId = undefined;
   writeLS('prepro.lastSpace', null);
   backend.setWindowTitle?.('');
-  setHomeTab('spaces');
+  setHomeTab(HOME_TAB[kind]);
   goHome();
+}
+
+// locking the finances closes them on screen
+onFinanceLock(() => {
+  if (useSpaceStore.getState().space?.meta.kind === 'finance') void leaveSpace();
+});
+
+/** The one Personal Finances / Training space (created the first time). */
+export async function singletonSpaceId(kind: 'finance' | 'training', create = true): Promise<string | null> {
+  const hit = (await backend.listSpaces()).find((x) => (x.kind ?? 'marketing') === kind);
+  if (hit) return hit.id;
+  if (!create) return null;
+  const s = createSpace({ title: KIND_INFO[kind].label, kind, type: 'other' });
+  await backend.createSpace(s);
+  return s.id;
+}
+
+/** Open Personal Finances (asks for the PIN) or Training. */
+export async function openSingleton(kind: 'finance' | 'training', moduleId?: SpaceModuleId): Promise<boolean> {
+  if (kind === 'finance' && !isFinanceUnlocked() && !(await requestFinanceUnlock())) return false;
+  const id = await singletonSpaceId(kind);
+  if (!id) return false;
+  await openSpaceById(id, moduleId);
+  return useSpaceStore.getState().space?.id === id;
 }
 
 /** Close an open space without navigating (used when a project is opened). */
@@ -117,6 +148,7 @@ export async function resetDemoSpace(): Promise<void> {
 }
 
 export async function duplicateSpace(id: string, title: string) {
+  // finance / training are one-per-user
   await flushSave();
   await backend.duplicateSpace(id, uid('spc'), `${title} (copy)`);
   toast('Space duplicated');

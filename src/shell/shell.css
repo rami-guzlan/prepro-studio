@@ -598,3 +598,67 @@
 .app.sidebar-collapsed .nav-item .nav-badge {
   display: none;
 }
+
+/* library tab bar: Productions · Spaces ▾ · Personal Finances · Training */
+.home-tabbar {
+  flex-wrap: wrap;
+}
+.home-tab-split {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+}
+.home-tab-split.on {
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-sm);
+}
+.home-tab-split.on > button.on {
+  background: transparent;
+  box-shadow: none;
+}
+.tabs button.home-tab-caret {
+  padding: 0 6px 0 2px;
+  margin-left: -4px;
+}
+.tabs button.home-tab-caret svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* new business: kind cards */
+.new-kind-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.new-kind-card {
+  --kc: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.new-kind-card:hover {
+  border-color: var(--border-strong);
+}
+.new-kind-card.on {
+  border-color: var(--kc);
+  box-shadow: 0 0 0 1px var(--kc);
+  background: color-mix(in srgb, var(--kc) 7%, var(--bg-elev));
+}
+.new-kind-card .emoji {
+  font-size: 18px;
+}
+@media (max-width: 720px) {
+  .new-kind-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

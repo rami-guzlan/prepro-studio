@@ -8,7 +8,10 @@ import { addDays, todayISO } from '@/lib/dates';
 import { uid } from '@/lib/id';
 import { SPACE_TYPES, STAGES } from '@/spaces/constants';
 import { allPosts, atRiskContent, cadenceForWeek, countByStage, engagement, goalProgress, overduePosts, sumMetrics, upcomingPosts, weekStart } from '@/spaces/derive';
-import { createSpaceAndOpen, deleteSpace, openDemoSpace, openSpaceById } from '@/shell/spaceActions';
+import { createSpaceAndOpen, deleteSpace, openDemoSpace, openSingleton, openSpaceById } from '@/shell/spaceActions';
+import { requireFinanceUnlocked } from '../ctx';
+import type { SpaceKind } from '@/spaces/types';
+import { modulesFor } from '@/spaces/registry';
 import type { SpaceModuleId } from '@/store/app';
 import { SPACE_MODULES } from '@/spaces/registry';
 import { clean, fail, normDate, plural, space } from '../ctx';
@@ -16,6 +19,7 @@ import { defineTool } from '../tool';
 import { arr, bool, enm, obj, opt, str } from '../schema';
 
 const SPACE_MODULE_IDS = SPACE_MODULES.map((m) => m.id) as SpaceModuleId[];
+const KINDS = ['marketing', 'business', 'finance', 'training'] as const;
 
 async function findSpace(ref: string) {
   const list = await backend.listSpaces();
@@ -36,27 +40,38 @@ async function projectIds(refs: string[]): Promise<string[]> {
 export const spaceTools = [
   defineTool({
     name: 'list_spaces',
-    title: 'List Marketing Spaces',
-    description: 'All Marketing Spaces (personal brand, channels, release campaigns …) with type, content counts, next scheduled post and which one is open. Spaces are separate from production projects (list_projects).',
+    title: 'List spaces',
+    description:
+      'Spaces of the studio with their kind: Marketing Spaces (personal brand, channels, release campaigns …: type, content counts, next scheduled post), businesses (Business Management), and the one Personal Finances and Training space. Filter with kind. Production projects are separate (list_projects).',
     readOnly: true,
     global: true,
-    input: obj({}),
-    async run() {
+    input: obj({ kind: opt(enm(KINDS, 'only this kind')) }),
+    async run(a: { kind?: SpaceKind }) {
       const open = useSpaceStore.getState().space?.id;
-      const list = await backend.listSpaces();
-      return { data: list.map((s) => clean({ id: s.id, title: s.title, type: s.type, description: s.description, content: s.contentCount, published: s.publishedCount, nextPost: s.nextPost, updated: s.updatedAt.slice(0, 10), demo: s.demo || undefined, open: s.id === open || undefined })) };
+      const list = (await backend.listSpaces()).filter((s) => !a.kind || (s.kind ?? 'marketing') === a.kind);
+      return {
+        data: list.map((s) => {
+          const kind = s.kind ?? 'marketing';
+          const mk = kind === 'marketing';
+          return clean({ id: s.id, title: s.title, kind, type: mk ? s.type : kind === 'business' ? s.subtype : undefined, description: s.description, content: mk ? s.contentCount : undefined, published: mk ? s.publishedCount : undefined, nextPost: mk ? s.nextPost : undefined, updated: s.updatedAt.slice(0, 10), demo: s.demo || undefined, open: s.id === open || undefined });
+        }),
+      };
     },
   }),
 
   defineTool({
     name: 'open_space',
-    title: 'Open a Marketing Space',
-    description: 'Opens a Marketing Space (by id or name) in the app, optionally on a screen. While a space is open the generic data tools (describe_data, list_items, add_items …) work on its content, posts, channels, goals, campaigns etc.',
+    title: 'Open a space',
+    description:
+      'Opens a space (by id or name) in the app — a Marketing Space or a business — optionally on a screen (get_app_state lists the modules once open). While a space is open the generic data tools (describe_data, list_items, add_items …) work on its collections. Personal Finances and Training have their own tools: open_finances, open_training.',
     global: true,
     noStep: true,
-    input: obj({ spaceId: str('space id or name'), module: opt(enm(SPACE_MODULE_IDS)) }),
+    input: obj({ spaceId: str('space id or name'), module: opt(str('module id, e.g. overview, content, calendar, invoices …')) }),
     async run(a: { spaceId: string; module?: SpaceModuleId }) {
       const hit = await findSpace(a.spaceId);
+      const kind = hit.kind ?? 'marketing';
+      if (kind === 'finance') requireFinanceUnlocked();
+      if (a.module && !modulesFor(kind).some((m) => m.id === a.module)) fail(`"${a.module}" is not a module of a ${kind} space. Modules: ${modulesFor(kind).map((m) => m.id).join(', ')}`);
       await openSpaceById(hit.id, a.module);
       if (useSpaceStore.getState().space?.id !== hit.id) fail(`Could not open “${hit.title}”.`);
       return { data: { opened: hit.id, title: hit.title }, summary: `Opened the space “${hit.title}”` };
@@ -91,6 +106,36 @@ export const spaceTools = [
         data: { id: s.id, title: s.meta.title, channels: s.channels.map((c) => c.name), pillars: s.pillars.map((p) => p.name), campaigns: s.campaigns.map((c) => c.name), content: s.content.length },
         summary: `Created the space “${s.meta.title}”`,
       };
+    },
+  }),
+
+  defineTool({
+    name: 'open_finances',
+    title: 'Open Personal Finances',
+    description:
+      'Opens the Personal Finances space (accounts, statements, transactions, budgets, plans), optionally on a screen. Only works while the user has unlocked the finances in the app with their PIN; otherwise ask them to unlock it. Never ask the user for the PIN in chat.',
+    global: true,
+    noStep: true,
+    input: obj({ module: opt(str('module id (see get_app_state after opening)')) }),
+    async run(a: { module?: string }) {
+      requireFinanceUnlocked();
+      if (a.module && !modulesFor('finance').some((m) => m.id === a.module)) fail(`Modules: ${modulesFor('finance').map((m) => m.id).join(', ')}`);
+      if (!(await openSingleton('finance', a.module))) fail('Personal Finances could not be opened.');
+      return { data: { opened: useSpaceStore.getState().space?.id, modules: modulesFor('finance').map((m) => m.id) }, summary: 'Opened Personal Finances' };
+    },
+  }),
+
+  defineTool({
+    name: 'open_training',
+    title: 'Open Training',
+    description: 'Opens the Training space (goals, meal plan & groceries, macros, workouts, body metrics, progress photos, check-ins), optionally on a screen.',
+    global: true,
+    noStep: true,
+    input: obj({ module: opt(str('module id (see get_app_state after opening)')) }),
+    async run(a: { module?: string }) {
+      if (a.module && !modulesFor('training').some((m) => m.id === a.module)) fail(`Modules: ${modulesFor('training').map((m) => m.id).join(', ')}`);
+      if (!(await openSingleton('training', a.module))) fail('Training could not be opened.');
+      return { data: { opened: useSpaceStore.getState().space?.id, modules: modulesFor('training').map((m) => m.id) }, summary: 'Opened Training' };
     },
   }),
 

@@ -7,12 +7,13 @@ import { assetUrl, backend } from '@/backend';
 import { IconButton, Menu } from '@/ui';
 import { exportArchive, leaveProject, revealCurrentProject } from './projectActions';
 import { AgentIndicator } from './AgentDialog';
+import { isPhone } from '@/ui/phone';
 
 const GROUPS: ModuleDef['group'][] = ['Overview', 'Writing', 'Visuals', 'People', 'Production', 'Post', 'Output'];
 
 export function Sidebar() {
   const moduleId = useApp((s) => s.moduleId);
-  const collapsed = useApp((s) => s.sidebarCollapsed);
+  const collapsed = useApp((s) => s.sidebarCollapsed) && !isPhone();
   const theme = useApp((s) => s.theme);
   const meta = useProject((p) => p.meta);
   const projectId = useProject((p) => p.id);
@@ -36,7 +37,7 @@ export function Sidebar() {
             </button>
           }
           items={[
-            { label: 'Project library', icon: HomeIcon, shortcut: 'Ctrl+Shift+H', onClick: () => leaveProject() },
+            { label: 'Library', icon: HomeIcon, shortcut: 'Ctrl+Shift+H', onClick: () => leaveProject() },
             { label: 'Project settings', icon: Settings, shortcut: 'Ctrl+,', onClick: () => navigate('settings') },
             ...(backend.openProjectFolder ? [{ label: 'Open project folder', icon: FolderOpen, onClick: () => revealCurrentProject() }] : []),
             { label: 'Export archive (.zip)…', icon: Archive, onClick: () => exportArchive(projectId, meta.title) },
@@ -92,7 +93,7 @@ function SaveState() {
   const status = appStatus === 'error' || appStatus === 'saving' ? appStatus : clean ? 'saved' : 'idle';
   const label = status === 'saving' ? 'Saving…' : status === 'error' ? 'Save failed' : status === 'idle' ? 'Unsaved' : 'Saved';
   return (
-    <div className={`save-state ${status}`} title={status === 'error' ? err : backend.kind === 'electron' ? 'Saved automatically to your projects folder' : 'Saved automatically in this browser'}>
+    <div className={`save-state ${status}`} title={status === 'error' ? err : backend.kind === 'electron' ? 'Saved automatically to your studio folder' : 'Saved automatically in this browser'}>
       <span className="dot" />
       <span>{label}</span>
     </div>

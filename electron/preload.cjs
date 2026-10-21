@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld('prepro', {
   },
   info: () => invoke('app:info'),
   setDemosHidden: (patch) => invoke('demos:setHidden', patch),
+  financePin: {
+    status: () => invoke('finance:pinStatus'),
+    verify: (pin) => invoke('finance:pinVerify', pin),
+    set: (current, next) => invoke('finance:pinSet', current, next),
+  },
   listProjects: () => invoke('projects:list'),
   loadProject: (id) => invoke('project:load', id),
   createProject: (data) => invoke('project:create', data),
