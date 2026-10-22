@@ -10,6 +10,7 @@ export function createLive({ auth, log = console }) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 * 1024 });
   const conns = new Set(); // { ws, user, clientId, docId, agent, lastActive }
   const resultHandlers = new Map(); // uid -> (msg) => void
+  const readyWaiters = new Map(); // uid -> Set<() => void>
   let describe = null;
   const describeListeners = new Set();
 
@@ -19,7 +20,7 @@ export function createLive({ auth, log = console }) {
 
   function presence(docId) {
     if (!docId) return;
-    const here = [...conns].filter((c) => c.docId === docId);
+    const here = [...conns].filter((c) => c.docId === docId && !c.headless);
     const people = [];
     const seen = new Set();
     for (const c of here) {
@@ -39,7 +40,8 @@ export function createLive({ auth, log = console }) {
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
       const url = new URL(req.url, 'http://x');
-      const c = { ws, user, clientId: url.searchParams.get('client') || '', docId: null, agent: false, lastActive: Date.now() };
+      // headless: an agent tab the server opened (server/headless.mjs); it stays out of presence
+      const c = { ws, user, clientId: url.searchParams.get('client') || '', docId: null, agent: false, headless: url.searchParams.get('agent') === '1', lastActive: Date.now() };
       conns.add(c);
       ws.on('message', (raw) => {
         let msg;
@@ -74,6 +76,8 @@ export function createLive({ auth, log = console }) {
       case 'mcp:ready':
         c.agent = true;
         c.lastActive = Date.now();
+        for (const fn of readyWaiters.get(c.user.uid) ?? []) fn();
+        readyWaiters.delete(c.user.uid);
         if (msg.describe && Array.isArray(msg.describe.tools)) {
           const changed = JSON.stringify(msg.describe) !== JSON.stringify(describe);
           describe = msg.describe;
@@ -101,11 +105,33 @@ export function createLive({ auth, log = console }) {
     for (const c of conns) if (c.user.uid === uid) send(c, { t: 'access' });
   }
 
-  /** The tab an agent should work in for this person: the most recently used one. */
+  /** The tab an agent should work in for this person: their most recently used real tab, else the agent tab. */
   function agentTab(uid) {
     let best = null;
-    for (const c of conns) if (c.user.uid === uid && c.agent && c.ws.readyState === 1 && (!best || c.lastActive > best.lastActive)) best = c;
+    const rank = (c) => (c.headless ? 0 : 1);
+    for (const c of conns) {
+      if (c.user.uid !== uid || !c.agent || c.ws.readyState !== 1) continue;
+      if (!best || rank(c) > rank(best) || (rank(c) === rank(best) && c.lastActive > best.lastActive)) best = c;
+    }
     return best;
+  }
+
+  /** Resolves true once one of this person's tabs is ready for agent calls. */
+  function waitAgent(uid, ms) {
+    if (agentTab(uid)) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const set = readyWaiters.get(uid) ?? new Set();
+      readyWaiters.set(uid, set);
+      const done = () => {
+        clearTimeout(t);
+        resolve(true);
+      };
+      const t = setTimeout(() => {
+        set.delete(done);
+        resolve(false);
+      }, ms);
+      set.add(done);
+    });
   }
 
   /** Adapter with the Electron webContents shape used by electron/mcp.cjs. */
@@ -125,6 +151,7 @@ export function createLive({ auth, log = console }) {
     library,
     accessChanged,
     webContentsFor,
+    waitAgent,
     activity,
     onResult: (uid, fn) => resultHandlers.set(uid, fn),
     getDescribe: () => describe,

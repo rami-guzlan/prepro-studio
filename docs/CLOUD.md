@@ -40,7 +40,15 @@ are flushed when Cloud Run stops the instance.
 ## AI agents (MCP)
 
 `/mcp` is the same MCP server as the desktop app (`electron/mcp.cjs`). Tool calls
-run in the person's open PrePro Studio tab, so keep one open while an agent works.
+run in the app itself, as that person:
+
+- If they have PrePro Studio open, the call runs in their most recently used tab, so they see the change live.
+- If not, the server opens an **agent tab** for them: a headless Chromium inside the container, signed in as
+  them (`server/headless.mjs`). It stays out of presence, saves before every reply, and closes after
+  10 idle minutes. The first call after that takes a few extra seconds while it starts.
+
+An agent tab is a fresh browser, so Personal Finances start locked there (the PIN is never given to agents);
+the owner's Finance tools work only while the owner has Finances unlocked in a real tab.
 
 - **Claude (claude.ai, Claude app):** Settings, Connectors, Add custom connector, URL `https://…run.app/mcp`. Claude registers itself, opens the sign-in page, and the person presses Allow (OAuth 2.1 with PKCE).
 - **Claude Code, Cursor, VS Code:** create a personal token on **Connect an AI agent** (`/connect`) and send it as `Authorization: Bearer <token>`.
@@ -65,7 +73,7 @@ On a network with TLS inspection, point gcloud at a bundle of the Windows certif
 
 ## Tests
 
-`scripts/cloud-test.mjs` runs 68 end-to-end checks (sign-in, invites, scopes,
+`scripts/cloud-test.mjs` runs 74 end-to-end checks (set `CHROME_PATH` to Chrome or Edge to include agent tabs) (sign-in, invites, scopes,
 Finance/Training lock-out, live updates, conflicts, MCP relay, OAuth with PKCE,
 turning a person off) against a running server and the real Identity Platform,
 then removes its two test accounts. Run the server locally with `STORAGE=disk`

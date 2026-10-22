@@ -19,9 +19,10 @@ $PublicUrl = "https://$Service-$number.$Region.run.app"
 
 # --max-instances 1: open documents live in the server's memory (live editing); see server/docs.mjs
 # --timeout 3600: live-editing WebSockets stay open up to an hour, then reconnect
+# --memory 2Gi: room for the headless Chromium that runs agent tabs
 gcloud run deploy $Service --project $Project --region $Region --source $root --quiet `
   --service-account $sa --allow-unauthenticated `
-  --min-instances 0 --max-instances 1 --concurrency 250 --cpu 1 --memory 1Gi --timeout 3600 `
+  --min-instances 0 --max-instances 1 --concurrency 250 --cpu 1 --memory 2Gi --timeout 3600 `
   --session-affinity --cpu-boost `
   --set-env-vars "STORAGE=gcs,DATA_BUCKET=$bucket,GOOGLE_CLOUD_PROJECT=$Project,OWNER_EMAIL=$OwnerEmail" `
   --set-secrets "IDENTITY_API_KEY=prepro-identity-api-key:latest,SESSION_SECRET=prepro-session-secret:latest"

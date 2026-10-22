@@ -197,7 +197,10 @@ async function main() {
   const ownerList = await mcp({ jsonrpc: '2.0', id: 4, method: 'tools/list' }, ownerPat.body.token);
   check('owner\'s agent gets the Finance tools', ownerList.body.result?.tools?.some((t) => t.name === 'finance_report'));
   const ownerCall = await mcp({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'get_app_state', arguments: {} } }, ownerPat.body.token);
-  check('owner\'s agent never runs in the member\'s tab', ownerCall.body.result?.isError && /not open/.test(ownerCall.body.result.content[0].text), JSON.stringify(ownerCall.body));
+  const ownerText = ownerCall.body.result?.content?.[0]?.text ?? '';
+  check('owner\'s agent never runs in the member\'s tab', !ownerText.includes('member tab'), ownerText.slice(0, 200));
+  if (process.env.CHROME_PATH) check('with no tab open, the owner\'s agent runs in an agent tab', !ownerCall.body.result?.isError && ownerText.includes('"app"'), ownerText.slice(0, 200));
+  else check('without CHROME_PATH, the owner\'s agent reports no open tab', ownerCall.body.result?.isError && /not open/.test(ownerText), ownerText.slice(0, 200));
 
   /* ---- OAuth (Claude custom connector flow) */
   const meta = (await anon.json('/.well-known/oauth-protected-resource/mcp')).body;
@@ -229,6 +232,26 @@ async function main() {
   const ref = await anon.json('/oauth/token', { method: 'POST', body: { grant_type: 'refresh_token', refresh_token: tok.body.refresh_token, client_id: reg.body.client_id } });
   check('refresh token rotates', ref.status === 200 && ref.body.access_token && ref.body.refresh_token !== tok.body.refresh_token);
   check('an old refresh token is refused', (await anon.json('/oauth/token', { method: 'POST', body: { grant_type: 'refresh_token', refresh_token: tok.body.refresh_token, client_id: reg.body.client_id } })).status === 400);
+
+  /* ---- the member closes their tab: their agent keeps working, in their own agent tab */
+  if (process.env.CHROME_PATH) {
+    wsMember.close();
+    await waitFor(() => false, 300);
+    const solo = await mcp({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'list_spaces', arguments: {} } });
+    const soloText = solo.body.result?.content?.map((c) => c.text).join(' ') ?? '';
+    check('with the app closed, the member\'s agent still works', !solo.body.result?.isError && soloText.includes(M1), soloText.slice(0, 200));
+    check('and it sees only the member\'s spaces', !soloText.includes(F) && !soloText.includes(T) && !soloText.includes(M2));
+    const opened = await mcp({ jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'open_space', arguments: { spaceId: M1 } } });
+    const renamed = await mcp({ jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'set_fields', arguments: { values: { 'meta.description': 'Written by an agent with no app open' } } } });
+    check('the agent edits a space with no app open', !opened.body.result?.isError && !renamed.body.result?.isError, JSON.stringify(renamed.body).slice(0, 200));
+    const saved = await owner.json(`/api/docs/${M1}`);
+    check('and the edit is saved on the server right away', saved.body.meta?.description === 'Written by an agent with no app open', saved.body.meta?.description);
+    const wsOwner2 = await wsOpen(owner, 'owner-tab-2');
+    wsOwner2.send(JSON.stringify({ t: 'open', id: M1 }));
+    await waitFor(() => false, 500);
+    check('agent tabs do not show up as people in presence', !wsOwner2.msgs.some((m) => m.t === 'presence' && m.people.length));
+    wsOwner2.close();
+  }
 
   /* ---- turning a person off ends everything at once */
   const team = (await owner.json('/api/team')).body.people;

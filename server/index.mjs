@@ -24,6 +24,7 @@ import { createAccess, canSee, canEdit, canCreate, tabOf, httpError, sign, unsig
 import { createDocs, isSafeId, isSafeName, kindOf } from './docs.mjs';
 import { createLive } from './live.mjs';
 import { createOAuth } from './oauth.mjs';
+import { createHeadless } from './headless.mjs';
 import { loginPage, invitePage, consentPage, errorPage, teamPage, connectPage, safeNext } from './pages.mjs';
 
 const require = createRequire(import.meta.url);
@@ -40,6 +41,7 @@ const auth = createAccess(store);
 const docs = createDocs(store, log);
 const live = createLive({ auth, log });
 const oauth = createOAuth(store);
+const headless = createHeadless({ auth, live, port: Number(process.env.PORT || 8080), log });
 
 /* ------------------------------------------------------------ helpers */
 
@@ -93,7 +95,9 @@ function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
   try {
-    return new URL(origin).host === new URL(baseUrl(req)).host;
+    // the public address, or the address actually used (agent tabs load from the loopback port)
+    const host = new URL(origin).host;
+    return host === new URL(baseUrl(req)).host || host === req.headers.host;
   } catch {
     return false;
   }
@@ -174,6 +178,8 @@ async function handleMcp(req, res) {
   } catch (e) {
     return send(res, 400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: `Parse error: ${e.message}` } });
   }
+  // no PrePro Studio tab open for this person: open an agent tab for the tool to run in
+  if ((Array.isArray(payload) ? payload : [payload]).some((p) => p?.method === 'tools/call')) await headless.ensure(user);
   const m = mcpFor(user);
   if (Array.isArray(payload)) {
     const out = (await Promise.all(payload.map((p) => m.handle(p)))).filter(Boolean);
@@ -477,12 +483,14 @@ async function route(req, res) {
       await auth.setAccess(uid, body);
       if (body.disabled) await oauth.revokeAllFor(uid);
       live.accessChanged(uid);
+      await headless.close(uid);
       return send(res, 200, { ok: true });
     }
     if (m === 'DELETE') {
       await auth.removePerson(uid);
       await oauth.revokeAllFor(uid);
       live.accessChanged(uid);
+      await headless.close(uid);
       return send(res, 200, { ok: true });
     }
   }
@@ -528,6 +536,7 @@ async function shutdown(sig) {
   stopping = true;
   log.info(`${sig}: saving open documents`);
   try {
+    await headless.closeAll(); // agent tabs save what they hold first
     await docs.flushAll();
   } catch (e) {
     log.error('flush on shutdown failed', e);

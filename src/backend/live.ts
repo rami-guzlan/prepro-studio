@@ -13,7 +13,7 @@
 import { create } from 'zustand';
 import { useProjectStore } from '@/store/project';
 import { useSpaceStore } from '@/store/space';
-import { runPreSaveHooks } from '@/store/autosave';
+import { flushSave, runPreSaveHooks } from '@/store/autosave';
 import { normalizeProject } from '@/store/defaults';
 import { normalizeSpace } from '@/spaces/defaults';
 import { merge3 } from '@/lib/merge3';
@@ -87,6 +87,9 @@ let lastEditor = '';
 
 /* ------------------------------------------------------------ socket */
 
+/** A tab the server opened for an AI agent while its person has none open (server/headless.mjs). */
+const isAgentTab = new URLSearchParams(location.search).get('agent') === '1';
+
 let ws: WebSocket | null = null;
 let retry = 0;
 let sentOpen: string | null = null;
@@ -100,7 +103,7 @@ function sendMsg(msg: unknown) {
 
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${proto}//${location.host}/api/live?client=${encodeURIComponent(clientId)}`);
+  ws = new WebSocket(`${proto}//${location.host}/api/live?client=${encodeURIComponent(clientId)}${isAgentTab ? '&agent=1' : ''}`);
   ws.onopen = () => {
     retry = 0;
     usePresence.setState({ connected: true });
@@ -171,7 +174,9 @@ export const cloudAgentBridge = {
     callHandlers.add(fn);
     return () => callHandlers.delete(fn);
   },
-  respond(msg: unknown) {
+  async respond(msg: unknown) {
+    // save the agent's change before answering, so it is stored even if no one keeps this tab open
+    await flushSave().catch((e) => console.warn('save before agent reply failed', e));
     sendMsg({ t: 'mcp:result', ...(msg as object) });
   },
   ready(describe: unknown) {
@@ -190,6 +195,7 @@ let started = false;
 export function startLive() {
   if (started) return;
   started = true;
+  (window as any).__preproFlush = () => flushSave();
 
   // remember the agreed version of each document as it opens and saves
   const track = (kind: Kind, doc: { id: string } | null, prevId: string | undefined) => {
