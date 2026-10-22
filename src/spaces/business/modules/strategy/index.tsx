@@ -124,6 +124,7 @@ export default function StrategyModule() {
           />
         }
       />
+      <div className="module-body">
       <div className="biz-page">
         <nav className="lib-jump" aria-label="Sections">
           {SECTIONS.map((s) => (
@@ -179,6 +180,7 @@ export default function StrategyModule() {
           </div>
           <Textarea autoGrow minRows={3} value={st.notes} placeholder="Anything else: assumptions, open questions, ideas for later…" onChange={(v) => setStrategy({ notes: v || undefined })} />
         </section>
+      </div>
       </div>
     </div>
   );

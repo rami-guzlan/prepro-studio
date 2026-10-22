@@ -102,7 +102,9 @@ export default function GrowthModule() {
         }
       />
       {cur ? (
-        <InitiativeDetail key={cur.id} i={cur} onBack={() => select(null)} />
+        <div className="module-body">
+          <InitiativeDetail key={cur.id} i={cur} onBack={() => select(null)} />
+        </div>
       ) : b.initiatives.length === 0 ? (
         <EmptyState
           icon={Rocket}
@@ -115,6 +117,7 @@ export default function GrowthModule() {
           }
         />
       ) : (
+        <div className="module-body">
         <div className="biz-page">
           <div className="biz-kpis small">
             <StatTile label="In progress" value={sum.active} sub={`${sum.open} open in total`} />
@@ -133,6 +136,7 @@ export default function GrowthModule() {
             />
           </div>
           {view === 'board' ? <Board b={b} today={today} onOpen={select} onAdd={add} /> : <Matrix b={b} today={today} onOpen={select} />}
+        </div>
         </div>
       )}
     </div>
