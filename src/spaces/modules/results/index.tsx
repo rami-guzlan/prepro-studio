@@ -59,7 +59,7 @@ async function exportPostsCsv(refs: PostRef[], label: string) {
       { header: 'Results updated', value: (r) => r.post.metricsAt },
     ]);
     if (path) toast(`Exported ${plural(refs.length, 'post')} to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Results CSV downloaded');
+    else if (backend.kind !== 'electron') toast('Results CSV downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }
@@ -86,7 +86,7 @@ async function exportBreakdownCsv(refs: PostRef[], label: string) {
       { header: 'Conversions', value: (r) => r.conversions },
     ]);
     if (path) toast(`Exported breakdown to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Breakdown CSV downloaded');
+    else if (backend.kind !== 'electron') toast('Breakdown CSV downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

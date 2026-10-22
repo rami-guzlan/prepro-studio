@@ -16,3 +16,6 @@ Thumbs.db
 # local app data (projects and spaces are never stored in the repo)
 PrePro Studio Projects/
 Marketing Spaces/
+
+# hosted version: local test data
+cloud-data/

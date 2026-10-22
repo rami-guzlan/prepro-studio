@@ -118,7 +118,7 @@ export function startAutosave() {
   window.addEventListener('beforeunload', (e) => {
     if (hasUnsavedChanges()) {
       void flushSave();
-      if (backend.kind === 'web') {
+      if (backend.kind !== 'electron') {
         e.preventDefault();
         e.returnValue = '';
       }

@@ -780,7 +780,7 @@ export default function ShotsModule() {
                   onClick: () =>
                     void exportShotsCsv(getProject(), model)
                       .then((path) => {
-                        if (path || backend.kind === 'web') toast('Shot list exported to CSV');
+                        if (path || backend.kind !== 'electron') toast('Shot list exported to CSV');
                       })
                       .catch((e) => toast(`CSV export failed: ${e instanceof Error ? e.message : e}`, 'error')),
                 },

@@ -246,7 +246,7 @@ export async function exportTransactionsCsv(txs: FinTransaction[], label: string
       { header: 'Notes', value: (t) => t.notes },
     ]);
     if (path) toast(`Exported ${plural(txs.length, 'transaction')} to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Transactions CSV downloaded');
+    else if (backend.kind !== 'electron') toast('Transactions CSV downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

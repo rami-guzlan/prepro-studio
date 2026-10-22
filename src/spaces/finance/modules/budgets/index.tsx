@@ -453,7 +453,7 @@ async function exportMonthCsv(view: MonthView, money: (n: number) => string) {
       { header: 'Needed this month', value: (x) => x.r.info?.need ?? '' },
     ]);
     if (path) toast(`Exported the ${monthLabel(view.month, true)} budget to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Budget CSV downloaded');
+    else if (backend.kind !== 'electron') toast('Budget CSV downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

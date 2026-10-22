@@ -46,7 +46,7 @@ export async function saveCsv<T>(projectTitle: string, docName: string, rows: T[
   try {
     const path = await exportCsv(safeFileName(`${projectTitle || 'Project'} - ${docName}`), rows, cols);
     if (path) toast(`Exported ${rows.length} ${rows.length === 1 ? 'row' : 'rows'} to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast(`${docName} CSV downloaded`);
+    else if (backend.kind !== 'electron') toast(`${docName} CSV downloaded`);
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

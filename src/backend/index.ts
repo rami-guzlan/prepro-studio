@@ -1,16 +1,19 @@
 /* Backend access for the whole app.
-   - `backend` is the Electron (disk) or web (IndexedDB) implementation.
+   - `backend` is the Electron (disk), cloud (hosted server) or web (IndexedDB) implementation.
    - assetUrl(name) resolves an asset of the currently open project.
    - importImageFile(file) stores an image in the current project and returns its asset name. */
 import type { Backend, FileFilter } from './types';
 import { createElectronBackend } from './electron';
 import { createWebBackend } from './web';
+import { cloudBoot, createCloudBackend } from './cloud';
 import { prepareImage, isImageFile } from '@/lib/images';
 import { toCSV, type CsvColumn } from '@/lib/csv';
 
 export type { Backend, FileFilter, OpenedFile, PdfJob, BackupInfo, AppInfo, HiddenDemos } from './types';
 
-export const backend: Backend = typeof window !== 'undefined' && window.prepro?.isElectron ? createElectronBackend(window.prepro) : createWebBackend();
+export const backend: Backend = typeof window !== 'undefined' && window.prepro?.isElectron ? createElectronBackend(window.prepro) : cloudBoot ? createCloudBackend() : createWebBackend();
+
+export const isCloud = backend.kind === 'cloud';
 
 export const isDesktop = backend.kind === 'electron';
 

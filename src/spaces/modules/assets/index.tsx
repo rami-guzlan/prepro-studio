@@ -39,7 +39,7 @@ async function exportAssetsCsv() {
       { header: 'Notes', value: (a) => a.notes },
     ]);
     if (path) toast(`Exported ${plural(s.assets.length, 'asset')} to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Asset list downloaded');
+    else if (backend.kind !== 'electron') toast('Asset list downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

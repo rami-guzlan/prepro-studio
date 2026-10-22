@@ -24,7 +24,7 @@ const MAX_BODY = 60 * 1024 * 1024; // images may arrive as base64
 const CALL_TIMEOUT_MS = 10 * 60 * 1000;
 
 function createMcpServer(opts) {
-  const { appVersion, getWebContents, onActivity, log = () => {} } = opts;
+  const { appVersion, getWebContents, onActivity, log = () => {}, notOpenMessage = 'The PrePro Studio window is not open.' } = opts;
 
   let server = null;
   let port = 0;
@@ -78,7 +78,7 @@ function createMcpServer(opts) {
   async function callRenderer(name, args) {
     if (!(await waitReady(30000))) return { error: 'PrePro Studio is still starting up. Try again in a few seconds.' };
     const wc = getWebContents();
-    if (!wc) return { error: 'The PrePro Studio window is not open.' };
+    if (!wc) return { error: notOpenMessage };
     const reqId = crypto.randomUUID();
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
@@ -313,6 +313,8 @@ function createMcpServer(opts) {
     handleResult,
     rendererGone,
     getDescribe: () => describe,
+    /** one JSON-RPC message in, one response out (or null); used by the cloud server */
+    handle: handleMessage,
   };
 }
 

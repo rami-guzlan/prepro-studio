@@ -42,7 +42,7 @@ async function exportChannelsCsv(stats: Map<ID, ChannelStats>) {
       { header: 'Notes', value: (c) => c.notes },
     ]);
     if (path) toast(`Exported ${plural(s.channels.length, 'channel')} to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Channels CSV downloaded');
+    else if (backend.kind !== 'electron') toast('Channels CSV downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

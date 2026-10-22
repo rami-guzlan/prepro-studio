@@ -31,6 +31,8 @@ import { coachTools } from './tools/coach';
 
 export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...crmTools, ...businessTools, ...businessSalesTools, ...businessWorkTools, ...businessLibraryTools, ...financeTools, ...trainingTools, ...coachTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
+/** owner-only areas: the hosted version hides these tools from everyone else's agents */
+const AREA = new Map<string, string>([...financeTools.map((t) => [t.name, 'finance'] as const), ...trainingTools.map((t) => [t.name, 'training'] as const)]);
 
 type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
 export interface CallResult {
@@ -61,6 +63,7 @@ export function describeTools() {
       description: t.description,
       inputSchema: t.input,
       annotations: { title: t.title, readOnlyHint: !!t.readOnly, destructiveHint: !!t.destructive, idempotentHint: !!t.readOnly, openWorldHint: false },
+      ...(AREA.has(t.name) ? { _meta: { 'prepro/area': AREA.get(t.name) } } : {}),
     })),
   };
 }
@@ -112,9 +115,8 @@ export async function callTool(name: string, args: unknown): Promise<{ result: C
 
 let started = false;
 
-/** Connect to the main-process MCP server (desktop app only). */
-export function startAgentServer() {
-  const m = window.prepro?.mcp;
+/** Connect to the MCP server: the desktop main process, or the cloud server's relay (src/backend/live.ts). */
+export function startAgentServer(m: { onCall: Function; respond: Function; ready: Function } | undefined = window.prepro?.mcp) {
   if (!m || started) return;
   started = true;
   let queue: Promise<unknown> = Promise.resolve();
