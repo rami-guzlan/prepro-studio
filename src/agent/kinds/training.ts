@@ -725,6 +725,69 @@ export const trainingTools: ToolDef[] = [
   }),
 
   defineTool({
+    name: 'training_ramp',
+    title: 'Ramp up coach',
+    description:
+      'Ramp up is a gentle, game-like start plan for someone finding it hard to get to the gym: four stages (Show up, Make it a habit, Build, Own it), each needing a number of weeks where the weekly target was met, so missed weeks never push them into harder work. Wins: "full" (the mission, 10 pts), "mini" (the 10-minute bad-day version, 6 pts, still counts for the week), "move" (any movement, 3 pts, points only). Finished workouts in Workouts count as full. Actions: "status" (stage, this week, today\'s mission, level, badges, what unlocks next, the user\'s why and reward); "setup" (where gym/home, goalDays 2–5, minutesNow, why, reward; keeps existing wins); "log_win" (kind, date default today, minutes, note); "undo_win" (winId); "hold" (weeks: stay longer at the current stage during a busy patch; 0 = back to normal); "add_to_program" (puts the current stage\'s workouts in the Program). Coach warmly and briefly, celebrate every win, never guilt. General fitness guidance, not medical advice.',
+    global: true,
+    input: obj({
+      action: enm(['status', 'setup', 'log_win', 'undo_win', 'hold', 'add_to_program'] as const),
+      where: opt(enm(['gym', 'home'] as const)),
+      goalDays: opt(int('setup: days a week to end up at (2–5)')),
+      minutesNow: opt(int('setup: minutes they can do right now')),
+      why: opt(str('setup: their reason, shown on the mission')),
+      reward: opt(str('setup: treat for each new level')),
+      kind: opt(enm(['full', 'mini', 'move'] as const)),
+      date: opt(str('YYYY-MM-DD (default today)')),
+      minutes: opt(int()),
+      note: opt(str()),
+      winId: opt(str()),
+      weeks: opt(int('hold: extra weeks at this stage (0 = none)')),
+    }),
+    async run(a: { action: 'status' | 'setup' | 'log_win' | 'undo_win' | 'hold' | 'add_to_program'; where?: 'gym' | 'home'; goalDays?: number; minutesNow?: number; why?: string; reward?: string; kind?: 'full' | 'mini' | 'move'; date?: string; minutes?: number; note?: string; winId?: string; weeks?: number }) {
+      spaceOf('training');
+      const R = await import('@/spaces/training/ramp');
+      const status = () => R.rampSummary(data(), today());
+      if (a.action === 'setup') {
+        write((t) => R.setupRamp(t, { where: a.where, goalDays: a.goalDays, minutesNow: a.minutesNow, why: a.why, reward: a.reward, startDate: t.ramp?.startDate ?? today() }));
+        return { data: { ramp: status(), show: { module: 'ramp' } }, summary: 'Set up Ramp up' };
+      }
+      if (!data().ramp) fail('Ramp up is not set up yet. Ask where they will train, how many days a week they want to end up at, how long they can do now and why, then call action "setup".');
+      if (a.action === 'status') {
+        const s = R.rampStatus(data(), today())!;
+        return { data: { ...status(), mission: s.mission, recentWins: s.ramp.wins.slice(-6) } };
+      }
+      if (a.action === 'log_win') {
+        const before = R.rampStatus(data(), today())!;
+        const date = normDate(a.date) ?? today();
+        let id = '';
+        write((t) => void (id = R.addWin(t, clean({ date, kind: a.kind ?? 'full', minutes: a.minutes, note: a.note, source: 'agent' as const }))));
+        const after = R.rampStatus(data(), today())!;
+        const news = [
+          after.level.index > before.level.index ? `level up to ${after.level.name}${after.ramp.reward ? ` (reward: ${after.ramp.reward})` : ''}` : '',
+          ...after.badges.filter((b) => b.earned && !before.badges.find((x) => x.id === b.id)?.earned).map((b) => `badge: ${b.name}`),
+          after.week.met && !before.week.met ? 'week target hit' : '',
+        ].filter(Boolean);
+        return { data: { winId: id, pointsGained: after.points - before.points, celebrate: news, ramp: status() }, summary: `Logged a ${a.kind ?? 'full'} win (${date})` };
+      }
+      if (a.action === 'undo_win') {
+        if (!a.winId) fail('undo_win needs winId (see status → recentWins).');
+        write((t) => R.removeWin(t, a.winId!));
+        return { data: { ramp: status() }, summary: 'Removed a win' };
+      }
+      if (a.action === 'hold') {
+        const s = R.rampStatus(data(), today())!;
+        write((t) => R.holdStage(t, s.stage.id, a.weeks ?? 1));
+        return { data: { ramp: status() }, summary: a.weeks === 0 ? 'Back to the normal ramp pace' : `Staying ${a.weeks ?? 1} more week(s) at ${s.stage.name}` };
+      }
+      const s = R.rampStatus(data(), today())!;
+      let ids: string[] = [];
+      write((t) => void (ids = R.rampToProgram(t, s.stage, s.ramp.where)));
+      return { data: { programDayIds: ids, show: { module: 'workouts', params: { tab: 'program' } } }, summary: `Added ${s.stage.name} to the Program` };
+    },
+  }),
+
+  defineTool({
     name: 'training_coach_note',
     title: 'Save coach advice',
     description: 'Saves advice, a plan or an observation to Journal & Coach so the user can come back to it (pinned notes also print on the progress report). Keep it short and actionable. Pass id to update an existing note. Frame health advice as general guidance, not medical advice.',

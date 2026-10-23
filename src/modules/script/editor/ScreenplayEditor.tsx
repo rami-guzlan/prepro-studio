@@ -175,10 +175,20 @@ export function ScreenplayEditor() {
       return;
     }
     lastWritten.current = storeDoc;
-    // apply as one editor transaction so Ctrl+Z in the script reverts it
+    // apply as one editor transaction so Ctrl+Z in the script reverts it; only the changed
+    // range is replaced, so the caret stays put when someone else edits another part
     const next = docFromJSON(storeDoc);
     try {
-      const tr = v.state.tr.replaceWith(0, v.state.doc.content.size, next.content);
+      const cur = v.state.doc.content;
+      const start = cur.findDiffStart(next.content);
+      if (start == null) return;
+      let { a: endA, b: endB } = cur.findDiffEnd(next.content) ?? { a: cur.size, b: next.content.size };
+      const overlap = start - Math.min(endA, endB);
+      if (overlap > 0) {
+        endA += overlap;
+        endB += overlap;
+      }
+      const tr = v.state.tr.replace(start, endA, next.slice(start, endB));
       tr.setMeta('external', true);
       v.dispatch(tr);
     } catch {

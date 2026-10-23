@@ -1,6 +1,6 @@
 /* Kind definition of 'training' spaces: sidebar modules, print documents, coach summary. */
 import { lazy } from 'react';
-import { Camera, Dumbbell, MessageSquareHeart, Ruler, Salad, Sun, Target } from 'lucide-react';
+import { Camera, Dumbbell, MessageSquareHeart, Rocket, Ruler, Salad, Sun, Target } from 'lucide-react';
 import type { SpaceKindDef } from '../kinds';
 import { normalizeTraining } from './types';
 import { trainingCoachSummary } from './calc';
@@ -10,6 +10,7 @@ export const trainingKind: SpaceKindDef = {
   groups: ['Today', 'Plan', 'Progress'],
   modules: [
     { id: 'overview', label: 'Today', group: 'Today', icon: Sun, description: "Today's plan, quick check-in, streaks and weight trend", component: lazy(() => import('./modules/overview')) },
+    { id: 'ramp', label: 'Ramp up', group: 'Today', icon: Rocket, description: 'A gentle, game-like way into the gym: small missions, points, levels and badges', component: lazy(() => import('./modules/ramp')) },
     { id: 'coach', label: 'Journal & Coach', group: 'Today', icon: MessageSquareHeart, description: 'Check-in blurbs, insights, coach notes and AI coaching prompts', component: lazy(() => import('./modules/coach')) },
     { id: 'goals', label: 'Goals', group: 'Plan', icon: Target, description: 'Overall goal, habit and strength targets, projections', component: lazy(() => import('./modules/goals')) },
     { id: 'nutrition', label: 'Nutrition', group: 'Plan', icon: Salad, description: 'Macro calculator, meals, weekly meal plan, grocery list, food log', component: lazy(() => import('./modules/nutrition')) },
@@ -21,6 +22,7 @@ export const trainingKind: SpaceKindDef = {
   coachSummary: (s, today) => trainingCoachSummary(normalizeTraining(s.training), today),
   navParams: {
     overview: 'checkin (true opens the quick check-in)',
+    ramp: '(none)',
     coach: 'checkInId',
     goals: 'goalId',
     nutrition: "tab ('plan' | 'meals' | 'groceries' | 'calculator' | 'log'), week (YYYY-MM-DD in the week), mealId, date (food log day)",

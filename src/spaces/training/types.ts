@@ -4,6 +4,7 @@
    water in litres. The profile's `units` only changes how values are shown and
    entered (see units.ts). Dates are 'YYYY-MM-DD'. */
 import { todayISO } from '@/lib/dates';
+import { normalizeRamp, type Ramp } from './ramp-types';
 
 export type ISODate = string;
 export type Units = 'metric' | 'imperial';
@@ -414,6 +415,8 @@ export interface TrainingData {
   checkIns: CheckIn[];
   photos: ProgressPhoto[];
   coachNotes: CoachNote[];
+  /** Ramp up: the gentle, game-like start plan (./ramp.ts); absent until set up */
+  ramp?: Ramp;
 }
 
 /* ---------------------------------------------------------------- normalize */
@@ -556,5 +559,6 @@ export function normalizeTraining(raw: unknown): TrainingData {
     coachNotes: arr(d.coachNotes)
       .filter(isObj)
       .map((x) => tidy({ ...x, id: withId(x, 'note'), date: date(x.date) ?? todayISO(), title: str(x.title) ?? 'Note', source: x.source === 'me' ? 'me' : 'agent' })),
+    ...(normalizeRamp(d.ramp) ? { ramp: normalizeRamp(d.ramp) } : {}),
   };
 }

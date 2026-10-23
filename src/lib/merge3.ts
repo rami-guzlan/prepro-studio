@@ -108,6 +108,82 @@ export function merge3<T = J>(base: J, mine: J, theirs: J): T {
     const all = [...mine, ...theirs];
     if (all.length && hasIds(all)) return mergeById([], mine, theirs) as T;
   }
+  // two people typing in the same text: keep both edits
+  if (typeof base === 'string' && typeof mine === 'string' && typeof theirs === 'string') return diff3([...base], [...mine], [...theirs], (x, y) => x === y).join('') as T;
+  // lists without ids (screenplay paragraphs, text runs, plain lists): merge item by item
+  if (Array.isArray(base) && Array.isArray(mine) && Array.isArray(theirs)) return diff3(base, mine, theirs, deepEqual, (b, m, t) => merge3(b, m, t)) as T;
   // both changed the same value: mine is the newer edit on this screen
   return mine as T;
+}
+
+/* ---------------------------------------------------------------- diff3 */
+
+/** Pairs [i in a, j in b] of a longest common subsequence (after trimming the shared ends). */
+function lcs<X>(a: X[], b: X[], eq: (x: X, y: X) => boolean): [number, number][] {
+  let pre = 0;
+  while (pre < a.length && pre < b.length && eq(a[pre], b[pre])) pre++;
+  let suf = 0;
+  while (suf < a.length - pre && suf < b.length - pre && eq(a[a.length - 1 - suf], b[b.length - 1 - suf])) suf++;
+  const A = a.slice(pre, a.length - suf);
+  const B = b.slice(pre, b.length - suf);
+  const pairs: [number, number][] = [];
+  for (let i = 0; i < pre; i++) pairs.push([i, i]);
+  if (A.length && B.length) {
+    // a very large middle is left unaligned: it then counts as one replaced block
+    if (A.length * B.length <= 4_000_000) {
+      const n = A.length;
+      const m = B.length;
+      const dp = new Uint32Array((n + 1) * (m + 1));
+      for (let i = n - 1; i >= 0; i--)
+        for (let j = m - 1; j >= 0; j--) dp[i * (m + 1) + j] = eq(A[i], B[j]) ? dp[(i + 1) * (m + 1) + j + 1] + 1 : Math.max(dp[(i + 1) * (m + 1) + j], dp[i * (m + 1) + j + 1]);
+      let i = 0;
+      let j = 0;
+      while (i < n && j < m) {
+        if (eq(A[i], B[j])) {
+          pairs.push([pre + i, pre + j]);
+          i++;
+          j++;
+        } else if (dp[(i + 1) * (m + 1) + j] >= dp[i * (m + 1) + j + 1]) i++;
+        else j++;
+      }
+    }
+  }
+  for (let k = suf; k > 0; k--) pairs.push([a.length - k, b.length - k]);
+  return pairs;
+}
+
+/** Three-way merge of sequences. Unchanged stretches stay, one-sided changes are taken, and where both
+    sides changed the same stretch: equal-length blocks merge item by item (mergeItem, for lists), otherwise
+    both are kept, mine first (for text: both people's characters stay). */
+function diff3<X>(base: X[], mine: X[], theirs: X[], eq: (x: X, y: X) => boolean, mergeItem?: (b: X, m: X, t: X) => X): X[] {
+  const mA = new Map(lcs(base, mine, eq));
+  const mB = new Map(lcs(base, theirs, eq));
+  const out: X[] = [];
+  let bi = 0;
+  let ai = 0;
+  let ti = 0;
+  const flush = (bEnd: number, aEnd: number, tEnd: number) => {
+    const B = base.slice(bi, bEnd);
+    const A = mine.slice(ai, aEnd);
+    const T = theirs.slice(ti, tEnd);
+    const same = (x: X[], y: X[]) => x.length === y.length && x.every((v, k) => eq(v, y[k]));
+    if (same(A, B)) out.push(...T);
+    else if (same(T, B)) out.push(...A);
+    else if (same(A, T)) out.push(...A);
+    else if (mergeItem && A.length === T.length && A.length === B.length) A.forEach((v, k) => out.push(mergeItem(B[k], v, T[k])));
+    else out.push(...A, ...T);
+  };
+  for (let i = 0; i < base.length; i++) {
+    const a = mA.get(i);
+    const t = mB.get(i);
+    // a stable point: this base item is still there on both sides
+    if (a == null || t == null || a < ai || t < ti) continue;
+    flush(i, a, t);
+    out.push(mine[a]);
+    bi = i + 1;
+    ai = a + 1;
+    ti = t + 1;
+  }
+  flush(base.length, mine.length, theirs.length);
+  return out;
 }

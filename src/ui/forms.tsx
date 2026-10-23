@@ -17,6 +17,42 @@ import { Search, X } from 'lucide-react';
 import type { Option } from '@/lib/constants';
 import { SWATCHES } from '@/lib/constants';
 
+/* ---------------------------------------------------------------- caret keeping */
+
+/** Where a caret at pos ends up when old becomes next (the change is found by trimming the shared ends). */
+function mapCaret(old: string, next: string, pos: number): number {
+  let pre = 0;
+  while (pre < old.length && pre < next.length && old[pre] === next[pre]) pre++;
+  let suf = 0;
+  while (suf < old.length - pre && suf < next.length - pre && old[old.length - 1 - suf] === next[next.length - 1 - suf]) suf++;
+  if (pos <= pre) return pos;
+  if (pos >= old.length - suf) return pos + (next.length - old.length);
+  return next.length - suf;
+}
+
+/** Text fields are shared live in the hosted version: when someone else's edit changes the value while
+    this field has focus, keep the caret and selection where they were instead of jumping to the end. */
+function useKeepCaret(el: { current: HTMLInputElement | HTMLTextAreaElement | null }, value: string) {
+  const pending = useRef<{ a: number; b: number; dir: string; old: string } | null>(null);
+  // read during render, while the field still shows the old text and caret (local typing has already
+  // changed the field itself, so it never counts as an incoming change)
+  const e = el.current;
+  if (e && document.activeElement === e && e.value !== value && e.selectionStart != null && e.selectionEnd != null) {
+    pending.current = { a: e.selectionStart, b: e.selectionEnd, dir: e.selectionDirection ?? 'none', old: e.value };
+  }
+  useLayoutEffect(() => {
+    const p = pending.current;
+    pending.current = null;
+    const f = el.current;
+    if (!p || !f || document.activeElement !== f) return;
+    try {
+      f.setSelectionRange(mapCaret(p.old, value, p.a), mapCaret(p.old, value, p.b), p.dir as 'forward' | 'backward' | 'none');
+    } catch {
+      /* some input types have no selection */
+    }
+  }, [value]);
+}
+
 /* ---------------------------------------------------------------- Input */
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'size'> {
@@ -26,13 +62,20 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   size?: 'sm' | 'md';
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ value, onChange, bare, size, className, ...rest }, ref) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ value, onChange, bare, size, className, onSelect, ...rest }, ref) {
+  const inner = useRef<HTMLInputElement | null>(null);
+  useKeepCaret(inner, value ?? '');
   return (
     <input
-      ref={ref}
+      ref={(el) => {
+        inner.current = el;
+        if (typeof ref === 'function') ref(el);
+        else if (ref) ref.current = el;
+      }}
       className={['input', bare && 'bare', size === 'sm' && 'sm', className].filter(Boolean).join(' ')}
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value)}
+      onSelect={onSelect}
       spellCheck={rest.type === 'email' || rest.type === 'tel' ? false : rest.spellCheck}
       {...rest}
     />
@@ -101,10 +144,11 @@ export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaE
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { value, onChange, bare, autoGrow, minRows = 2, className, style, ...rest },
+  { value, onChange, bare, autoGrow, minRows = 2, className, style, onSelect, ...rest },
   ref,
 ) {
   const inner = useRef<HTMLTextAreaElement | null>(null);
+  useKeepCaret(inner, value ?? '');
   useLayoutEffect(() => {
     const el = inner.current;
     if (!autoGrow || !el) return;
@@ -144,6 +188,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       rows={minRows}
       style={{ ...(autoGrow ? { resize: 'none', overflow: 'hidden' } : {}), ...style }}
       onChange={(e) => onChange(e.target.value)}
+      onSelect={onSelect}
       {...rest}
     />
   );
