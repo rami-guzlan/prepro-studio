@@ -56,7 +56,16 @@ export function createLive({ auth, log = console }) {
         conns.delete(c);
         presence(c.docId);
       });
-      const ping = setInterval(() => ws.readyState === 1 && ws.ping(), 25000);
+      // drop connections that stopped answering (their tab is gone without a goodbye)
+      let alive = true;
+      ws.on('pong', () => (alive = true));
+      ws.on('message', () => (alive = true));
+      const ping = setInterval(() => {
+        if (ws.readyState !== 1) return;
+        if (!alive) return ws.terminate();
+        alive = false;
+        ws.ping();
+      }, 30000);
       ws.on('close', () => clearInterval(ping));
     });
   }
@@ -72,6 +81,9 @@ export function createLive({ auth, log = console }) {
       }
       case 'active':
         c.lastActive = Date.now();
+        break;
+      case 'ping':
+        send(c, { t: 'pong' });
         break;
       case 'mcp:ready':
         c.agent = true;

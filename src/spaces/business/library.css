@@ -843,3 +843,86 @@ button.lib-chip:disabled {
     font-size: 18px;
   }
 }
+
+/* Growth dashboard (modules/growth Dashboard) */
+.biz-back.show {
+  display: inline-flex !important;
+}
+.lib-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.lib-dash-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lib-dash-group h4 {
+  margin: 0 0 2px;
+  font-size: 13px;
+}
+.lib-dash-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.3fr) minmax(170px, 1fr) minmax(260px, 1.4fr);
+  gap: 14px;
+  align-items: center;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.lib-dash-row:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+.lib-dash-row.late {
+  border-left: 3px solid var(--danger);
+}
+.lib-dash-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.lib-dash-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.lib-dash-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.lib-dash-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.lib-dash-facts span,
+.lib-dash-kpi span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lib-dash-more {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+@container biz (max-width: 760px) {
+  .lib-dash-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

@@ -68,20 +68,36 @@ function applyRemote(kind: Kind, id: string, remoteRaw: unknown, rev: number): u
 }
 
 const pulling = new Set<string>();
+/** changes announced while a pull was already running: fetched right after it */
+const pullAgain = new Map<string, number>();
 async function pull(id: string, rev: number, by?: string) {
   const o = openDoc();
-  if (!o || o.id !== id || rev <= getRev(id) || pulling.has(id)) return;
+  if (!o || o.id !== id || rev <= getRev(id)) return;
+  if (pulling.has(id)) {
+    pullAgain.set(id, Math.max(pullAgain.get(id) ?? 0, rev));
+    return;
+  }
   pulling.add(id);
   try {
     const latest = await fetchDoc<unknown>(id);
-    if (latest.rev <= getRev(id)) return;
-    applyRemote(o.kind, id, latest.doc, latest.rev);
-    if (by) lastEditor = by;
+    if (latest.rev > getRev(id)) {
+      applyRemote(o.kind, id, latest.doc, latest.rev);
+      if (by) lastEditor = by;
+    }
   } catch (e) {
     console.warn('live pull failed', e);
   } finally {
     pulling.delete(id);
+    const again = pullAgain.get(id);
+    pullAgain.delete(id);
+    if (again != null) void pull(id, again);
   }
+}
+
+/** Fetch the open document if it changed while this tab wasn't listening (sleep, background, network drop). */
+function catchUp() {
+  const o = openDoc();
+  if (o) void pull(o.id, Number.MAX_SAFE_INTEGER);
 }
 let lastEditor = '';
 
@@ -92,6 +108,11 @@ const isAgentTab = new URLSearchParams(location.search).get('agent') === '1';
 
 let ws: WebSocket | null = null;
 let retry = 0;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+/** last time anything arrived on the socket; the server answers pings, so silence means it is dead */
+let lastHeard = Date.now();
+const HEARTBEAT_MS = 20000;
+const DEAD_AFTER_MS = 50000;
 let sentOpen: string | null = null;
 let agentReady: unknown = null;
 const callHandlers = new Set<(req: any) => void>();
@@ -106,6 +127,7 @@ function connect() {
   ws = new WebSocket(`${proto}//${location.host}/api/live?client=${encodeURIComponent(clientId)}${isAgentTab ? '&agent=1' : ''}`);
   ws.onopen = () => {
     retry = 0;
+    lastHeard = Date.now();
     usePresence.setState({ connected: true });
     sentOpen = null;
     syncOpen();
@@ -115,6 +137,7 @@ function connect() {
     if (o) void pull(o.id, Number.MAX_SAFE_INTEGER);
   };
   ws.onmessage = (ev) => {
+    lastHeard = Date.now();
     let msg: any;
     try {
       msg = JSON.parse(String(ev.data));
@@ -153,7 +176,10 @@ function connect() {
     usePresence.setState({ connected: false, people: [] });
     ws = null;
     const wait = Math.min(15000, 500 * 2 ** retry++);
-    setTimeout(connect, wait);
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      connect();
+    }, wait);
   };
 }
 
@@ -207,9 +233,26 @@ export function startLive() {
   setSavedListener((id, _kind, doc) => base.set(id, doc));
   setConflictResolver((id, kind, remote, rev) => applyRemote(kind, id, remote, rev));
 
-  const active = () => sendMsg({ t: 'active' });
-  window.addEventListener('focus', active);
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && active());
+  // back on this tab (or the network): reconnect now if needed and fetch what changed meanwhile
+  const wake = () => {
+    sendMsg({ t: 'active' });
+    if (!ws && retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+      retry = 0;
+      connect();
+    } else if (ws && ws.readyState === WebSocket.OPEN && Date.now() - lastHeard > DEAD_AFTER_MS) ws.close();
+    catchUp();
+  };
+  window.addEventListener('focus', wake);
+  window.addEventListener('online', wake);
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wake());
+  // heartbeat: a socket can die silently (laptop sleep, phone in a pocket, Wi-Fi change)
+  setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (Date.now() - lastHeard > DEAD_AFTER_MS) ws.close();
+    else sendMsg({ t: 'ping' });
+  }, HEARTBEAT_MS);
   connect();
 }
 
