@@ -824,3 +824,22 @@ button.lib-chip:disabled {
     grid-auto-columns: minmax(200px, 82%);
   }
 }
+
+/* Strategy: the overarching strategy, written large and conversationally */
+.biz-story .biz-story-text {
+  font-size: 21px;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+  max-width: 72ch;
+  padding: 4px 0;
+  color: var(--text);
+  background: transparent;
+}
+.biz-story .biz-story-text::placeholder {
+  color: var(--text-3);
+}
+@media (max-width: 640px) {
+  .biz-story .biz-story-text {
+    font-size: 18px;
+  }
+}

@@ -36,12 +36,14 @@ import type { SingletonDef } from '../singletons';
 import { activeDoc, clean, fail, itemsOf, openKind, plural, project, resolveRef } from '../ctx';
 import { FORMATS } from '@/spaces/constants';
 import type { ContentFormat } from '@/spaces/types';
+import { getSpace } from '@/store/space';
 import { defineTool } from '../tool';
 import { anyObj, arr, bool, enm, num, obj, opt, str } from '../schema';
 
 /* ================================================================ mind dump */
 
-const SEND = ['scenes', 'action', 'av_video', 'av_audio', 'shots', 'tasks', 'content', 'milestones'] as const;
+const SEND = ['scenes', 'action', 'av_video', 'av_audio', 'shots', 'tasks', 'content', 'milestones', 'initiatives', 'priorities', 'offers', 'leads', 'workflows'] as const;
+const BIZ_SEND = { initiatives: 'growth initiatives', priorities: 'priorities', offers: 'offers', leads: 'sales leads', workflows: 'workflows' } as const;
 
 const BOARD_ARG = 'board (idea batch / category) to work on, by name or id — it becomes the active board; omit for the active one';
 
@@ -153,7 +155,7 @@ const mindTools = [
     name: 'mind_send_notes',
     title: 'Turn board notes into script, content, shots or tasks',
     description:
-      'Turns notes (in reading order) into real content and ticks them as used. In a project: "scenes" (each note becomes a new scene at the end of the screenplay; a first line like "INT. KITCHEN - NIGHT" becomes the heading, otherwise it becomes the index-card synopsis), "action" (action paragraphs at the end), "av_video" / "av_audio" (A/V script rows), "shots" (unassigned shots) or "tasks". In a Marketing Space: "content" (content pieces in the Idea stage; pick a format) or "milestones".',
+      'Turns notes (in reading order) into real content and ticks them as used. In a project: "scenes" (each note becomes a new scene at the end of the screenplay; a first line like "INT. KITCHEN - NIGHT" becomes the heading, otherwise it becomes the index-card synopsis), "action" (action paragraphs at the end), "av_video" / "av_audio" (A/V script rows), "shots" (unassigned shots) or "tasks". In a Marketing Space: "content" (content pieces in the Idea stage; pick a format) or "milestones". In a business: "initiatives" (Growth), "priorities" (this quarter, Strategy), "offers" (Strategy), "leads" (Sales Pipeline) or "workflows" (Workflows & SOPs).',
     global: true,
     input: obj({
       noteIds: { ...arr(str()), minItems: 1 },
@@ -166,6 +168,13 @@ const mindTools = [
       pickBoard(a.board, false);
       const ids = new Set(a.noteIds.map((x) => resolveRef('mind_notes', x)));
       const notes: IdeaNote[] = readingOrder(getMind().notes.filter((n) => ids.has(n.id)));
+      if (kind === 'space' && getSpace().meta.kind === 'business') {
+        if (!(a.to in BIZ_SEND)) fail('In a business, send notes to "initiatives", "priorities", "offers", "leads" or "workflows".');
+        const m = await import('@/spaces/business/mind');
+        const run = { initiatives: m.notesToInitiatives, priorities: m.notesToPriorities, offers: m.notesToOffers, leads: m.notesToDeals, workflows: m.notesToSops }[a.to as keyof typeof BIZ_SEND];
+        run(notes);
+        return { summary: `Turned ${plural(notes.length, 'note')} into ${BIZ_SEND[a.to as keyof typeof BIZ_SEND]}` };
+      }
       if (kind === 'space') {
         const { notesToContent, notesToMilestones } = await import('@/spaces/mind');
         if (a.to === 'content') {

@@ -2,7 +2,8 @@
    and notes of a Marketing Space. */
 import './strategy.css';
 import { useEffect, useState } from 'react';
-import { Compass, Layers, ListTodo, MessageSquareQuote, NotebookPen, Plus, Target, Users } from 'lucide-react';
+import { Calculator, Compass, Layers, ListTodo, MessageSquareQuote, NotebookPen, Plus, Target, Users } from 'lucide-react';
+import { SharedCalculator } from '@/spaces/calc/SharedCalculator';
 import { useSpace } from '@/store/space';
 import { readLS, useApp, writeLS } from '@/store/app';
 import { Button, ExportMenu, ModuleHeader, UnderlineTabs, type TabDef } from '@/ui';
@@ -13,8 +14,8 @@ import { PillarsTab } from './PillarsTab';
 import { TacticsTab } from './TacticsTab';
 import { addGoal, addPersona, addPillar, exportGoalsCsv, exportTacticsCsv, plural } from './shared';
 
-type Tab = 'goals' | 'audience' | 'pillars' | 'messaging' | 'tactics' | 'notes';
-const TAB_IDS: Tab[] = ['goals', 'audience', 'pillars', 'messaging', 'tactics', 'notes'];
+type Tab = 'goals' | 'audience' | 'pillars' | 'messaging' | 'tactics' | 'notes' | 'calc';
+const TAB_IDS: Tab[] = ['goals', 'audience', 'pillars', 'messaging', 'tactics', 'notes', 'calc'];
 const LS_KEY = 'prepro.spaceStrategy.tab';
 
 export default function StrategyModule() {
@@ -52,6 +53,7 @@ export default function StrategyModule() {
     { id: 'messaging', label: 'Messaging', icon: MessageSquareQuote },
     { id: 'tactics', label: 'Tactics', icon: ListTodo, count: tactics.length || undefined },
     { id: 'notes', label: 'Notes', icon: NotebookPen },
+    { id: 'calc', label: 'Calculator', icon: Calculator },
   ];
 
   const onTrack = goals.filter((g) => g.status === 'on_track' || g.status === 'done').length;
@@ -103,6 +105,11 @@ export default function StrategyModule() {
         {tab === 'messaging' && <MessagingTab />}
         {tab === 'tactics' && <TacticsTab focusId={focusId} onAdded={onAdded} />}
         {tab === 'notes' && <NotesTab />}
+        {tab === 'calc' && (
+          <div style={{ padding: 20 }}>
+            <SharedCalculator />
+          </div>
+        )}
       </div>
     </div>
   );

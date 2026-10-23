@@ -26,6 +26,7 @@ gcloud run deploy $Service --project $Project --region $Region --source $root --
   --session-affinity --cpu-boost `
   --set-env-vars "STORAGE=gcs,DATA_BUCKET=$bucket,GOOGLE_CLOUD_PROJECT=$Project,OWNER_EMAIL=$OwnerEmail" `
   --set-secrets "IDENTITY_API_KEY=prepro-identity-api-key:latest,SESSION_SECRET=prepro-session-secret:latest"
+if ($LASTEXITCODE -ne 0) { throw "Deploy failed; the live site still runs the previous version" }
 
 gcloud run services update $Service --project $Project --region $Region --quiet --update-env-vars "PUBLIC_URL=$PublicUrl" | Out-Null
 Write-Host "Deployed: $PublicUrl"

@@ -465,6 +465,8 @@ export interface SpaceData {
   crm: CrmSheet[];
   /** brainstorming board (same model as the script's Mind Dump) */
   mind: MindDump;
+  /** shared calculator lines on the Strategy page (src/spaces/calc) */
+  calc?: import('@/lib/calc').CalcLine[];
   /** linked production projects */
   projectIds: ID[];
   /** linked Marketing Spaces (business spaces link the marketing they run) */

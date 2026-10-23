@@ -1,6 +1,6 @@
 /* Kind definition of 'business' spaces: sidebar modules, print documents, coach summary. */
 import { lazy } from 'react';
-import { BookOpenCheck, Clapperboard, Clock, Compass, Film, FileSignature, FileText, FolderKanban, Gauge, HandCoins, Library, MessageSquareQuote, Presentation, Receipt, Rocket, Target, UserRound, UsersRound } from 'lucide-react';
+import { BookOpenCheck, Clapperboard, Clock, Compass, Film, FileSignature, FileText, FolderKanban, Gauge, HandCoins, Library, Lightbulb, MessageSquareQuote, Presentation, Receipt, Rocket, Target, UserRound, UsersRound } from 'lucide-react';
 import type { SpaceKindDef } from '../kinds';
 import { bizOf, arAging, invoiceTotal, minutesIn, periodRange, profitLoss, totalOwedToContractors, unbilledEntries, entryValue, sumAmount, upcoming, weekStartOf, round2 } from './derive';
 import { addDays } from '@/lib/dates';
@@ -8,12 +8,14 @@ import { businessPrintDocs } from './print';
 import { salesPrintDocs } from './print-sales';
 import { workPrintDocs } from './print-work';
 import { libraryPrintDocs } from './print-library';
+import { spacePrintDocs as ideasPrintDocs } from '../modules/ideas/print';
 
 export const businessKind: SpaceKindDef = {
   groups: ['Overview', 'Sales', 'Work', 'Money', 'People', 'Legal', 'Library'],
   modules: [
     { id: 'overview', label: 'Overview', group: 'Overview', icon: Gauge, description: 'Income, sales and projects at a glance', component: lazy(() => import('./modules/overview')) },
     { id: 'strategy', label: 'Strategy', group: 'Overview', icon: Compass, description: 'Mission, positioning, offers, goals, priorities, SWOT', component: lazy(() => import('./modules/strategy')) },
+    { id: 'ideas', label: 'Ideas', group: 'Overview', icon: Lightbulb, description: 'Brainstorm board: get it all out, then turn the best into initiatives, offers or leads', component: lazy(() => import('./modules/ideas')) },
     { id: 'growth', label: 'Growth', group: 'Overview', icon: Rocket, description: 'Growth initiatives with KPIs, budget and check-ins', component: lazy(() => import('./modules/growth')) },
     { id: 'pipeline', label: 'Sales Pipeline', group: 'Sales', icon: Target, description: 'Leads and deals from first contact to won', component: lazy(() => import('./modules/pipeline')) },
     { id: 'enablement', label: 'Sales Enablement', group: 'Sales', icon: Presentation, description: 'Pitch decks, case studies, pricing, scripts, email templates', component: lazy(() => import('./modules/enablement')) },
@@ -31,10 +33,11 @@ export const businessKind: SpaceKindDef = {
     { id: 'sops', label: 'Workflows & SOPs', group: 'Library', icon: BookOpenCheck, description: 'Step-by-step procedures and checklists you can run', component: lazy(() => import('./modules/sops')) },
     { id: 'resources', label: 'Resources', group: 'Library', icon: Library, description: 'Templates, brand assets, files and links you reuse', component: lazy(() => import('./modules/resources')) },
   ],
-  printDocs: [...businessPrintDocs, ...salesPrintDocs, ...workPrintDocs, ...libraryPrintDocs],
+  printDocs: [...businessPrintDocs, ...ideasPrintDocs.map((d) => ({ ...d, id: 'space-biz-ideas', group: 'Strategy' as const })), ...salesPrintDocs, ...workPrintDocs, ...libraryPrintDocs],
   navParams: {
     overview: 'card ("profile" | "settings" | "links")',
     strategy: 'section ("plan" | "offers" | "goals" | "priorities" | "swot" | "competitors")',
+    ideas: '(none; use the mind_* tools for the board)',
     growth: 'initiativeId, or new: true',
     pipeline: 'dealId, or new: true; stage (filter), followUps: true',
     enablement: 'resourceId, category, or new: true',

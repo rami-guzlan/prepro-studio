@@ -12,6 +12,7 @@ import { safeFileName, plural } from '@/lib/text';
 import { openSpaceById } from '@/shell/spaceActions';
 import { Button, Checkbox, DateInput, EmptyState, ExportMenu, Field, IconButton, Input, ModuleHeader, NumberInput, Select, Switch, Textarea, confirmDialog, toast } from '@/ui';
 import { Meter } from '@/ui/charts';
+import { SharedCalculator } from '@/spaces/calc/SharedCalculator';
 import { openUrl } from '@/spaces/modules/assets/actions';
 import { GOAL_METRICS, PERIODS } from '../../constants';
 import { goalProgress, initiativeStatusInfo } from '../../derive-work';
@@ -35,12 +36,14 @@ import {
 } from './ops';
 
 const SECTIONS = [
+  { id: 'story', label: 'Our strategy' },
   { id: 'plan', label: 'Plan' },
   { id: 'offers', label: 'Offers' },
   { id: 'goals', label: 'Goals' },
   { id: 'priorities', label: 'Priorities' },
   { id: 'swot', label: 'SWOT' },
   { id: 'competitors', label: 'Competitors' },
+  { id: 'calc', label: 'Calculator' },
 ] as const;
 
 const scrollTo = (id: string) => document.getElementById(`biz-strat-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -134,6 +137,23 @@ export default function StrategyModule() {
           ))}
         </nav>
 
+        <section id="biz-strat-story" className="lib-section biz-story">
+          <div className="biz-section-head">
+            <h3>Our strategy</h3>
+            <span className="muted small">The big picture, in your own words</span>
+          </div>
+          <Textarea
+            bare
+            autoGrow
+            minRows={4}
+            className="biz-story-text"
+            value={st.narrative}
+            placeholder={'Where is this business going, and how will it get there?\n\nWrite it the way you would explain it to a partner over coffee: who we serve, what we do better than anyone, how we will grow over the next year, and what we are saying no to.'}
+            onChange={(v) => setStrategy({ narrative: v || undefined })}
+            aria-label="Our strategy"
+          />
+        </section>
+
         <PlanSection st={st} />
         <OffersSection st={st} />
 
@@ -173,6 +193,10 @@ export default function StrategyModule() {
         <PrioritiesSection st={st} today={today} />
         <SwotSection st={st} />
         <CompetitorsSection st={st} />
+
+        <section id="biz-strat-calc" className="lib-section">
+          <SharedCalculator />
+        </section>
 
         <section className="lib-section">
           <div className="biz-section-head">

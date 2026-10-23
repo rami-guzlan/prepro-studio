@@ -523,6 +523,8 @@ export interface BizCompetitor {
 }
 
 export interface BizStrategy {
+  /** the overarching strategy in your own words (big text at the top of Strategy) */
+  narrative?: string;
   mission?: string;
   vision?: string;
   /** one-sentence positioning statement */
