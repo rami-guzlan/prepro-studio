@@ -1,23 +1,31 @@
 /* Two-column audio/video (A/V) script editor, rendered inside the Script module.
    Rows: optional segment band, number, VIDEO, AUDIO ("SPEAKER:" labels styled),
    duration (suggested from audio at 150 wpm), running time, thumbnail or linked
-   shot, notes. Keyboard: Ctrl+Enter new row · Alt+↑/↓ move · Ctrl+Shift+S segment. */
+   shot, notes. Keyboard: Ctrl+Enter new row · Alt+↑/↓ move · Ctrl+Shift+S segment.
+   Bands stay at their position when rows move; a section (band + its rows) moves as a
+   block from the band's own grip or menu (see sections.ts). */
 import './avscript.css';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
+  useDraggable,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   ArrowDown,
+  ArrowDownToLine,
   ArrowUp,
+  ArrowUpToLine,
   Clock,
   Copy,
   FileVideo2,
@@ -44,6 +52,7 @@ import { exportCsv } from '@/backend';
 import { AssetImage, Button, EmptyState, ExportMenu, IconButton, ImageDrop, Menu, Select, Textarea, confirmDialog, toast, type MenuItem } from '@/ui';
 import { RichText, computeTiming, WPM } from './format';
 import { templateAvRows } from '@/templates';
+import { blocksOf as blocksOfRows, canShiftBand, canStepSection, moveRowKeepBands, moveSection, sectionDrop, sectionSize, shiftBand, stepRow, stepSection } from './sections';
 
 type Field = 'video' | 'audio' | 'duration' | 'segment' | 'notes';
 
@@ -224,6 +233,10 @@ interface RowActions {
   move: (id: string, dir: -1 | 1, field?: Field, caret?: number) => void;
   segment: (id: string) => void;
   removeSegment: (id: string) => void;
+  /** move the whole section starting at this band up / down past the next section */
+  moveSection: (id: string, dir: -1 | 1) => void;
+  /** start the section one row earlier / later (the shots stay) */
+  shiftBand: (id: string, dir: -1 | 1) => void;
   duplicate: (id: string) => void;
   remove: (id: string) => void;
   openNote: (id: string) => void;
@@ -247,6 +260,8 @@ interface RowProps {
   shotOptions: { value: string; label: string }[];
   grid: string;
   actions: RowActions;
+  /** a section being dragged will land before / after this row */
+  dropMark?: 'before' | 'after';
 }
 
 const AVRowView = memo(function AVRowView({
@@ -265,8 +280,10 @@ const AVRowView = memo(function AVRowView({
   shotOptions,
   grid,
   actions,
+  dropMark,
 }: RowProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
+  const band = useDraggable({ id: `band:${row.id}`, disabled: row.segment == null });
   const style: CSSProperties = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 5 : undefined, position: 'relative' };
 
   const onKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -280,7 +297,8 @@ const AVRowView = memo(function AVRowView({
     } else if (e.altKey && !mod && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault();
       const caret = target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement ? target.selectionStart ?? undefined : undefined;
-      actions.move(row.id, e.key === 'ArrowUp' ? -1 : 1, field, caret);
+      if (field === 'segment') actions.moveSection(row.id, e.key === 'ArrowUp' ? -1 : 1);
+      else actions.move(row.id, e.key === 'ArrowUp' ? -1 : 1, field, caret);
     } else if (mod && e.shiftKey && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
       e.preventDefault();
       actions.segment(row.id);
@@ -301,6 +319,21 @@ const AVRowView = memo(function AVRowView({
     { label: 'Delete row', icon: Trash2, danger: true, onClick: () => actions.remove(row.id) },
   ];
 
+  const bandMenu = (): MenuItem[] => {
+    const rows = getProject().script.av?.rows ?? [];
+    const n = sectionSize(rows, row.id);
+    return [
+      { header: `Section · ${n} row${n === 1 ? '' : 's'}` },
+      { label: 'Move section up', icon: ArrowUp, shortcut: 'Alt+↑', disabled: !canStepSection(rows, row.id, -1), onClick: () => actions.moveSection(row.id, -1) },
+      { label: 'Move section down', icon: ArrowDown, shortcut: 'Alt+↓', disabled: !canStepSection(rows, row.id, 1), onClick: () => actions.moveSection(row.id, 1) },
+      { separator: true },
+      { label: 'Start one row earlier', icon: ArrowUpToLine, disabled: !canShiftBand(rows, row.id, -1), onClick: () => actions.shiftBand(row.id, -1) },
+      { label: 'Start one row later', icon: ArrowDownToLine, disabled: !canShiftBand(rows, row.id, 1), onClick: () => actions.shiftBand(row.id, 1) },
+      { separator: true },
+      { label: 'Remove segment band', icon: X, onClick: () => actions.removeSegment(row.id) },
+    ];
+  };
+
   const thumb = () => {
     if (row.image) return <ImageDrop value={row.image} onChange={(v) => rowOps.update(row.id, { image: v }, false)} aspect={16 / 9} />;
     if (shot?.image)
@@ -317,9 +350,12 @@ const AVRowView = memo(function AVRowView({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={`avs-row-wrap ${isDragging ? 'dragging' : ''}`} data-avs-row={row.id} onKeyDown={onKey}>
+    <div ref={setNodeRef} style={style} className={`avs-row-wrap ${isDragging ? 'dragging' : ''} ${dropMark ? `avs-drop-${dropMark}` : ''}`} data-avs-row={row.id} onKeyDown={onKey}>
       {row.segment != null && (
-        <div className="avs-segment">
+        <div ref={band.setNodeRef} className={`avs-segment ${band.isDragging ? 'band-dragging' : ''}`}>
+          <button type="button" ref={band.setActivatorNodeRef} className="avs-grip avs-band-grip" {...band.attributes} {...band.listeners} aria-label={`Drag section ${row.segment || 'untitled'}`} title="Drag to move the whole section (band and its rows)">
+            <GripVertical size={14} />
+          </button>
           <input
             className="avs-segment-input"
             value={row.segment}
@@ -336,7 +372,7 @@ const AVRowView = memo(function AVRowView({
             aria-label="Segment title"
           />
           {showDurations && segmentSeconds != null && segmentSeconds > 0 && <span className="avs-segment-time">{formatSeconds(segmentSeconds)}</span>}
-          <IconButton icon={X} size="sm" label="Remove segment band" onClick={() => actions.removeSegment(row.id)} />
+          <Menu align="end" trigger={<IconButton icon={MoreHorizontal} size="sm" label="Section actions" />} items={bandMenu} />
         </div>
       )}
       <div className="avs-row" style={{ gridTemplateColumns: grid }}>
@@ -486,8 +522,19 @@ export default function AVScriptEditor() {
         const i = list.findIndex((r) => r.id === id);
         const j = i + dir;
         if (i < 0 || j < 0 || j >= list.length) return;
-        rowOps.move(i, j);
+        update((d) => stepRow(avDraft(d).rows, i, dir));
         if (field) requestFocus(id, field, caret);
+      },
+      moveSection(id, dir) {
+        if (!canStepSection(cur(), id, dir)) return;
+        update((d) => void stepSection(avDraft(d).rows, id, dir));
+        requestFocus(id, 'segment', 'end');
+      },
+      shiftBand(id, dir) {
+        if (!canShiftBand(cur(), id, dir)) return;
+        let moved: string | null = null;
+        update((d) => void (moved = shiftBand(avDraft(d).rows, id, dir)));
+        if (moved) requestFocus(moved, 'segment', 'end');
       },
       segment(id) {
         const r = cur().find((x) => x.id === id);
@@ -613,13 +660,44 @@ export default function AVScriptEditor() {
 
   /* ---- drag & drop */
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // a section being dragged by its band: where it would land
+  const [bandDrag, setBandDrag] = useState<{ bandId: string; title: string; size: number; overId?: string } | null>(null);
+  const bandDrop = useMemo(() => (bandDrag?.overId ? sectionDrop(rows, bandDrag.bandId, bandDrag.overId) : null), [bandDrag, rows]);
+  const dropMarks = useMemo(() => {
+    const m = new Map<string, 'before' | 'after'>();
+    if (!bandDrop) return m;
+    const blocks = blocksOfRows(rows);
+    const b = blocks[bandDrop.blockIndex];
+    if (b) m.set(bandDrop.side === 'before' ? rows[b.start].id : rows[b.end - 1].id, bandDrop.side);
+    return m;
+  }, [bandDrop, rows]);
+  const onDragStart = (e: DragStartEvent) => {
+    const id = String(e.active.id);
+    if (!id.startsWith('band:')) return;
+    const list = getProject().script.av?.rows ?? [];
+    const bandId = id.slice(5);
+    setBandDrag({ bandId, title: list.find((r) => r.id === bandId)?.segment || 'Untitled section', size: sectionSize(list, bandId) });
+  };
+  const onDragOver = (e: DragOverEvent) => {
+    if (!String(e.active.id).startsWith('band:')) return;
+    const overId = e.over ? String(e.over.id) : undefined;
+    setBandDrag((b) => (b && b.overId !== overId ? { ...b, overId } : b));
+  };
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
+    const id = String(active.id);
+    setBandDrag(null);
     if (!over || active.id === over.id) return;
     const list = getProject().script.av?.rows ?? [];
+    if (id.startsWith('band:')) {
+      const bandId = id.slice(5);
+      const drop = sectionDrop(list, bandId, String(over.id));
+      if (drop) update((d) => moveSection(avDraft(d).rows, bandId, drop));
+      return;
+    }
     const from = list.findIndex((r) => r.id === active.id);
     const to = list.findIndex((r) => r.id === over.id);
-    if (from >= 0 && to >= 0) rowOps.move(from, to);
+    if (from >= 0 && to >= 0) update((d) => moveRowKeepBands(avDraft(d).rows, from, to));
   };
 
   const grid = [
@@ -743,7 +821,7 @@ export default function AVScriptEditor() {
         />
       ) : (
         <div className="avs-sheet" style={{ minWidth }}>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setBandDrag(null)}>
             <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
               {rows.map((row, i) => {
                 const shot = row.shotId ? shotIndex.byId.get(row.shotId) : undefined;
@@ -765,10 +843,22 @@ export default function AVScriptEditor() {
                     shotOptions={shotIndex.options}
                     grid={grid}
                     actions={actions}
+                    dropMark={dropMarks.get(row.id)}
                   />
                 );
               })}
             </SortableContext>
+            <DragOverlay dropAnimation={null}>
+              {bandDrag && (
+                <div className="avs-band-overlay">
+                  <GripVertical size={14} />
+                  <b>{bandDrag.title}</b>
+                  <span>
+                    {bandDrag.size} row{bandDrag.size === 1 ? '' : 's'}
+                  </span>
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
           <div className="avs-foot">
             <Button size="sm" variant="ghost" icon={Plus} onClick={() => addRow(false)}>
@@ -778,7 +868,7 @@ export default function AVScriptEditor() {
               Add segment
             </Button>
             <span className="spacer" />
-            <span className="avs-hint">Ctrl+Enter new row · Alt+↑/↓ move row · Ctrl+Shift+S segment band</span>
+            <span className="avs-hint">Ctrl+Enter new row · Alt+↑/↓ move row (in a band: the section) · drag a band to move its section · Ctrl+Shift+S segment band</span>
           </div>
         </div>
       )}
