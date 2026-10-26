@@ -28,8 +28,9 @@ import { businessLibraryTools } from './kinds/business-library';
 import { financeTools } from './kinds/finance';
 import { trainingTools } from './kinds/training';
 import { coachTools } from './tools/coach';
+import { designSystemTools } from './kinds/designSystem';
 
-export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...crmTools, ...businessTools, ...businessSalesTools, ...businessWorkTools, ...businessLibraryTools, ...financeTools, ...trainingTools, ...coachTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
+export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...designSystemTools, ...crmTools, ...businessTools, ...businessSalesTools, ...businessWorkTools, ...businessLibraryTools, ...financeTools, ...trainingTools, ...coachTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 /** owner-only areas: the hosted version hides these tools from everyone else's agents */
 const AREA = new Map<string, string>([...financeTools.map((t) => [t.name, 'finance'] as const), ...trainingTools.map((t) => [t.name, 'training'] as const)]);

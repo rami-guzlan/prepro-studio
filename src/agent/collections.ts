@@ -54,6 +54,8 @@ export interface FieldSpec {
   keys?: string[];
   /** object fields: values are numbers (default: text) */
   numericValues?: boolean;
+  /** object fields: keys are references to this collection (ids or names, stored as ids) */
+  keysRef?: string;
   /** never written by the agent */
   readOnly?: boolean;
   /** uppercase string values */

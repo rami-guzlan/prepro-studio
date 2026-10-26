@@ -43,6 +43,7 @@ const SPACE_NAV_PARAMS: Partial<Record<SpaceModuleId, string>> = {
   campaigns: 'campaignId',
   production: 'shootId',
   people: 'sheetId (name or id), rowId',
+  assets: 'tab ("assets" | "system" = the design system | "guide" = the compiled agent guide); with tab "system", section (a design-system section: "overview" | "color" | "type" | "tokens" | "components" | "art" | "rules" | "references" | "formats" | "briefs" | "review" | "sources")',
 };
 
 const NAV_PARAMS: Partial<Record<ModuleId, string>> = {

@@ -99,6 +99,38 @@ const fmt = useSpaceFormatters();   // fmt.date(iso) fmt.dateMedium fmt.time('18
 - Deleting a campaign keeps its resources (their `campaignId` is cleared). Starter templates (`campaign`, `event`)
   create placeholder resources per campaign; the demo space has real files (PDFs made with pdf-lib, Markdown).
 
+## Design system (Brand Kit & Assets → Design system)
+- `space.designSystem: DesignSystem` (src/spaces/designSystem/types.ts; `normalizeDesignSystem` never throws). Two
+  layers: foundations (themes, semantic tokens per theme, type styles, spacing / radius / border / shadow / grid /
+  motion tokens, components, layouts) and art direction (intent, imagery, composition, how elements relate, colour
+  behaviour, treatments, rules with level `required | preferred | open` and scope `brand | campaign`, annotated
+  references with roles and a verdict, formats, briefs, review). Colours, logos, fonts and images stay `BrandAsset`s;
+  colour assets carry `group`, `role`, `cssVar`, `onColor`, `coverage`, fonts `weights`.
+- Writes: `ops.ts` (`dsUpdate`, `dsSet`, `dsAdd`, `dsPatch`, `dsRemove` — one undo step each). Read with `dsOf(space)`.
+- Agent-readable output (`compile.ts`): `compileGuide` (Markdown guide = README.md of the bundle), `compileTokens`
+  (W3C JSON), `compileCss` (`:root` + `[data-theme]`), `compileBrief`, `bundlePath(asset)`, `dsReadiness`;
+  `structured.ts` → `designSystemJson` (everything as JSON with asset file names).
+- Import (`parse.ts` pure + `importer.ts`): a Claude Design design-system zip or any zip / loose files. Markdown & txt →
+  `DSSource.docs` verbatim (README sets name / summary when empty); CSS custom properties → `:root` colours become
+  colour assets (group from the preceding `/* heading */` or the name prefix, role from the name), variables that
+  differ per `[data-theme=…]` / `.theme-x` / `.dark` / `prefers-color-scheme: dark` become themes + semantic tokens,
+  `--space-* / --radius-* / --shadow-* / --border-* / --breakpoint-* / --duration-*` → tokens, `--font-*` → font
+  families, `@font-face` → families + weights, type classes (`.h1`, `.display`, `.eyebrow`, `.type-*` …) and
+  `--type-x-size/weight/…` → type styles; tokens JSON (W3C `$value` or flat, incl. our own export) → the same targets;
+  images (logo / wordmark / mark / icon names or logos/ folders → logos), fonts, HTML cards (title from `<title>` / h1;
+  `components/` → DSComponent, `slides/`, `ui_kits/`, `pages/` … → DSLayout). The original file is kept as
+  `DSSource.file`. One undo step; re-importing the same file name replaces that source and updates items matched by
+  name / cssVar. Untrusted input: nothing is executed, files > 25 MB are skipped, `..` paths are refused, icon sets
+  and scripts are skipped with a warning. HTML cards must only be shown in a sandboxed iframe.
+- Export (`exporters.ts`): zip bundle = README.md, SKILL.md, design-system.json, tokens.json, tokens.css,
+  briefs/*.md, logos/ fonts/ images/ templates/ at `bundlePath`, sources/<source>/… (imported docs & cards).
+- PDF: `space-design-system` (src/spaces/designSystem/print.tsx; options `includeBriefs`, `includeGuidance`).
+- Agents (src/agent/kinds/designSystem.ts): collections `ds_themes`, `ds_semantic_tokens` (`values` keyed by theme
+  name or id), `ds_type_styles`, `ds_tokens`, `ds_components`, `ds_layouts`, `ds_personality`, `ds_treatments`,
+  `ds_rules`, `ds_references`, `ds_formats`, `ds_briefs`, `ds_sources`; single fields `designSystem.*`; the
+  `design_system` tool (`get` markdown / json, `brief`, `readiness`, `import`, `export`).
+- Demo data: src/spaces/designSystem/sample.ts (used by the demo space and the self-test).
+
 ## People & Brands
 - `space.crm: CrmSheet[]`; a sheet has `columns: CrmColumn[]` (`type`: text, longtext, select, multi, number, money,
   date, email, phone, url, checkbox, campaign; select / multi have `options` with stable ids) and `rows: CrmRow[]`

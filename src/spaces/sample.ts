@@ -7,6 +7,7 @@ import { addDays, todayISO } from '@/lib/dates';
 import { uid } from '@/lib/id';
 import { newBoard } from '@/lib/mind';
 import { makeSheet, parseValue } from './crm';
+import { sampleDesignSystem } from './designSystem/sample';
 import { createSpace, makeChannel, makeChecklistItem, makeContent, makePost, makeShot } from './defaults';
 import type { BrandAsset, Campaign, CrmSheet, ContentPiece, ContentPost, Goal, Persona, PostMetrics, ShootSession, SpaceData, SpaceMilestone, Tactic } from './types';
 
@@ -459,6 +460,19 @@ export async function createSampleSpace(): Promise<SpaceData> {
     asset('Festival submission tracker', 'resource', { resourceType: 'template', campaignId: cPremiere.id, url: 'https://docs.google.com/spreadsheets/', notes: 'Shared sheet: deadlines, fees, status' }),
     asset('Release-week email sequence map', 'resource', { ...sequence, resourceType: 'sequence_map', campaignId: cRelease.id, notes: '5 emails from day -7 to day +7' }),
   );
+
+  /* ---------------- design system (Brand Kit & Assets → Design system) */
+  {
+    const { designSystem, assets } = await sampleDesignSystem({
+      assets: s.assets,
+      campaigns: { trailer: cTrailer, premiere: cPremiere },
+      images: { poster: poster.thumbnail, trailer: trailer.thumbnail, portrait: castJune.thumbnail },
+      storeSvg: img,
+    });
+    s.assets.splice(s.assets.findIndex((x) => x.kind === 'font'), 0, ...assets.filter((x) => x.kind === 'color'));
+    s.assets.splice(s.assets.findIndex((x) => x.kind === 'template'), 0, ...assets.filter((x) => x.kind !== 'color'));
+    s.designSystem = designSystem;
+  }
 
   /* ---------------- people & brands */
   const sheet = (template: string, name: string, rows: Record<string, unknown>[]): CrmSheet => {

@@ -10,6 +10,7 @@ import { spacePrintDocs as calendar } from '../modules/calendar/print';
 import { spacePrintDocs as results } from '../modules/results/print';
 import { spacePrintDocs as assets } from '../modules/assets/print';
 import { spacePrintDocs as people } from '../modules/people/print';
+import { spacePrintDocs as designSystem } from '../designSystem/print';
 import { businessKind } from '../business';
 import { financeKind } from '../finance';
 import { trainingKind } from '../training';
@@ -17,7 +18,7 @@ import type { SpaceKind } from '../types';
 
 export const SPACE_PRINT_GROUPS: SpacePrintDocDef['group'][] = ['Overview', 'Strategy', 'Content', 'Calendar', 'Production', 'Results', 'Business', 'Sales', 'Work', 'Money', 'Library', 'Finances', 'Training'];
 
-export const SPACE_PRINT_DOCS: SpacePrintDocDef[] = [...overview, ...strategy, ...campaigns, ...ideas, ...content, ...calendar, ...production, ...results, ...people, ...assets, ...withKind(businessKind.printDocs, 'business'), ...withKind(financeKind.printDocs, 'finance'), ...withKind(trainingKind.printDocs, 'training')];
+export const SPACE_PRINT_DOCS: SpacePrintDocDef[] = [...overview, ...strategy, ...campaigns, ...ideas, ...content, ...calendar, ...production, ...results, ...people, ...assets, ...designSystem, ...withKind(businessKind.printDocs, 'business'), ...withKind(financeKind.printDocs, 'finance'), ...withKind(trainingKind.printDocs, 'training')];
 
 function withKind(docs: SpacePrintDocDef[], kind: SpaceKind): SpacePrintDocDef[] {
   return docs.map((d) => (d.kinds ? d : { ...d, kinds: [kind] }));

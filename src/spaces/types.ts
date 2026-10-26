@@ -397,6 +397,19 @@ export interface BrandAsset {
   fileName?: string;
   /** size of the upload in bytes */
   fileSize?: number;
+  /* ---- design system (colours) */
+  /** palette it belongs to, e.g. "Core", "Spectrum", "Neutrals" */
+  group?: string;
+  role?: import('./designSystem/types').DSColorRole;
+  /** CSS custom property, e.g. "--color-purple" */
+  cssVar?: string;
+  /** colour for text placed on it (hex) */
+  onColor?: string;
+  /** rough share of a composition, e.g. "10 %" */
+  coverage?: string;
+  /* ---- design system (fonts) */
+  /** weights in use, e.g. "400, 700, 800" */
+  weights?: string;
 }
 
 /* ---------------------------------------------------------------- people & brands (CRM sheets) */
@@ -467,6 +480,8 @@ export interface SpaceData {
   mind: MindDump;
   /** shared calculator lines on the Strategy page (src/spaces/calc) */
   calc?: import('@/lib/calc').CalcLine[];
+  /** design system (Brand Kit & Assets → Design system), see src/spaces/designSystem */
+  designSystem?: import('./designSystem/types').DesignSystem;
   /** linked production projects */
   projectIds: ID[];
   /** linked Marketing Spaces (business spaces link the marketing they run) */

@@ -6,7 +6,10 @@ import type { AssetKind, BrandAsset } from '@/spaces/types';
 import { ASSET_KINDS } from '@/spaces/constants';
 import { useSpace } from '@/store/space';
 import { assetUrl } from '@/backend';
-import { Button, ColorPicker, Field, IconButton, ImageDrop, Input, Modal, Select, Textarea } from '@/ui';
+import { Button, ColorPicker, Combo, Field, IconButton, ImageDrop, Input, Modal, Select, Textarea } from '@/ui';
+import type { DSColorRole } from '@/spaces/designSystem/types';
+import { colorVar } from '@/spaces/designSystem/compile';
+import { COLOR_ROLES } from '@/spaces/designSystem/ui/options';
 import { assetOps, canOpenValue, copyText, deleteAsset, fontAvailable, HexInput, openUrl, openValue, TagInput } from './actions';
 import { fontStack, inkOn, normalizeHex } from './util';
 
@@ -31,6 +34,8 @@ export function AssetEditor({ asset, allTags, onClose }: { asset: BrandAsset; al
   const fontOk = kind === 'font' && asset.value?.trim() ? fontAvailable(asset.value) : true;
   const kindLabel = ASSET_KINDS.find((k) => k.value === kind)?.label ?? 'Asset';
   const campaigns = useSpace((s) => s.campaigns);
+  const assets = useSpace((s) => s.assets);
+  const groups = useMemo(() => (kind === 'color' ? [...new Set((assets ?? []).map((a) => (a.kind === 'color' ? a.group?.trim() : '')).filter((g): g is string => !!g))] : []), [assets, kind]);
   const linkish = kind === 'link' || kind === 'doc' || kind === 'other';
 
   return (
@@ -102,6 +107,35 @@ export function AssetEditor({ asset, allTags, onClose }: { asset: BrandAsset; al
               </div>
             </Field>
           ) : null}
+          {kind === 'color' && (
+            <>
+              <Field label="Palette group" hint="e.g. Core, Spectrum, Neutrals">
+                <Combo value={asset.group} suggestions={groups} placeholder="Palette" onChange={(group) => up({ group: group || undefined })} />
+              </Field>
+              <Field label="Role">
+                <Select value={asset.role ?? ''} options={COLOR_ROLES} placeholder="Choose…" onChange={(v) => assetOps.update(asset.id, { role: (v || undefined) as DSColorRole | undefined }, false)} />
+              </Field>
+              <Field label="CSS variable">
+                <Input className="mono" value={asset.cssVar} placeholder={colorVar({ ...asset, cssVar: undefined })} onChange={(cssVar) => up({ cssVar: cssVar || undefined })} />
+              </Field>
+              <Field label="Text on it" hint="Colour of text placed on this colour">
+                <div className="row" style={{ gap: 6 }}>
+                  <span className="sp-assets-oncolor" style={{ background: hex ?? 'var(--bg-sunken)', color: normalizeHex(asset.onColor) ?? inkOn(hex ?? undefined) }} aria-hidden>
+                    Aa
+                  </span>
+                  <HexInput value={asset.onColor} onChange={(onColor) => up({ onColor })} className="sp-assets-hex" />
+                </div>
+              </Field>
+              <Field label="Coverage" hint="Rough share of a composition" span="all">
+                <Input value={asset.coverage} placeholder="e.g. 10 % — accents only" onChange={(coverage) => up({ coverage: coverage || undefined })} />
+              </Field>
+            </>
+          )}
+          {kind === 'font' && (
+            <Field label="Weights in use" span="all">
+              <Input value={asset.weights} placeholder="e.g. 400, 700, 800" onChange={(weights) => up({ weights: weights || undefined })} />
+            </Field>
+          )}
           {kind !== 'color' && (
             <Field label={kind === 'font' ? 'Download / licence link' : 'Link'} span="all">
               <div className="row" style={{ gap: 4 }}>

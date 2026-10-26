@@ -119,9 +119,9 @@ link production projects (a release campaign links its film and uses its poster 
 | **Channels** | Platforms and handles, cadence targets, best times, followers, per-channel stats and platform limits. |
 | **Results** | Views, engagement, clicks, followers gained by period, channel, format and pillar; top posts; quick results entry. |
 | **People & Brands** | CRM-style sheets: relationships, leads, brand deals, collaborators & guests, press — or your own. Typed columns (single / multi select with colours, money with totals, dates with follow-up reminders, email, links, checkbox, campaign), a spreadsheet and a pipeline board per sheet, CSV import / export. |
-| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, music and links. Links & documents also holds every campaign's downloadable resources, grouped per campaign (files are stored in the space folder). |
+| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, music and links. Links & documents also holds every campaign's downloadable resources, grouped per campaign (files are stored in the space folder). The **Design system** tab turns the kit into a design system agents can follow: themes and semantic tokens, palettes with roles and CSS variables, type styles, spacing and shape tokens, components and layouts, plus art direction for generated imagery (intent, imagery, composition, colour behaviour, treatments, rules by level, annotated references, formats, briefs, review checklist). **Import** a Claude Design design-system zip (or README / tokens.css / tokens.json / images / fonts); **export** a bundle (README guide, tokens, logos, fonts, briefs) for Claude Design, image models and coding agents. |
 | **Linked Projects** | Productions this space promotes, with their linked content and campaigns. |
-| **Print & Export** | One-sheet, strategy brief, campaign plan, content briefs, content plan, calendar, posting schedule, shoot plan, results report, brand kit, ideas board, People & Brands sheets — or one merged **marketing plan** PDF. |
+| **Print & Export** | One-sheet, strategy brief, campaign plan, content briefs, content plan, calendar, posting schedule, shoot plan, results report, brand kit, design system book, ideas board, People & Brands sheets — or one merged **marketing plan** PDF. |
 
 Spaces are saved in `Documents\PrePro Studio Projects\Marketing Spaces\<name>__<id>\space.json` (+ `assets\`,
 `backups\`). **Help → Open Demo Marketing Space** opens *The Last Take — Release Campaign* with every screen filled in.
@@ -217,7 +217,8 @@ While PrePro Studio is open it runs a local **MCP server** (Model Context Protoc
 supports MCP, can plan shoots with you conversationally. The agent can read and edit everything you can: the script
 (as Fountain), Mind Dump, storyboard frames (including SVG sketches it draws), shots, lighting plots, cast, crew,
 contacts, locations, breakdown tags, schedule, call sheets, gear, budget, post, tasks and settings. It can also export
-PDFs and look at page previews. Changes appear live in the window, are saved automatically, and **Ctrl+Z** undoes them
+PDFs and look at page previews. In a Marketing Space, agents read the brand's design system with the `design_system`
+tool before they design or generate anything visual, and can import or export design-system files. Changes appear live in the window, are saved automatically, and **Ctrl+Z** undoes them
 (each agent action is one undo step). The sidebar shows when an agent is connected or working.
 
 **Help → Connect an AI Agent (MCP)…** (also in the library and the sidebar) shows the server status and setup:
@@ -233,7 +234,8 @@ PDFs and look at page previews. Changes appear live in the window, are saved aut
 Things to ask: *"Open my short film project and break down the script"*, *"Brainstorm a cold open on the Mind Dump"*,
 *"Write scene 4 where June finds the camera"*, *"Plan a 2-day shoot starting Nov 7 and fill the call sheets"*,
 *"Shot-list scene 1 and sketch storyboard frames"*, *"Light the rooftop scene for magic hour"*,
-*"Export the production book as PDF"*. Built-in prompts: *plan the shoot*, *break down the script*, *brainstorm*,
+*"Export the production book as PDF"*, *"Import this Claude Design zip into the brand kit and write a brief for the
+premiere poster"*. Built-in prompts: *plan the shoot*, *break down the script*, *brainstorm*,
 *shot list & storyboard*.
 
 The server only accepts connections from this computer (127.0.0.1) and refuses requests from web pages. Your AI tool

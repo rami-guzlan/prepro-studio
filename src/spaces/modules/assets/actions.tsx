@@ -1,4 +1,5 @@
 /* Brand Kit & Assets: store actions and small interactive controls (tags, hex input, font check). */
+import { dsForgetAssets } from '@/spaces/designSystem/ops';
 import { useEffect, useState, type DragEvent } from 'react';
 import { X } from 'lucide-react';
 import type { ID } from '@/types';
@@ -40,7 +41,11 @@ export async function deleteAsset(a: BrandAsset): Promise<boolean> {
   const label = a.name?.trim() || (a.kind === 'color' ? a.value : '') || 'this asset';
   const ok = await confirmDialog({ title: `Delete ${label.startsWith('#') || label === 'this asset' ? label : `“${label}”`}?`, message: 'It is removed from the brand kit. You can undo with Ctrl+Z.', confirmLabel: 'Delete', danger: true });
   if (!ok) return false;
-  assetOps.remove(a.id);
+  // one undo step: the asset and every design-system link to it (references, previews, treatment examples)
+  updateSpace((d) => {
+    d.assets = d.assets.filter((x) => x.id !== a.id);
+    dsForgetAssets(d, new Set([a.id]));
+  });
   toast('Asset deleted', 'success', { action: { label: 'Undo', onClick: () => spaceUndo() } });
   return true;
 }

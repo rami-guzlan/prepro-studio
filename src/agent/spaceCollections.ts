@@ -4,6 +4,7 @@ import { ASSET_KINDS, RESOURCE_TYPES, CAMPAIGN_STATUSES, FORMATS, GOAL_STATUSES,
 import { BOARD_COLORS, NOTE_COLORS, NOTE_H, NOTE_W, boardDraftFor, boardFor } from '@/modules/script/mind/ops';
 import type { CollectionDef, FieldSpec } from './collections';
 import type { SingletonDef } from './singletons';
+import { DS_ASSET_FIELDS, DS_COLLECTIONS, DS_SINGLETONS } from './kinds/designSystem';
 
 const v = (opts: readonly { value: string }[]) => opts.map((o) => o.value);
 const F = (name: string, type: FieldSpec['type'], o: Omit<FieldSpec, 'name' | 'type'> = {}): FieldSpec => ({ name, type, ...o });
@@ -297,7 +298,7 @@ export const SPACE_COLLECTIONS: CollectionDef[] = [
     label: 'Brand kit & assets',
     module: 'assets' as any,
     description:
-      'Logos, colours (value = hex), fonts (value = font name), images, templates, links, footage, music — and downloadable resources (kind "resource": playbooks, sequence maps, template docs, one-pagers, gated lead magnets …). A resource with campaignId shows in that campaign’s "Resources in this campaign". Upload or write resource files with add_resource.',
+      'Logos, colours (value = hex; group / role / cssVar / onColor / coverage for the design system), fonts (value = font name, weights), images, templates, links, footage, music — and downloadable resources (kind "resource": playbooks, sequence maps, template docs, one-pagers, gated lead magnets …). A resource with campaignId shows in that campaign’s "Resources in this campaign". Upload or write resource files with add_resource.',
     kind: 'array',
     get: (s: S) => s.assets,
     draft: (d: S) => d.assets,
@@ -315,6 +316,7 @@ export const SPACE_COLLECTIONS: CollectionDef[] = [
       F('fileName', 'string', { readOnly: true, desc: 'uploaded file (add_resource)' }),
       F('fileSize', 'number', { readOnly: true }),
       F('tags', 'string[]'),
+      ...DS_ASSET_FIELDS,
       NOTES,
     ],
     defaults: () => ({ kind: 'other' }),
@@ -370,6 +372,7 @@ export const SPACE_COLLECTIONS: CollectionDef[] = [
     idPrefix: 'ilnk',
     fields: [F('from', 'ref', { ...req, ref: 'mind_notes' }), F('to', 'ref', { ...req, ref: 'mind_notes' })],
   },
+  ...DS_COLLECTIONS,
 ];
 
 export const SPACE_COLLECTION_BY_NAME: Record<string, CollectionDef> = Object.fromEntries(SPACE_COLLECTIONS.map((c) => [c.name, c]));
@@ -443,4 +446,5 @@ export const SPACE_SINGLETONS: SingletonDef[] = [
     draft: (d: S) => d,
     fields: [F('notes', 'text')],
   },
+  ...DS_SINGLETONS,
 ];

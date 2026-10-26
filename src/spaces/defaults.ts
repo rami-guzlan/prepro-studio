@@ -1,4 +1,5 @@
 /* Factories, normalisation and starting templates for Marketing Spaces. */
+import { normalizeDesignSystem } from './designSystem/types';
 import type { ID } from '@/types';
 import { uid } from '@/lib/id';
 import { normalizeMind } from '@/lib/mind';
@@ -419,6 +420,7 @@ export function normalizeSpace(raw: Partial<SpaceData> & Record<string, any>): S
   }
   for (const ch of s.channels) ch.active = ch.active !== false;
   s.mind = normalizeMind(s.mind, 'Ideas');
+  if (s.designSystem) s.designSystem = normalizeDesignSystem(s.designSystem);
   s.notes = s.notes ?? '';
   s.meta.kind = KIND_INFO[s.meta.kind as SpaceKind] ? s.meta.kind : 'marketing';
   if (!Array.isArray(s.spaceIds)) s.spaceIds = [];

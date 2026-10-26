@@ -258,6 +258,13 @@ export async function runSelftest() {
           spaceResults.push({ doc: def.id, ok: false, error: e instanceof Error ? e.stack ?? e.message : String(e) });
         }
       }
+      // design system: the Brand Kit design-system tab, importing a generated design-system zip, the guide and the PDF
+      try {
+        summary.designSystem = await checkDesignSystem();
+        if (!(summary.designSystem as any).ok) spaceResults.push({ check: 'design-system', ok: false, detail: summary.designSystem });
+      } catch (e) {
+        spaceResults.push({ check: 'design-system', ok: false, error: e instanceof Error ? e.stack ?? e.message : String(e) });
+      }
       // an empty (blank) space: every screen and document must cope with no data
       const blankSpace = await createSpaceAndOpen({ title: 'Blank Space Test', type: 'other', withTemplate: false });
       if (blankSpace) {
@@ -379,6 +386,90 @@ export async function runSelftest() {
     summary.finished = new Date().toISOString();
     bridge.selftestDone(summary);
   }
+}
+
+/** A small design-system zip like Claude Design exports (README, CSS tokens with a dark theme, a logo, a component card). */
+export async function makeTestDesignSystemZip(): Promise<Uint8Array> {
+  const { zipSync, strToU8 } = await import('fflate');
+  const css = `/* Selftest palette */
+:root {
+  --st-teal: #0ca678;
+  --st-coral: #ff6b6b;
+  --st-ink: #212529;
+  --st-paper: #f8f9fa;
+  --st-surface: #ffffff;
+  --st-text: #212529;
+  --space-9: 44px;
+  --radius-pill: 999px;
+}
+[data-theme="dark"] { --st-surface: #101113; --st-text: #f8f9fa; }
+.type-st-display { font: 800 56px/1.05 "Selftest Sans", sans-serif; letter-spacing: -0.01em; }
+`;
+  return zipSync({
+    'selftest-ds/README.md': strToU8('# Selftest DS\n\nA tiny design system used by the self-test to check the importer end to end.\n\n## Rules\n\n- Teal is the accent.\n'),
+    'selftest-ds/tokens.css': strToU8(css),
+    'selftest-ds/assets/selftest-logo.svg': strToU8('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40"><rect width="120" height="40" rx="6" fill="#0ca678"/><text x="60" y="26" font-family="Arial" font-size="16" fill="#fff" text-anchor="middle">SELFTEST</text></svg>'),
+    'selftest-ds/components/st-badge.html': strToU8('<!doctype html><html><head><title>Badge</title><script>window.__dsCardRan = true</script></head><body><p>A small teal status badge.</p></body></html>'),
+  });
+}
+
+/** Design system in the open (demo) space: the tab renders, a zip imports with the expected counts (and
+    re-imports without duplicates), the guide compiles and the book renders to PDF. */
+async function checkDesignSystem(): Promise<Record<string, unknown>> {
+  const bridge = (window as any).prepro;
+  const { importDesignSystemFiles } = await import('@/spaces/designSystem/importer');
+  const { compileGuide, compileTokens, compileCss, dsOf } = await import('@/spaces/designSystem/compile');
+  const { buildDesignSystemZip } = await import('@/spaces/designSystem/exporters');
+  const { buildSpaceDoc } = await import('@/spaces/print/run');
+  const { getSpace } = await import('@/store/space');
+  const { navigateSpace } = await import('@/store/app');
+  const out: Record<string, unknown> = {};
+  const checks: Record<string, boolean> = {};
+
+  navigateSpace('assets', { tab: 'system' });
+  await wait(1400);
+  checks.tabRenders = !document.body.innerText.includes('Something went wrong in this screen');
+  await bridge.selftestCapture('space-assets-design-system.png');
+
+  const sample = dsOf(getSpace());
+  checks.sampleHasSystem = sample.themes.length === 2 && sample.semanticTokens.length >= 8 && sample.typeStyles.length >= 7 && sample.rules.length >= 10 && sample.references.length >= 5 && sample.briefs.length === 2;
+
+  const zip = await makeTestDesignSystemZip();
+  const colorsBefore = getSpace().assets.filter((a) => a.kind === 'color').length;
+  const r = await importDesignSystemFiles([{ name: 'selftest-ds.zip', data: zip }]);
+  out.import = r;
+  const c = r.counts ?? {};
+  checks.importCounts = c.colors === 4 && c.themes === 2 && c.semanticTokens === 2 && c.typeStyles === 1 && c.tokens === 2 && c.logos === 1 && c.cards === 1 && c.components === 1 && c.docs === 1;
+  const ds = dsOf(getSpace());
+  const src = ds.sources.find((x) => x.fileName === 'selftest-ds.zip');
+  checks.source = !!src && !!src.file && src.docs[0]?.title === 'Selftest DS' && src.cards.length === 1 && /README/.test(src.summary ?? '');
+  checks.componentLinked = !!ds.components.find((x) => x.name === 'StBadge')?.file;
+  checks.scriptNotRun = !(window as any).__dsCardRan;
+  const r2 = await importDesignSystemFiles([{ name: 'selftest-ds.zip', data: zip }]);
+  checks.reimportNoDuplicates = getSpace().assets.filter((a) => a.kind === 'color').length === colorsBefore + 4 && dsOf(getSpace()).sources.filter((x) => x.fileName === 'selftest-ds.zip').length === 1 && !r2.counts?.colors;
+
+  const s = getSpace();
+  const guide = compileGuide(s);
+  await bridge.selftestWrite('design-system-guide.md', guide);
+  checks.guide = ['## How to use this design system', '## Colour', '### Semantic tokens', '## Typography', '## Art direction', '## Rules', '## References', '## Generation briefs', '## Imported guidance', '--st-surface'].every((x) => guide.includes(x));
+  checks.tokens = !!(compileTokens(s).themes as any)?.Night && compileCss(s).includes('[data-theme="dark"]');
+  const { bytes } = await buildDesignSystemZip(s);
+  await bridge.selftestWrite('design-system-bundle.zip', bytes);
+  checks.bundle = bytes.length > 2000;
+
+  const doc = buildSpaceDoc('space-design-system', { includeGuidance: true });
+  await bridge.selftestWrite('space-design-system-imported.html', doc.html);
+  const pdf = await backend.renderPdfBytes!(toJob(doc));
+  await bridge.selftestWrite('space-design-system-imported.pdf', pdf);
+  checks.pdf = pdf.length > 20000;
+  out.pdfKb = Math.round(pdf.length / 1024);
+
+  navigateSpace('assets', { tab: 'system' });
+  await wait(900);
+  await bridge.selftestCapture('space-assets-design-system-imported.png');
+  out.checks = checks;
+  out.ok = Object.values(checks).every(Boolean);
+  return out;
 }
 
 /** Board tabs of the Mind Dump / Ideas screen: every layout keeps the write panel usable,
