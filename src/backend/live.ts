@@ -164,6 +164,11 @@ function connect() {
         toast('Your access changed. Reloading…', 'info');
         setTimeout(() => location.reload(), 1200);
         break;
+      case 'review':
+        // someone sent feedback on a review link of the open space (Brand Kit & Assets → Share for review)
+        toast(`${msg.by} sent feedback on “${msg.title}”`, 'info', { duration: 6000 });
+        window.dispatchEvent(new CustomEvent('prepro:review', { detail: msg }));
+        break;
       case 'mcp:call':
         for (const fn of callHandlers) fn({ reqId: msg.reqId, name: msg.name, args: msg.args });
         break;

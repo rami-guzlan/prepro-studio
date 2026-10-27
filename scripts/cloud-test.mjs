@@ -253,6 +253,56 @@ async function main() {
     wsOwner2.close();
   }
 
+  /* ---- review links: chosen Brand Kit sections, no sign-in, feedback back to the space */
+  {
+    const up = async (bytes, ext) => (await owner.json(`/api/docs/${M1}/assets?ext=${ext}`, { method: 'POST', body: Buffer.from(bytes), raw: true, headers: { 'Content-Type': 'application/octet-stream' } })).body.name;
+    const img = await up([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4], 'png');
+    const vid = await up(Array.from({ length: 2000 }, (_, i) => i % 256), 'mp4');
+    const pdf = await up([0x25, 0x50, 0x44, 0x46], 'pdf');
+    const cur = await owner.json(`/api/docs/${M1}`);
+    const assets = [
+      { id: 'as_img', kind: 'image', name: 'Key art', image: img, notes: 'Option A' },
+      { id: 'as_vid', kind: 'video', name: 'Teaser', file: vid, fileName: 'teaser.mp4', fileSize: 2000, value: 'D:\Footage\teaser.mp4' },
+      { id: 'as_yt', kind: 'video', name: 'Trailer', url: 'https://youtu.be/abc123' },
+      { id: 'as_pdf', kind: 'resource', name: 'Internal plan', file: pdf, fileName: 'plan.pdf' },
+    ];
+    const put = await owner.json(`/api/docs/${M1}`, { method: 'PUT', body: { ...cur.body, assets }, headers: { 'X-Base-Rev': cur.headers.get('x-rev') } });
+    check('space gets brand kit assets', put.status === 200, JSON.stringify(put.body));
+    check('a review link needs a section', (await owner.json(`/api/docs/${M1}/reviews`, { method: 'POST', body: { sections: ['nope'] } })).status === 400);
+    check('no review links for Business spaces', (await owner.json(`/api/docs/${B}/reviews`)).status === 400);
+    const made = await owner.json(`/api/docs/${M1}/reviews`, { method: 'POST', body: { title: 'Launch review', message: 'Look at these', sections: ['images', 'video'], days: 30 } });
+    check('owner creates a review link', made.status === 200 && made.body.token, JSON.stringify(made.body));
+    const tok = made.body.token;
+    const anon = new Client();
+    const pg = await anon.req(`/review/${tok}`);
+    check('review page opens with no sign-in', pg.status === 200 && (await pg.text()).includes(`data-token="${tok}"`));
+    const view = await anon.json(`/api/review/${tok}`);
+    const ids = view.body?.sections?.flatMap((x) => x.items.map((i) => i.id)) ?? [];
+    check('it shows only the chosen sections', view.status === 200 && view.body.sections.length === 2 && ids.join() === 'as_img,as_vid,as_yt', JSON.stringify(ids));
+    check('a video never shows its path on someone’s computer', view.body.sections[1].items[0].value === '');
+    check('a shown file can be fetched', (await anon.req(`/api/review/${tok}/file/${img}`)).status === 200);
+    check('a file outside the chosen sections cannot', (await anon.req(`/api/review/${tok}/file/${pdf}`)).status === 404);
+    const rng = await anon.req(`/api/review/${tok}/file/${vid}`, { headers: { Range: 'bytes=0-99' } });
+    check('videos stream in ranges (seeking)', rng.status === 206 && rng.headers.get('content-range') === 'bytes 0-99/2000' && (await rng.arrayBuffer()).byteLength === 100);
+    check('feedback needs a name', (await anon.json(`/api/review/${tok}/feedback`, { method: 'POST', body: { decision: 'approve' } })).status === 400);
+    wsOwner.send(JSON.stringify({ t: 'open', id: M1 }));
+    await waitFor(() => false, 300);
+    const fb = await anon.json(`/api/review/${tok}/feedback`, { method: 'POST', body: { name: 'Sam Reviewer', decision: 'changes', overall: 'Close', items: { as_img: { decision: 'approve', comment: 'Love it' }, as_pdf: { decision: 'approve' } } } });
+    check('reviewer sends feedback', fb.status === 200, JSON.stringify(fb.body));
+    const note = await waitFor(() => wsOwner.msgs.find((m) => m.t === 'review'), 3000);
+    check('the open space hears about it live', note && note.by === 'Sam Reviewer' && note.title === 'Launch review', JSON.stringify(note));
+    const list = await member.json(`/api/docs/${M1}/reviews`);
+    const r0 = list.body?.[0]?.responses?.[0];
+    check('people with the space see the feedback', list.status === 200 && r0?.name === 'Sam Reviewer' && r0.items.as_img?.comment === 'Love it' && !r0.items.as_pdf, JSON.stringify(r0));
+    check('views are counted', list.body[0].views >= 1);
+    const big = await owner.json(`/api/docs/${M1}/assets/upload`, { method: 'POST', body: { ext: 'mp4', size: 200 * 1024 * 1024 } });
+    check('big uploads get a name (and a bucket address on Cloud Storage)', big.status === 200 && /^a_.*.mp4$/.test(big.body.name) && 'uploadUrl' in big.body, JSON.stringify(big.body));
+    check('owner turns the link off', (await owner.json(`/api/docs/${M1}/reviews/${tok}`, { method: 'PATCH', body: { revoked: true } })).status === 200);
+    check('a turned-off link stops working', (await anon.json(`/api/review/${tok}`)).status === 410 && (await anon.json(`/api/review/${tok}/feedback`, { method: 'POST', body: { name: 'x', overall: 'y' } })).status === 410);
+    check('unknown links do not work', (await anon.json('/api/review/abcdefghijklmnopqrstuvwxyz')).status === 404);
+    check('owner deletes the link', (await owner.json(`/api/docs/${M1}/reviews/${tok}`, { method: 'DELETE' })).status === 200 && (await owner.json(`/api/docs/${M1}/reviews`)).body.length === 0);
+  }
+
   /* ---- turning a person off ends everything at once */
   const team = (await owner.json('/api/team')).body.people;
   const memberUid = team.find((p) => p.email === MEMBER).uid;

@@ -262,6 +262,14 @@ export function createDocs(store, log = console) {
   async function getAsset(id, name) {
     return store.get(`docs/${id}/assets/${name}`);
   }
+  /** Stream an asset (with an optional byte range), so big videos never sit in memory. */
+  async function streamAsset(id, name, range) {
+    return store.stream(`docs/${id}/assets/${name}`, range);
+  }
+  /** An upload address the browser PUTs a big file to (null: send it to the server instead). */
+  async function uploadUrl(id, name, opts) {
+    return store.startUpload(`docs/${id}/assets/${name}`, opts);
+  }
 
   async function allFiles(id) {
     await flush(id);
@@ -296,5 +304,5 @@ export function createDocs(store, log = console) {
     }
   }
 
-  return { loadIndex, entry, list, read, save, create, remove, duplicate, putAsset, getAsset, allFiles, backups, readBackup, flushAll };
+  return { loadIndex, entry, list, read, save, create, remove, duplicate, putAsset, getAsset, streamAsset, uploadUrl, allFiles, backups, readBackup, flushAll };
 }

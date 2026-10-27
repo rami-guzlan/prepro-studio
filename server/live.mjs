@@ -107,6 +107,11 @@ export function createLive({ auth, log = console }) {
     for (const c of conns) if (c.docId === docId && c.clientId !== exceptClientId) send(c, { t: 'changed', id: docId, rev, by: by?.name });
   }
 
+  /** Someone sent feedback on a review link of this document: tell the tabs that have it open. */
+  function review(docId, info) {
+    for (const c of conns) if (c.docId === docId && !c.headless) send(c, { t: 'review', id: docId, ...info });
+  }
+
   /** Library lists changed (created / deleted). */
   function library() {
     for (const c of conns) send(c, { t: 'library' });
@@ -162,6 +167,7 @@ export function createLive({ auth, log = console }) {
     changed,
     library,
     accessChanged,
+    review,
     webContentsFor,
     waitAgent,
     activity,
