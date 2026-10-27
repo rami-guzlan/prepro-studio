@@ -398,3 +398,40 @@
   font-size: 11.5px;
   color: var(--text-3);
 }
+
+/* ---------------------------------------------------------------- moving sections */
+.avs-band-grip {
+  margin-left: -6px;
+  color: var(--accent);
+}
+.avs-segment.band-dragging {
+  opacity: 0.45;
+}
+.avs-row-wrap.avs-drop-before {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+.avs-row-wrap.avs-drop-after {
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+.avs-band-overlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-lg);
+  color: var(--accent);
+  font-size: 12.5px;
+  cursor: grabbing;
+}
+.avs-band-overlay b {
+  color: var(--text);
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.avs-band-overlay span {
+  color: var(--text-3);
+}

@@ -7,7 +7,7 @@ import { spaceRedo, spaceUndo, useSpaceStore } from '@/store/space';
 import { flushSave, startAutosave } from '@/store/autosave';
 import { startSpaceAutosave } from '@/store/spaceAutosave';
 import { runCommand } from '@/lib/commands';
-import { backend } from '@/backend';
+import { backend, isCloud } from '@/backend';
 import { Button, ContextMenuHost, DialogHost, ToastHost, isModalOpen, toast } from '@/ui';
 import { PrintPreviewHost } from '@/print/PrintPreview';
 import { Home } from './Home';
@@ -18,6 +18,7 @@ import { SpaceWorkspace } from './SpaceWorkspace';
 import { PHONE_TABS, PhoneNavBackdrop, PhoneTabBar } from './PhoneNav';
 import { useIsPhone } from '@/ui/phone';
 import { FinanceLockHost, useFinanceLock } from '@/spaces/finance/lock';
+import { PresenceBar } from './PresenceBar';
 
 // automated tests (isolated data folder + explicit flag): start with the finances unlocked
 void backend.info().then((i) => {
@@ -301,6 +302,14 @@ export function App() {
     startAutosave();
     startSpaceAutosave();
     reopenLastProject();
+    // hosted version: live editing, presence, and AI agents relayed through the server
+    if (isCloud) {
+      import('@/backend/live').then((live) => {
+        live.startLive();
+        initAgentActivity(live.cloudAgentBridge);
+        import('@/agent').then((m) => m.startAgentServer(live.cloudAgentBridge));
+      });
+    }
     // local MCP server for AI agents: the tools live in a lazily loaded chunk
     if (window.prepro?.mcp) {
       initAgentActivity();
@@ -317,6 +326,7 @@ export function App() {
       <ShortcutsDialog />
       <AgentDialog />
       <FinanceLockHost />
+      {isCloud && <PresenceBar />}
       <DialogHost />
       <ContextMenuHost />
       <ToastHost />

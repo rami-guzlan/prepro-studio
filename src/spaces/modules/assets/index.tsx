@@ -1,18 +1,24 @@
 /* Brand Kit & Assets — logos, colours, fonts, references, templates, media and
-   links of the space, plus a read-only view of the brand voice from Strategy. */
+   links of the space, plus a read-only view of the brand voice from Strategy.
+   Tabs: Assets (this file), Design system and Agent guide (src/spaces/designSystem/ui).
+   Deep links: navigateSpace('assets', { tab: 'assets' | 'system' | 'guide', section: DSSectionId }). */
 import './assets.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, FilePlus2, FileText, Film, ImagePlus, LayoutTemplate, Link2, Loader2, Music, Palette, Plus, Quote, Shapes, Type, Upload, X } from 'lucide-react';
+import { ArrowRight, BookMarked, Bot, FileArchive, FilePlus2, FileText, Film, ImagePlus, LayoutTemplate, Link2, Loader2, Music, Palette, Plus, Quote, Shapes, Type, Upload, X } from 'lucide-react';
 import type { ID } from '@/types';
 import type { AssetKind, BrandAsset } from '@/spaces/types';
 import { ASSET_KINDS } from '@/spaces/constants';
-import { getSpace, useSpace } from '@/store/space';
-import { navigateSpace, readLS, writeLS } from '@/store/app';
+import { getSpace, useSpace, useSpaceId } from '@/store/space';
+import { navigateSpace, readLS, useApp, writeLS } from '@/store/app';
 import { useCommand } from '@/lib/commands';
 import { matchesQuery, plural, safeFileName } from '@/lib/text';
 import { backend, exportCsv, importDroppedImages, pickImages } from '@/backend';
 import { isImageFile } from '@/lib/images';
-import { Button, ExportMenu, Input, isModalOpen, Menu, ModuleHeader, SearchInput, toast, Toolbar, type MenuItem } from '@/ui';
+import { Button, ExportMenu, Input, isModalOpen, Menu, ModuleHeader, SearchInput, toast, Toolbar, UnderlineTabs, type MenuItem, type TabDef } from '@/ui';
+import { DesignSystemPane } from '@/spaces/designSystem/ui/DesignSystemPane';
+import { GuidePane } from '@/spaces/designSystem/ui/GuidePane';
+import { DS_SECTION_IDS, type DSSectionId } from '@/spaces/designSystem/ui/options';
+import { exportMenuItems, importDroppedDesignSystem, isZipFile, pickImport } from '@/spaces/designSystem/ui/io';
 import { addAssets, addColor, addImageAssets, copyText, makeAsset } from './actions';
 import { AssetEditor, ImageLightbox } from './editors';
 import { ColorsGrid, FileList, FontsList, ImagesGallery, LinksSection, LogosGrid, SectionShell, type TileHandlers } from './sections';
@@ -39,7 +45,7 @@ async function exportAssetsCsv() {
       { header: 'Notes', value: (a) => a.notes },
     ]);
     if (path) toast(`Exported ${plural(s.assets.length, 'asset')} to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Asset list downloaded');
+    else if (backend.kind !== 'electron') toast('Asset list downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }
@@ -127,10 +133,53 @@ function GlanceCard({ assets, onJump }: { assets: BrandAsset[]; onJump: (id: Sec
   );
 }
 
+/* ---------------------------------------------------------------- tabs */
+
+type Tab = 'assets' | 'system' | 'guide';
+const TAB_IDS: Tab[] = ['assets', 'system', 'guide'];
+const tabKey = (spaceId: string) => `prepro.sp-assets.tab.${spaceId || 'none'}`;
+const sectionKey = (spaceId: string) => `prepro.sp-assets.dsSection.${spaceId || 'none'}`;
+
+function readTab(spaceId: string, params: Record<string, any> | undefined): Tab {
+  if (TAB_IDS.includes(params?.tab)) return params!.tab;
+  if (DS_SECTION_IDS.includes(params?.section)) return 'system';
+  const t = readLS<Tab>(tabKey(spaceId), 'assets');
+  return TAB_IDS.includes(t) ? t : 'assets';
+}
+function readSection(spaceId: string, params: Record<string, any> | undefined): DSSectionId {
+  if (DS_SECTION_IDS.includes(params?.section)) return params!.section;
+  const s = readLS<DSSectionId>(sectionKey(spaceId), 'overview');
+  return DS_SECTION_IDS.includes(s) ? s : 'overview';
+}
+
 /* ---------------------------------------------------------------- module */
 
 export default function AssetsModule() {
   const assets = useSpace((s) => s.assets) ?? [];
+  const spaceId = useSpaceId();
+  const params = useApp((s) => s.params);
+  const navKey = useApp((s) => s.navKey);
+  const [tab, setTabState] = useState<Tab>(() => readTab(spaceId, params));
+  const [dsSection, setDsSectionState] = useState<DSSectionId>(() => readSection(spaceId, params));
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    writeLS(tabKey(spaceId), t);
+  };
+  const setDsSection = (s: DSSectionId) => {
+    setDsSectionState(s);
+    writeLS(sectionKey(spaceId), s);
+  };
+  // another space, or a deep link: navigateSpace('assets', { tab: 'system', section: 'rules' })
+  useEffect(() => {
+    setTabState(readTab(spaceId, params));
+    setDsSectionState(readSection(spaceId, params));
+  }, [spaceId, navKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dsCount = useSpace((s) => {
+    const d = s.designSystem;
+    return d ? (d.rules?.length ?? 0) + (d.references?.length ?? 0) + (d.typeStyles?.length ?? 0) + (d.components?.length ?? 0) + (d.briefs?.length ?? 0) : 0;
+  });
   const tagline = useSpace((s) => s.strategy?.tagline);
   const title = useSpace((s) => s.meta?.title);
   const [q, setQ] = useState('');
@@ -214,10 +263,23 @@ export default function AssetsModule() {
     }
   };
 
-  /** Dropped files: images go to Images & references, everything else becomes a resource. */
+  /** Dropped files: a .zip is a design system; images go to Images & references, everything else becomes a resource. */
   const importFiles = (files: File[]) => {
-    const imgs = files.filter(isImageFile);
-    const other = files.filter((f) => !isImageFile(f));
+    const zips = files.filter(isZipFile);
+    if (zips.length) {
+      setBusy(true);
+      void importDroppedDesignSystem(zips)
+        .then((ok) => {
+          if (ok) {
+            setTab('system');
+            setDsSection('sources');
+          }
+        })
+        .finally(() => setBusy(false));
+    }
+    const rest = files.filter((f) => !isZipFile(f));
+    const imgs = rest.filter(isImageFile);
+    const other = rest.filter((f) => !isImageFile(f));
     if (imgs.length) void importImages(imgs);
     if (other.length) {
       clearFilters();
@@ -261,7 +323,7 @@ export default function AssetsModule() {
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (isModalOpen() || t?.closest?.('input, textarea, select, [contenteditable="true"], .image-drop')) return;
+      if (tabRef.current !== 'assets' || isModalOpen() || t?.closest?.('input, textarea, select, [contenteditable="true"], .image-drop')) return;
       const files = Array.from(e.clipboardData?.files ?? []).filter(isImageFile);
       if (!files.length) return;
       e.preventDefault();
@@ -298,6 +360,11 @@ export default function AssetsModule() {
   const subtitle = assets.length
     ? [plural(assets.length, 'asset'), counts.logos && plural(counts.logos, 'logo'), counts.colors && plural(counts.colors, 'colour'), counts.fonts && plural(counts.fonts, 'font')].filter(Boolean).join(' · ')
     : 'Logos, colours, fonts, references, templates and links';
+  const tabs: TabDef<Tab>[] = [
+    { id: 'assets', label: 'Assets', icon: Palette, count: assets.length || undefined },
+    { id: 'system', label: 'Design system', icon: BookMarked, count: dsCount || undefined },
+    { id: 'guide', label: 'Agent guide', icon: Bot },
+  ];
   const sampleText = sample || tagline?.trim() || title?.trim() || 'The quick brown fox jumps over the lazy dog';
 
   const sectionBody = (id: SectionId, items: BrandAsset[]) => {
@@ -380,20 +447,58 @@ export default function AssetsModule() {
         subtitle={subtitle}
         actions={
           <>
-            <ExportMenu docs={[{ id: 'space-brand-kit', label: 'Brand kit (PDF)' }]} csv={[{ label: 'Asset list (CSV)', onClick: exportAssetsCsv }]} />
-            <Menu
-              align="end"
-              items={addItems}
-              trigger={
-                <Button variant="primary" icon={Plus}>
-                  Add asset
-                </Button>
+            <ExportMenu docs={[{ id: 'space-brand-kit', label: 'Brand kit (PDF)' }]} csv={[{ label: 'Asset list (CSV)', onClick: exportAssetsCsv }]} extra={exportMenuItems()} />
+            <Button
+              icon={FileArchive}
+              title="Import a Claude Design design-system .zip, tokens.json, CSS or Markdown guidelines"
+              onClick={() =>
+                void pickImport().then((ok) => {
+                  if (ok) {
+                    setTab('system');
+                    setDsSection('sources');
+                  }
+                })
               }
-            />
+            >
+              Import design system…
+            </Button>
+            {tab === 'assets' && (
+              <Menu
+                align="end"
+                items={addItems}
+                trigger={
+                  <Button variant="primary" icon={Plus}>
+                    Add asset
+                  </Button>
+                }
+              />
+            )}
           </>
         }
       />
-      {assets.length > 0 && (
+      <UnderlineTabs<Tab> tabs={tabs} value={tab} onChange={setTab} />
+      {tab === 'system' && (
+        <div className="module-body sp-assets-dsbody ds-pane-host">
+          <DesignSystemPane section={dsSection} onSection={setDsSection} onGuide={() => setTab('guide')} />
+        </div>
+      )}
+      {tab === 'guide' && (
+        <div className="module-body">
+          <GuidePane
+            onJump={(target) => {
+              if (target === 'assets') {
+                setTab('assets');
+                expand('logos');
+                setTimeout(() => document.getElementById('sp-assets-logos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+              } else {
+                setDsSection(target);
+                setTab('system');
+              }
+            }}
+          />
+        </div>
+      )}
+      {tab === 'assets' && assets.length > 0 && (
         <Toolbar>
           <div ref={searchRef}>
             <SearchInput value={q} onChange={setQ} placeholder="Search assets…" />
@@ -422,7 +527,8 @@ export default function AssetsModule() {
           )}
         </Toolbar>
       )}
-      <div className="module-body">
+      {tab === 'assets' && (
+        <div className="module-body">
         <div className="sp-assets-layout">
           <div className="sp-assets-main">
             {assets.length === 0 && (
@@ -479,13 +585,14 @@ export default function AssetsModule() {
             )}
           </aside>
         </div>
-      </div>
+        </div>
+      )}
 
       {fileOver && (
         <div className="sp-assets-dropzone" aria-hidden>
           <div>
             <ImagePlus />
-            <span>Drop images → Images & references · other files → Links & documents</span>
+            <span>Drop a design-system .zip to import it · images → Images & references · other files → Links & documents</span>
           </div>
         </div>
       )}

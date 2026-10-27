@@ -1,12 +1,13 @@
 /* The library: Productions, Spaces (Marketing Spaces / Business Management), Personal
    Finances and Training — create, open, import, duplicate, archive and delete. */
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import { Archive, Bot, BriefcaseBusiness, ChevronDown, CircleHelp, Clapperboard, Dumbbell, Wallet, Copy, EyeOff, FileInput, FolderOpen, Megaphone, Moon, MoreHorizontal, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload, Monitor } from 'lucide-react';
+import { Archive, Bot, BriefcaseBusiness, LogOut, Users, ChevronDown, CircleHelp, Clapperboard, Dumbbell, Wallet, Copy, EyeOff, FileInput, FolderOpen, Megaphone, Moon, MoreHorizontal, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload, Monitor } from 'lucide-react';
 import type { SpaceSummary } from '@/spaces/types';
 import { SPACE_TYPES } from '@/spaces/constants';
 import { openAgentDialog } from '@/agent/state';
 import type { ProjectSummary } from '@/types';
-import { backend, type HiddenDemos } from '@/backend';
+import { backend, isCloud, type HiddenDemos } from '@/backend';
+import { cloudBoot, type TabId } from '@/backend/cloud';
 import { PROJECT_STATUSES, PROJECT_TYPES, optionLabel } from '@/lib/constants';
 import { makeFormatters } from '@/lib/format';
 import { readLS, setHomeTab, setTheme, useApp, writeLS, type HomeTab } from '@/store/app';
@@ -23,6 +24,12 @@ import { confirmResetDemoSpace, deleteSpace, duplicateSpace, openDemoSpace, open
 import { confirmResetDemo, deleteProject, duplicateProject, exportArchive, importArchive, importScriptAsNewProject, openDemo, openProjectById, removeDemoFromHome } from './projectActions';
 
 const fmt = makeFormatters();
+
+/* Hosted version: each person sees only the tabs the owner gave them. */
+const account = cloudBoot?.account;
+const TAB_ACCESS: Record<HomeTab, TabId> = { projects: 'productions', spaces: 'marketing', business: 'business', finance: 'finance', training: 'training' };
+export const tabAllowed = (t: HomeTab) => !account || !!account.tabs[TAB_ACCESS[t]];
+const ALL_TABS: HomeTab[] = ['projects', 'spaces', 'business', 'finance', 'training'];
 
 /** Where to find the demos once their cards are removed (Help menu of the window; a Help button in the browser build). */
 const DEMO_HINT_PROJECT = ' Want to look around first? Help → Open Demo Project.';
@@ -58,6 +65,18 @@ export function Home() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+  // hosted version: someone created or deleted something
+  useEffect(() => {
+    const on = () => void refresh();
+    window.addEventListener('prepro:library', on);
+    return () => window.removeEventListener('prepro:library', on);
+  }, [refresh]);
+  useEffect(() => {
+    if (!tabAllowed(tab)) {
+      const first = ALL_TABS.find(tabAllowed);
+      if (first) setHomeTab(first);
+    }
+  }, [tab]);
 
   useCommand('new-project', () => {
     setHomeTab('projects');
@@ -176,7 +195,7 @@ export function Home() {
             </div>
             <div>
               <h1>PrePro Studio</h1>
-              <p>Pre-production & post planning — everything stays on this computer.</p>
+              <p>{account ? <>Signed in as {account.email}{account.owner ? ' (owner)' : ''}</> : 'Pre-production & post planning — everything stays on this computer.'}</p>
             </div>
           </div>
           <div className="spacer" />
@@ -334,9 +353,19 @@ export function Home() {
               ]}
             />
           )}
-          {window.prepro?.mcp && (
+          {isCloud && account?.owner && (
+            <Button size="sm" variant="ghost" icon={Users} onClick={() => window.open('/team', '_blank', 'noopener')}>
+              Team and access
+            </Button>
+          )}
+          {(window.prepro?.mcp || isCloud) && (
             <Button size="sm" variant="ghost" icon={Bot} onClick={openAgentDialog}>
               Connect an AI agent
+            </Button>
+          )}
+          {isCloud && (
+            <Button size="sm" variant="ghost" icon={LogOut} onClick={() => (location.href = '/logout')}>
+              Sign out
             </Button>
           )}
           <div className="spacer" />
@@ -478,15 +507,23 @@ function HomeTabBar({ tab, counts }: { tab: HomeTab; counts: { projects: number;
     setHomeTab(t);
   };
   const inSpaces = tab === 'spaces' || tab === 'business';
+  const spaceTabs = (['spaces', 'business'] as const).filter(tabAllowed);
   const Count = ({ n }: { n: number }) => (n > 0 ? <span className="count">{n}</span> : null);
   return (
     <div className="tabs home-tabbar" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => go('projects')}>
+      {tabAllowed('projects') && <button type="button" role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => go('projects')}>
         <Clapperboard />
         Productions
         <Count n={counts.projects} />
-      </button>
-      <span className={`home-tab-split ${inSpaces ? 'on' : ''}`}>
+      </button>}
+      {spaceTabs.length === 1 && (
+        <button type="button" role="tab" aria-selected={inSpaces} className={inSpaces ? 'on' : ''} onClick={() => go(spaceTabs[0])}>
+          {spaceTabs[0] === 'business' ? <BriefcaseBusiness /> : <Megaphone />}
+          {spaceTabs[0] === 'business' ? 'Business Management' : 'Marketing Spaces'}
+          <Count n={spaceTabs[0] === 'business' ? counts.business : counts.spaces} />
+        </button>
+      )}
+      {spaceTabs.length === 2 && <span className={`home-tab-split ${inSpaces ? 'on' : ''}`}>
         <button type="button" role="tab" aria-selected={inSpaces} className={inSpaces ? 'on' : ''} onClick={() => go(spacesSub)}>
           {spacesSub === 'business' ? <BriefcaseBusiness /> : <Megaphone />}
           {spacesSub === 'business' ? 'Business Management' : 'Marketing Spaces'}
@@ -505,15 +542,15 @@ function HomeTabBar({ tab, counts }: { tab: HomeTab; counts: { projects: number;
             { label: `Business Management${counts.business ? ` (${counts.business})` : ''}`, icon: BriefcaseBusiness, checked: tab === 'business', onClick: () => go('business') },
           ]}
         />
-      </span>
-      <button type="button" role="tab" aria-selected={tab === 'finance'} className={tab === 'finance' ? 'on' : ''} onClick={() => go('finance')}>
+      </span>}
+      {tabAllowed('finance') && <button type="button" role="tab" aria-selected={tab === 'finance'} className={tab === 'finance' ? 'on' : ''} onClick={() => go('finance')}>
         <Wallet />
         Personal Finances
-      </button>
-      <button type="button" role="tab" aria-selected={tab === 'training'} className={tab === 'training' ? 'on' : ''} onClick={() => go('training')}>
+      </button>}
+      {tabAllowed('training') && <button type="button" role="tab" aria-selected={tab === 'training'} className={tab === 'training' ? 'on' : ''} onClick={() => go('training')}>
         <Dumbbell />
         Training
-      </button>
+      </button>}
     </div>
   );
 }

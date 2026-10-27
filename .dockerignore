@@ -1,0 +1,11 @@
+node_modules
+dist
+release
+out
+cloud-data
+.git
+.claude
+.vscode
+*.log
+PrePro Studio Projects
+Marketing Spaces

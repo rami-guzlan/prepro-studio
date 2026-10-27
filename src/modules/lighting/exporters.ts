@@ -39,7 +39,7 @@ export async function exportDiagramSvg(project: ProjectData, d: LightingDiagram)
   try {
     const svg = await diagramSvgString(d, project.id);
     const path = await saveTextFile(`${baseName(project, d)}.svg`, svg, [{ name: 'SVG image', extensions: ['svg'] }]);
-    if (path !== null || backend.kind === 'web') toast('SVG exported');
+    if (path !== null || backend.kind !== 'electron') toast('SVG exported');
   } catch (e) {
     toast(`SVG export failed: ${e instanceof Error ? e.message : e}`, 'error');
   }
@@ -81,7 +81,7 @@ export async function exportDiagramPng(project: ProjectData, d: LightingDiagram)
   try {
     const bytes = await diagramPngBytes(d, project.id, 2);
     const path = await saveBinaryFile(`${baseName(project, d)}.png`, bytes, [{ name: 'PNG image', extensions: ['png'] }]);
-    if (path !== null || backend.kind === 'web') toast('PNG exported');
+    if (path !== null || backend.kind !== 'electron') toast('PNG exported');
   } catch (e) {
     toast(`PNG export failed: ${e instanceof Error ? e.message : e}`, 'error');
   }
@@ -138,7 +138,7 @@ export async function exportLegendCsv(project: ProjectData, d: LightingDiagram) 
       { header: 'Channel / support', value: (r) => r.channel },
       { header: 'Notes', value: (r) => r.notes },
     ]);
-    if (path !== null || backend.kind === 'web') toast('Key exported to CSV');
+    if (path !== null || backend.kind !== 'electron') toast('Key exported to CSV');
   } catch (e) {
     toast(`CSV export failed: ${e instanceof Error ? e.message : e}`, 'error');
   }

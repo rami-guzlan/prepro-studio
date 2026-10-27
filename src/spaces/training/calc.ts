@@ -29,6 +29,7 @@ import {
   weekdaysOf,
 } from './types';
 import { unitKit } from './units';
+import { rampSummary } from './ramp';
 
 /* ---------------------------------------------------------------- generic */
 
@@ -1117,6 +1118,7 @@ export function trainingCoachSummary(t: TrainingData, today: ISODate): Record<st
       targetPerWeek: t.goal.workoutsPerWeek,
       today: sessionToday ? 'done' : day ? `planned: ${day.name}` : undefined,
     },
+    rampUp: rampSummary(t, today),
     streaks: { daysLogged: st.current, best: st.best, loggedToday: st.loggedToday, consistency28: `${Math.round((countIn(logged, addDays(today, -27), today) / 28) * 100)}%` },
     macros: t.macros.calories
       ? {

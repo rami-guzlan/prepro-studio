@@ -26,13 +26,17 @@ interface AgentState {
 export const useAgent = create<AgentState>(() => ({ client: null, connectedAt: 0, busy: null, last: null, feed: [], dialogOpen: false }));
 
 export function openAgentDialog() {
+  // hosted version: tokens and connectors are set up on the server's Connect page
+  if ((window as any).__PREPRO_CLOUD__) {
+    window.open('/connect', '_blank', 'noopener');
+    return;
+  }
   useAgent.setState({ dialogOpen: true });
 }
 
 let started = false;
 
-export function initAgentActivity() {
-  const m = window.prepro?.mcp;
+export function initAgentActivity(m: { onActivity: Function } | undefined = window.prepro?.mcp) {
   if (!m || started) return;
   started = true;
   m.onActivity((ev: any) => {

@@ -556,7 +556,7 @@ export const dataTools = [
             continue;
           }
           if (f.type === 'object') {
-            const nulls = Object.entries(val as object).filter(([, x]) => x === null).map(([kk]) => kk);
+            const nulls = Object.entries(val as object).filter(([, x]) => x === null).map(([kk]) => (f.keysRef ? resolveRef(f.keysRef, kk, p) : kk));
             plan.merge[k] = { ...(cv as object), ...Object.fromEntries(nulls.map((kk) => [kk, null])) };
             continue;
           }

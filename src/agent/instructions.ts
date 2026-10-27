@@ -20,6 +20,7 @@ How to work
 4. Single values (title, logline, client, director, shoot dates, target runtime, title page, paper size, print watermark, schedule start date, contingency %…) use get_fields / set_fields.
 5. Specialised tools: mind_use_board / mind_add_notes / mind_organize / mind_send_notes (brainstorm boards — several per project or space, one per idea batch or category; pass board:"Name" to put ideas on their own board), import_image (storyboard frames, headshots, location photos, logos — you may draw storyboard sketches as SVG), lighting_* (plots measured in feet or metres), get_schedule / schedule_scenes / schedule_action, get_call_sheet / update_call_sheet, tag_script (breakdown), apply_template / budget_quick_fill, get_report (readiness, breakdown, budget, timeline …), list_documents / export_pdf / preview_document.
 6. In a Marketing Space: describe_data lists its collections (content, posts, content_shots, content_checklist, channels, pillars, goals, personas, tactics, campaigns, milestones, shoots, assets, mind_notes …). add_items {collection:"content"} can create a piece with its posts in one call ({title, format, stage, pillarId, campaignId, concept, hook, script or copy, posts:[{channelId:"Instagram", date, time, caption, hashtags, status}]}); schedule / reschedule by updating posts (parentId = content). get_space_calendar and get_space_report give the big picture; set_fields edits strategy.* and meta.*; mind_* tools work on the Ideas board; link_projects links productions. People & Brands (relationships, leads, brand deals, collaborators, press) are CRM sheets: crm_read / crm_sheet / crm_rows. Downloadable campaign resources (playbooks, sequence maps, template docs, one-pagers, gated lead magnets) are assets of kind "resource" with a campaignId; add_resource stores a file you write (Markdown / HTML / CSV text) or one from disk.
+6b. DESIGN SYSTEM (Marketing Spaces, Brand Kit & Assets → Design system): the brand's design system and art direction, written for agents (Claude Design, image models, coding agents) — themes and semantic tokens per theme, colour palettes with roles and CSS variables, type styles, spacing / radius / shadow tokens, components and layouts, brand intent, imagery, composition, how the elements relate, colour behaviour, signature treatments, rules with a level (required / preferred / open) and scope (brand / campaign), annotated references (what each controls; on brand / near miss / off brand), output formats, reusable generation briefs and a review checklist. BEFORE you design, prompt or generate any visual for a space (image prompts, thumbnails, carousels, slides, pages, UI code) call design_system {action:"get"} (or {format:"json"}) and follow it; build image-model prompts with design_system {action:"brief"}; check your result against the review checklist. Never redraw logos or render exact copy inside generated images — leave room and place the real files afterwards. Edit it with the ds_* collections and set_fields designSystem.*; import a Claude Design design-system zip (or README / tokens.css / tokens.json / images / fonts) with design_system {action:"import"}; export a bundle for other tools with design_system {action:"export", format:"folder" | "zip"}; the PDF is list_documents → space-design-system.
 7. Use show_in_app to bring up what you just changed (in spaces also {content:{contentId, tab}} opens the content editor), and screenshot_app or preview_document to check visual results.
 8. Ask the user before big or destructive changes (replacing the whole script, deleting many items, delete_project). Never invent real people's contact details.
 
@@ -94,6 +95,18 @@ export const PROMPTS: PromptDef[] = [
       {
         role: 'user',
         text: 'Help me plan content for the Marketing Space that is open in PrePro Studio (get_app_state; open one with list_spaces / open_space if needed). Read the strategy (get_fields), goals, pillars and channels with their cadence (list_items), and what is already scheduled (get_space_calendar). Then propose a {weeks}-week plan that hits each channel’s cadence and balances the pillars: for each piece the title, format, hook, pillar and the posts per channel with dates and times. Wait for my OK, then create it with add_items {collection:"content"} (posts included) and show me the calendar.',
+      },
+    ],
+  },
+  {
+    name: 'on_brand_visual',
+    title: 'Make an on-brand visual',
+    description: 'In a Marketing Space: read the design system and write an image / layout brief that follows it.',
+    arguments: [{ name: 'what', description: 'what to make (e.g. "a LinkedIn carousel cover for the trailer launch")', required: true }],
+    messages: [
+      {
+        role: 'user',
+        text: 'I need {what} for the Marketing Space open in PrePro Studio. First read its design system with design_system {action:"get"} (and {action:"get", images:true} to see the references). Then write a generation brief with design_system {action:"brief"} — pick the right format, the rules and the references that apply, and keep exact copy and logos for finishing. Show me the brief and how it meets each Required rule; after I approve, save it with add_items {collection:"ds_briefs"} and, if I ask, produce the visual and check it against the review checklist.',
       },
     ],
   },

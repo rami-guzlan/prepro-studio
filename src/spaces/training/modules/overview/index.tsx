@@ -2,12 +2,15 @@
    photo, streaks + 12-week consistency calendar, weight trend with projection
    and the top insights. Designed to work on a phone-width window. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronRight, Circle, Dumbbell, Flame, ImagePlus, MessageSquareHeart, Play, Salad, Square, Sun } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronRight, Circle, Dumbbell, Flame, ImagePlus, MessageSquareHeart, Play, Rocket, Salad, Square, Sun } from 'lucide-react';
 import { Button, Card, confirmDialog, ExportMenu, ModuleHeader, Select, Tabs, toast, AssetImage } from '@/ui';
 import { StatTile } from '@/ui/charts';
 import { useSpaceFormatters } from '@/store/space';
 import { addDays } from '@/lib/dates';
-import { MEAL_SLOTS, POSES, type Pose } from '../../types';
+import { MEAL_SLOTS, POSES, normalizeTraining, type Pose } from '../../types';
+import { rampStatus } from '../../ramp';
+import { navigateSpace } from '@/store/app';
+import '../ramp/ramp.css';
 import {
   countIn,
   dayEaten,
@@ -33,6 +36,34 @@ import { storePhoto } from '../../photoStore';
 import { go, Heatmap, InsightList, MacroBars, Pill, useMondayFirst, useNavParams, useToday, useTraining, useUnits, WeightChart, type HeatKind } from '../../ui';
 import { QuickCheckIn, type CheckInHandle } from './CheckIn';
 import { SetupCard } from './Setup';
+
+/** Ramp up on the Today page: today's mission, or an invitation to start one. */
+function RampTodayCard({ t, today }: { t: ReturnType<typeof useTraining>; today: string }) {
+  const s = useMemo(() => rampStatus(normalizeTraining(t), today), [t, today]);
+  return (
+    <div className="card ramp-today" style={{ padding: '12px 16px' }}>
+      <Rocket size={20} />
+      <div className="grow">
+        {s ? (
+          <>
+            <b>{s.doneToday ? 'Ramp up: today is done' : `Today's mission: ${s.mission.title}, about ${s.mission.minutes} min`}</b>
+            <div className="muted small">
+              {s.week.sessions}/{s.week.target} this week · {s.level.name}, {s.points} points · {s.nextUnlock}
+            </div>
+          </>
+        ) : (
+          <>
+            <b>Finding it hard to get into the gym?</b>
+            <div className="muted small">Ramp up starts with two short visits a week and builds from there, with points, levels and badges along the way.</div>
+          </>
+        )}
+      </div>
+      <Button size="sm" variant={s && !s.doneToday ? 'primary' : undefined} onClick={() => navigateSpace('ramp')}>
+        {s ? (s.doneToday ? 'See progress' : 'Open mission') : 'Start Ramp up'}
+      </Button>
+    </div>
+  );
+}
 
 export default function TrainingToday() {
   const t = useTraining();
@@ -118,6 +149,7 @@ export default function TrainingToday() {
       <div className="module-body">
         <div className="tr-page">
           {firstRun && <SetupCard today={today} />}
+          <RampTodayCard t={t} today={today} />
 
           <div className="tr-stats">
             <StatTile

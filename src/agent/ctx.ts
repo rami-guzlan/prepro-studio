@@ -284,7 +284,15 @@ export function coerceField(c: CollectionDef, f: FieldSpec, value: unknown, p: a
     case 'string[]':
     case 'image[]': {
       const a = Array.isArray(value) ? value : [value];
-      return a.map((x) => (f.upper ? String(x).toUpperCase() : String(x))).filter((x) => x.trim() !== '');
+      const list = a.map((x) => (f.upper ? String(x).toUpperCase() : String(x))).filter((x) => x.trim() !== '');
+      if (f.type === 'string[]' && f.values) {
+        return list.map((x) => {
+          const hit = f.values!.find((v) => v === x) ?? f.values!.find((v) => v.toLowerCase() === x.toLowerCase().replace(/[\s-]+/g, '_'));
+          if (!hit) fail(`${where}: "${x}" is not allowed. Use: ${f.values!.join(', ')}`);
+          return hit;
+        });
+      }
+      return list;
     }
     case 'ref':
       return resolveRef(f.ref!, value, p);
@@ -299,7 +307,8 @@ export function coerceField(c: CollectionDef, f: FieldSpec, value: unknown, p: a
     case 'object': {
       if (typeof value !== 'object' || Array.isArray(value)) fail(`${where}: expected an object with keys ${f.keys?.join(', ')}`);
       const out: Record<string, unknown> = {};
-      for (const [k, x] of Object.entries(value as object)) {
+      for (const [k0, x] of Object.entries(value as object)) {
+        const k = f.keysRef ? resolveRef(f.keysRef, k0, p) : k0;
         if (f.keys && !f.keys.includes(k)) fail(`${where}.${k}: unknown key (allowed: ${f.keys.join(', ')})`);
         if (x === null || x === undefined || x === '') continue;
         if (f.numericValues) {

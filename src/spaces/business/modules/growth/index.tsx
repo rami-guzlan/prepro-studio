@@ -1,14 +1,15 @@
 /* Growth: business growth initiatives (new offers, outreach pushes, partnerships,
-   ads tests, hiring …) on a status board or an impact / effort matrix. Each
+   ads tests, hiring …) on a dashboard, a status board or an impact / effort matrix. Each
    initiative tracks a KPI from baseline to target with dated check-ins, budget vs
    spend (incl. linked expenses), steps and learnings. */
 import '../../biz.css';
 import '../../library.css';
-import { useMemo, useState, type DragEvent } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, CalendarClock, CheckSquare, ExternalLink, Grid2x2, KanbanSquare, Link2, Plus, Receipt, Rocket, Square, Trash2, Unlink, UserRound } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { ArrowDown, ArrowLeft, ArrowUp, CalendarClock, CheckSquare, ExternalLink, Gauge, Grid2x2, KanbanSquare, Link2, MessageSquarePlus, Plus, Receipt, Rocket, Square, Target, Trash2, Unlink, UserRound } from 'lucide-react';
 import type { ID } from '@/types';
 import { useSpace } from '@/store/space';
-import { navigateSpace, readLS, writeLS } from '@/store/app';
+import { navigateSpace, readLS, useApp, writeLS } from '@/store/app';
+import { diffDays } from '@/lib/dates';
 import { exportCsv } from '@/backend';
 import { plural, safeFileName } from '@/lib/text';
 import { openSpaceById } from '@/shell/spaceActions';
@@ -21,7 +22,7 @@ import { Money, Pill, rowKeys, useBiz, useFmt, useMarketingSpaces, useNavParams,
 import type { BusinessData, Initiative, InitiativeStatus } from '../../types';
 import { QUADRANTS, addInitiativeChild, growthSummary, isOnTrack, linkExpense, makeUpdate, moveInitiativeStep, quadrantOf, removeInitiativeChild, updateInitiativeChild } from './ops';
 
-type View = 'board' | 'matrix';
+type View = 'dashboard' | 'board' | 'matrix';
 const RATINGS = [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }));
 const kpiNum = (n: number | undefined) => (n == null ? '—' : String(Math.round(n * 100) / 100));
 
@@ -31,16 +32,21 @@ export default function GrowthModule() {
   const title = useSpace((s) => s.meta.title);
   const fmt = useFmt();
   const today = useToday();
-  const [view, setViewState] = useState<View>(() => readLS<View>('prepro.biz.growth.view', 'board'));
+  const [view, setViewState] = useState<View>(() => readLS<View>('prepro.biz.growth.view.v2', 'dashboard'));
   const setView = (v: View) => {
     setViewState(v);
-    writeLS('prepro.biz.growth.view', v);
+    writeLS('prepro.biz.growth.view.v2', v);
   };
-  const [sel, setSel] = useState<ID | null>(() => readLS<string | null>(`prepro.biz.initiative.${spaceId}`, null));
-  const select = (id: ID | null) => {
-    setSel(id);
-    writeLS(`prepro.biz.initiative.${spaceId}`, id);
-  };
+  // Growth always opens on the overview; an initiative opens from it (or a link) and Back returns
+  const [sel, select] = useState<ID | null>(null);
+  // clicking Growth in the sidebar again while an initiative is open goes back to the overview
+  const navKey = useApp((s) => s.navKey);
+  const firstNav = useRef(navKey);
+  useEffect(() => {
+    if (navKey === firstNav.current) return;
+    const p = useApp.getState().params;
+    if (!p?.initiativeId && !p?.new) select(null);
+  }, [navKey]);
   const add = (status: InitiativeStatus = 'idea') => {
     const i = makeInitiative({ title: 'New initiative', status, startDate: status === 'in_progress' ? today : undefined });
     addItem('initiatives', i);
@@ -102,7 +108,9 @@ export default function GrowthModule() {
         }
       />
       {cur ? (
-        <InitiativeDetail key={cur.id} i={cur} onBack={() => select(null)} />
+        <div className="module-body">
+          <InitiativeDetail key={cur.id} i={cur} onBack={() => select(null)} />
+        </div>
       ) : b.initiatives.length === 0 ? (
         <EmptyState
           icon={Rocket}
@@ -115,6 +123,7 @@ export default function GrowthModule() {
           }
         />
       ) : (
+        <div className="module-body">
         <div className="biz-page">
           <div className="biz-kpis small">
             <StatTile label="In progress" value={sum.active} sub={`${sum.open} open in total`} />
@@ -127,12 +136,14 @@ export default function GrowthModule() {
               value={view}
               onChange={setView}
               tabs={[
+                { id: 'dashboard', label: 'Dashboard', icon: Gauge },
                 { id: 'board', label: 'Board', icon: KanbanSquare },
                 { id: 'matrix', label: 'Impact / effort', icon: Grid2x2 },
               ]}
             />
           </div>
-          {view === 'board' ? <Board b={b} today={today} onOpen={select} onAdd={add} /> : <Matrix b={b} today={today} onOpen={select} />}
+          {view === 'dashboard' ? <Dashboard b={b} today={today} onOpen={select} /> : view === 'board' ? <Board b={b} today={today} onOpen={select} onAdd={add} /> : <Matrix b={b} today={today} onOpen={select} />}
+        </div>
         </div>
       )}
     </div>
@@ -190,6 +201,94 @@ function InitCard({ i, b, today, onOpen, draggable }: { i: Initiative; b: Busine
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- dashboard */
+
+const CHECKIN_DAYS = 14;
+const GROUPS: { id: string; label: string; statuses: InitiativeStatus[] }[] = [
+  { id: 'now', label: 'Now', statuses: ['in_progress'] },
+  { id: 'next', label: 'Up next', statuses: ['planned', 'idea', 'paused'] },
+  { id: 'closed', label: 'Finished', statuses: ['done', 'dropped'] },
+];
+
+/** Every initiative at a glance: KPI progress, steps, budget, due date and the last check-in. */
+function Dashboard({ b, today, onOpen }: { b: BusinessData; today: string; onOpen: (id: string) => void }) {
+  const fmt = useFmt();
+  const [showClosed, setShowClosed] = useState(false);
+  const goals = new Map(b.strategy.goals.map((g) => [g.id, g.title]));
+  return (
+    <div className="lib-dash">
+      {GROUPS.map((grp) => {
+        const list = b.initiatives.filter((i) => grp.statuses.includes(i.status));
+        if (!list.length) return null;
+        if (grp.id === 'closed' && !showClosed)
+          return (
+            <button key={grp.id} type="button" className="lib-dash-more" onClick={() => setShowClosed(true)}>
+              Show {plural(list.length, 'finished initiative')}
+            </button>
+          );
+        return (
+          <section key={grp.id} className="lib-dash-group">
+            <h4>
+              {grp.label} <span className="muted">{list.length}</span>
+            </h4>
+            {list.map((i) => {
+              const p = initiativeProgress(b, i, today);
+              const st = initiativeStatusInfo(i.status);
+              const last = [...i.updates].filter((u) => u.date).sort((x, y) => y.date.localeCompare(x.date))[0];
+              const stale = i.status === 'in_progress' && (!last || diffDays(last.date, today) > CHECKIN_DAYS);
+              const on = isOnTrack(i, p, today);
+              const over = !!i.budget && p.spent > i.budget;
+              const goal = i.goalId ? goals.get(i.goalId) : undefined;
+              const meta = [i.area, i.owner ? `owner ${i.owner}` : '', goal ? `for “${goal}”` : ''].filter(Boolean).join(' · ');
+              return (
+                <button key={i.id} type="button" className={`lib-dash-row ${p.overdue ? 'late' : ''}`} onClick={() => onOpen(i.id)}>
+                  <div className="lib-dash-main">
+                    <div className="lib-dash-title">
+                      <b className="ellipsis">{i.title || 'Untitled initiative'}</b>
+                      <Pill color={st.color}>{st.label}</Pill>
+                      {i.status === 'in_progress' && p.pct != null && <span className={on ? 'biz-ok small' : 'biz-out small'}>{on ? 'on track' : 'behind'}</span>}
+                    </div>
+                    <div className="muted small ellipsis">{meta || 'No area or owner yet'}</div>
+                  </div>
+                  <div className="lib-dash-kpi">
+                    {i.kpi || i.target != null ? (
+                      <>
+                        <span className="small">
+                          <Target size={12} /> {i.kpi || 'KPI'}: <b>{kpiNum(p.current)}</b>
+                          {i.target != null && <span className="muted"> / {kpiNum(i.target)}</span>}
+                        </span>
+                        <Meter value={p.pct ?? 0} max={1} tone={p.pct != null && p.pct >= 1 ? 'good' : undefined} label="KPI progress" />
+                      </>
+                    ) : (
+                      <span className="muted small">No KPI yet: open it to set one</span>
+                    )}
+                  </div>
+                  <div className="lib-dash-facts small">
+                    <span title="Steps done">
+                      <CheckSquare size={12} /> {p.stepsDone}/{p.stepsTotal} steps
+                    </span>
+                    <span className={over ? 'biz-out' : ''} title="Spent of budget">
+                      <Receipt size={12} /> {fmt.money(p.spent, { cents: false })}
+                      {i.budget ? ` of ${fmt.money(i.budget, { cents: false })}` : ''}
+                    </span>
+                    <span className={p.overdue ? 'biz-out' : ''} title="Due">
+                      <CalendarClock size={12} /> {i.dueDate ? `due ${fmt.dateShort(i.dueDate)}` : 'no due date'}
+                    </span>
+                    <span className={stale ? 'biz-out' : 'muted'} title="Last check-in">
+                      <MessageSquarePlus size={12} /> {last ? `checked in ${fmt.dateShort(last.date)}` : 'no check-ins'}
+                      {stale ? ' · time for one' : ''}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -339,8 +438,8 @@ function InitiativeDetail({ i, onBack }: { i: Initiative; onBack: () => void }) 
   return (
     <div className="biz-editor lib-init">
       <div className="biz-editor-head">
-        <Button className="biz-back" variant="ghost" icon={ArrowLeft} onClick={onBack}>
-          Growth
+        <Button className="biz-back show" variant="ghost" icon={ArrowLeft} onClick={onBack}>
+          All initiatives
         </Button>
         <div className="biz-editor-title lib-init-title">
           <Rocket size={18} className="muted" />

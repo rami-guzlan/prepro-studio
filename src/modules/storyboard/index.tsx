@@ -447,7 +447,7 @@ export default function StoryboardModule() {
     setExporting(`Rendering 0 / ${items.length}…`);
     try {
       const res = await exportFramesForMiro(items, aspect, projectTitle || 'Storyboard', (d, t) => setExporting(`Rendering ${d} / ${t}…`));
-      if (res || (res === null && backend.kind === 'web')) toast(`Exported ${plural(items.length, 'frame')} — drag the PNGs onto your Miro board`);
+      if (res || (res === null && backend.kind !== 'electron')) toast(`Exported ${plural(items.length, 'frame')} — drag the PNGs onto your Miro board`);
     } catch (e) {
       toast(`Export failed: ${e instanceof Error ? e.message : e}`, 'error');
     } finally {

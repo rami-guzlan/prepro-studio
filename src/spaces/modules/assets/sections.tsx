@@ -12,6 +12,7 @@ import { optionColor, optionLabel } from '@/lib/constants';
 import { sortCampaigns } from '@/spaces/modules/campaigns/logic';
 import { addImageAssets, assetOps, canOpenValue, copyText, deleteAsset, fontAvailable, HexInput, openUrl, openValue, useTileDrag } from './actions';
 import { fontStack, hexToRgb, inkOn, normalizeHex, type SectionDef } from './util';
+import { colorRoleLabel } from '@/spaces/designSystem/ui/options';
 import { GatedBadge, ResourceIcon, ResourceList, downloadResource, dropResources, formatBytes, pickResources, useFileDrop } from './resources';
 
 export interface TileHandlers {
@@ -189,6 +190,12 @@ function ColorTile({ a, h, drag }: { a: BrandAsset; h: TileHandlers; drag: Retur
           />
         </div>
         {rgb && <div className="sp-assets-rgb mono">RGB {rgb.join(' ')}</div>}
+        {(a.role || a.cssVar) && (
+          <div className="sp-assets-colorrole">
+            {a.role && <span className="sp-assets-role">{colorRoleLabel(a.role)}</span>}
+            {a.cssVar && <span className="mono ellipsis" title="CSS variable">{a.cssVar}</span>}
+          </div>
+        )}
         {a.notes?.trim() && <div className="sp-assets-note ellipsis" title={a.notes}>{a.notes}</div>}
         <Tags tags={a.tags} h={h} />
       </div>
@@ -204,6 +211,34 @@ function ColorTile({ a, h, drag }: { a: BrandAsset; h: TileHandlers; drag: Retur
 
 export function ColorsGrid({ items, h, onAdd }: { items: BrandAsset[]; h: TileHandlers; onAdd?: () => void }) {
   const drag = useTileDrag();
+  // palette groups (design system) as sub-headings, in order of first appearance
+  const groups = useMemo(() => [...new Set(items.map((a) => a.group?.trim() || ''))], [items]);
+  if (groups.length > 1 || (groups.length === 1 && groups[0]))
+    return (
+      <div className="sp-assets-colorgroups">
+        {groups.map((g, i) => {
+          const list = items.filter((a) => (a.group?.trim() || '') === g);
+          return (
+            <div key={g || '-'} className="sp-assets-colorgroup">
+              <div className="sp-assets-subhead">
+                {g || 'Other colours'} <span className="muted">{list.length}</span>
+              </div>
+              <div className="sp-assets-grid colors">
+                {list.map((a) => (
+                  <ColorTile key={a.id} a={a} h={h} drag={drag} />
+                ))}
+                {onAdd && i === groups.length - 1 && (
+                  <button type="button" className="sp-assets-addbtn color" onClick={onAdd}>
+                    <Plus />
+                    <span>Add colour</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   return (
     <div className="sp-assets-grid colors">
       {items.map((a) => (

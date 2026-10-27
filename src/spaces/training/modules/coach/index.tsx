@@ -17,6 +17,10 @@ import { QuickCheckIn } from '../overview/CheckIn';
 
 const PROMPTS: { title: string; text: string }[] = [
   {
+    title: 'Ramp up coach (getting started)',
+    text: 'Be my Ramp up coach. Call training_ramp with action "status" (if it is not set up, ask me four quick questions and run action "setup"). Keep it short and fun: the mission for today in two lines, ask if I can do it today, and if the day is hard offer the 10-minute version. When I train, log it with training_ramp "log_win" and celebrate points, level and badges, then tell me what unlocks next. If life gets busy, suggest "hold" instead of skipping. Never guilt me.',
+  },
+  {
     title: 'Daily check-in',
     text: 'Check in with me for today in PrePro Studio → Training. Ask how I slept, my weight, energy and mood, what I ate and whether I trained — conversationally, one or two questions at a time. Then log everything in one training_log call and tell me my streak and how today compares with my targets.',
   },

@@ -41,12 +41,14 @@ export interface AppInfo {
   projectsDir?: string;
   electron?: string;
   hiddenDemos?: HiddenDemos;
+  /** hosted version: who is signed in and which tabs they may see */
+  account?: import('./cloud').CloudAccount;
   /** automated tests with an isolated data folder only */
   testUnlockFinances?: boolean;
 }
 
 export interface Backend {
-  kind: 'electron' | 'web';
+  kind: 'electron' | 'web' | 'cloud';
   info(): Promise<AppInfo>;
   /** Personal Finances PIN (stored as a salted hash, never the PIN itself). */
   financePin: {

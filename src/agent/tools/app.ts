@@ -37,12 +37,13 @@ function navParamsFor(kind: SpaceKind, id: string): string | undefined {
   return kind === 'marketing' ? SPACE_NAV_PARAMS[id] : kindDef(kind).navParams?.[id];
 }
 const SPACE_NAV_PARAMS: Partial<Record<SpaceModuleId, string>> = {
-  strategy: 'tab ("goals" | "audience" | "pillars" | "messaging" | "tactics" | "notes")',
+  strategy: 'tab ("goals" | "audience" | "pillars" | "messaging" | "tactics" | "notes"); with tab "pillars", pillarId (a pillar id, or "__none__") opens that pillar’s content panel',
   content: 'stage, contentId',
   calendar: 'date (YYYY-MM-DD)',
   campaigns: 'campaignId',
   production: 'shootId',
   people: 'sheetId (name or id), rowId',
+  assets: 'tab ("assets" | "system" = the design system | "guide" = the compiled agent guide); with tab "system", section (a design-system section: "overview" | "color" | "type" | "tokens" | "components" | "art" | "rules" | "references" | "formats" | "briefs" | "review" | "sources")',
 };
 
 const NAV_PARAMS: Partial<Record<ModuleId, string>> = {

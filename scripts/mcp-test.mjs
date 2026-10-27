@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, statSync } 
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { strToU8, zipSync } from 'fflate';
 
 const require = createRequire(import.meta.url);
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -455,6 +456,8 @@ const iso = (n) => {
 async function spaceScenario() {
   let r = await call('list_spaces', {});
   check('no spaces yet', Array.isArray(r.data) && r.data.length === 0, JSON.stringify(r.data));
+  r = await call('design_system', { action: 'get' }, { expectError: true });
+  check('design_system refuses without a Marketing Space', /Marketing Space/.test(r.text), r.text.slice(0, 200));
   r = await call('create_space', { title: 'My Personal Brand', type: 'personal_brand', projectIds: ['MCP Test Film'] });
   check('space created with template', r.data?.channels?.length === 5 && r.data?.pillars?.length === 4 && r.data?.content === 3, JSON.stringify(r.data));
   r = await call('get_app_state', {});
@@ -638,11 +641,128 @@ async function spaceScenario() {
   check('demo content', r.data?.total >= 12, `${r.data?.total}`);
   r = await call('get_space_calendar', { from: iso(-30), to: iso(60) });
   check('demo calendar', r.data?.posts?.length >= 15 && r.data?.milestones?.length >= 5, `${r.data?.posts?.length} posts`);
+  await designSystemScenario();
   r = await call('list_spaces', {});
   check('two spaces', r.data?.length === 2, JSON.stringify(r.data));
   r = await call('open_project', { projectId: 'MCP Test Film' });
   r = await call('get_app_state', {});
   check('back to project', r.data?.openProject?.title === 'MCP Test Film' && !r.data?.openSpace, JSON.stringify(r.data?.openProject));
+}
+
+/* ------------------------------------------------------------ design system (demo Marketing Space) */
+
+function designSystemZip() {
+  const css = `/* MCP palette */
+:root {
+  --mcp-teal: #0ca678;
+  --mcp-coral: #ff6b6b;
+  --mcp-ink: #212529;
+  --mcp-surface: #ffffff;
+  --mcp-text: #212529;
+  --space-10: 52px;
+}
+[data-theme="dark"] { --mcp-surface: #101113; --mcp-text: #f8f9fa; }
+`;
+  return zipSync({
+    'mcp-ds/README.md': strToU8('# MCP Test DS\n\nA tiny design system written by the MCP test to check the importer.\n'),
+    'mcp-ds/tokens.css': strToU8(css),
+    'mcp-ds/assets/mcp-logo.svg': strToU8('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#0ca678"/></svg>'),
+    'mcp-ds/slides/cover.html': strToU8('<!doctype html><title>Cover slide</title><h1>Cover</h1>'),
+    'mcp-ds/../escape.txt': strToU8('nope'),
+  });
+}
+
+async function designSystemScenario() {
+  let r = await call('design_system', { action: 'get' });
+  const guide = r.text;
+  check(
+    'ds guide sections',
+    ['## How to use this design system', '## Brand intent', '## Colour', '### Semantic tokens', '## Typography', '## Spacing, shape & other tokens', '## Components & layouts', '## Art direction', 'How the elements work together', '## Rules', '### Required', '## References', 'Near misses', '## Formats & production', '## Generation briefs', '## Review & finishing'].every((x) => guide.includes(x)),
+    guide.slice(0, 400),
+  );
+  r = await call('design_system', { action: 'get', sections: ['rules'] });
+  check('ds guide subset', r.text.includes('## Rules') && !r.text.includes('## Colour'), r.text.slice(0, 200));
+  r = await call('design_system', { action: 'get', format: 'json' });
+  check(
+    'ds json',
+    r.data?.tokens?.color && Object.keys(r.data.tokens.themes ?? {}).length === 2 && r.data.semanticTokens?.length >= 8 && r.data.typeStyles?.length >= 7 && r.data.rules?.length >= 10 && r.data.references?.some((x) => x.verdict === 'near_miss' && x.image?.file) && r.data.formats?.length === 4,
+    JSON.stringify(r.data).slice(0, 400),
+  );
+  r = await call('design_system', { action: 'get', images: true, sections: ['references'] });
+  check('ds reference images', r.images.every((i) => /^image\//.test(i.mimeType)), `${r.images.length}`);
+  r = await call('design_system', { action: 'brief', briefId: 'Countdown story frame' });
+  check('ds stored brief', /Exact copy/.test(r.text) && /\*\*Rules\*\*/.test(r.text) && /Story/.test(r.text), r.text.slice(0, 300));
+  r = await call('design_system', { action: 'brief', objective: 'Thumbnail for the BTS video', formatId: 'YouTube thumbnail', referenceIds: ['Official poster'] });
+  check('ds ad-hoc brief', /YouTube thumbnail/.test(r.text) && /Official poster/.test(r.text) && /Required/.test(r.text), r.text.slice(0, 300));
+  await call('design_system', { action: 'brief', briefId: 'No such brief' }, { expectError: true });
+  r = await call('design_system', { action: 'readiness' });
+  check('ds readiness', /%$/.test(r.data?.score ?? '') && Array.isArray(r.data?.missing), JSON.stringify(r.data));
+
+  // collections & single fields
+  r = await call('describe_data', {});
+  check(
+    'ds collections listed',
+    ['ds_themes', 'ds_semantic_tokens', 'ds_type_styles', 'ds_tokens', 'ds_components', 'ds_layouts', 'ds_treatments', 'ds_rules', 'ds_references', 'ds_formats', 'ds_briefs', 'ds_sources', 'ds_personality'].every((n) => r.data?.collections?.some((c) => c.name === n)),
+    JSON.stringify(r.data?.collections?.map((c) => c.name)),
+  );
+  r = await call('list_items', { collection: 'ds_rules', where: { level: 'required' } });
+  check('ds required rules', r.data?.total >= 5, JSON.stringify(r.data?.total));
+  r = await call('add_items', { collection: 'ds_rules', items: [{ area: 'imagery', kind: 'dont', text: 'No drone shots over the rooftop', level: 'required', why: 'MCP test rule' }] });
+  check('ds add rule', r.data?.created === 1, r.text);
+  r = await call('design_system', { action: 'get', sections: ['rules'] });
+  check('ds new rule in guide', r.text.includes("DON'T: No drone shots over the rooftop"), r.text.slice(0, 300));
+  r = await call('update_items', { collection: 'ds_semantic_tokens', updates: [{ id: '--accent', values: { Night: '#ff0000' } }] });
+  r = await call('list_items', { collection: 'ds_semantic_tokens', search: '--accent' });
+  const accent = r.data?.items?.find((x) => x.name === '--accent');
+  check('ds semantic token by theme name', accent?._values?.Night === '#ff0000' && accent?._values?.Daylight === '#c2410c', JSON.stringify(accent));
+  await call('update_items', { collection: 'ds_semantic_tokens', updates: [{ id: '--accent', values: { Moon: '#000' } }] }, { expectError: true });
+  await call('add_items', { collection: 'ds_references', items: [{ title: 'Bad roles', assetId: 'Poster artwork', roles: ['style', 'bogus'], verdict: 'on_brand' }] }, { expectError: true });
+  r = await call('add_items', { collection: 'ds_references', items: [{ title: 'Poster again', assetId: 'Poster artwork', roles: ['Composition'], verdict: 'near miss' }] });
+  check('ds add reference (normalised enums)', r.data?.created === 1, r.text);
+  r = await call('set_fields', { values: { 'designSystem.artDirection.imagery.subjects': 'MCP test subjects', 'designSystem.version': '9.9', 'designSystem.review.criteria': ['Looks right'] } });
+  r = await call('get_fields', { paths: ['designSystem.artDirection.imagery', 'designSystem.version'] });
+  check('ds single fields', r.data?.['designSystem.artDirection.imagery']?.subjects === 'MCP test subjects' && r.data?.['designSystem.version'] === '9.9', JSON.stringify(r.data));
+  r = await call('update_items', { collection: 'assets', updates: [{ id: 'Magic hour', role: 'accent', coverage: '12 %' }] });
+  r = await call('get_items', { collection: 'assets', ids: ['Magic hour'] });
+  check('colour asset ds fields', r.data?.items?.[0]?.role === 'accent' && r.data.items[0].cssVar === '--color-magic-hour' && r.data.items[0].group === 'Core', JSON.stringify(r.data?.items?.[0]));
+
+  // import: a generated zip from disk, again (no duplicates), and a loose CSS file as text
+  const zipPath = path.join(DATA, 'mcp-ds.zip');
+  writeFileSync(zipPath, designSystemZip());
+  r = await call('design_system', { action: 'import', path: zipPath });
+  const c = r.data?.counts ?? {};
+  check(
+    'ds import zip',
+    c.colors === 3 && c.themes === 2 && c.semanticTokens === 2 && c.tokens === 1 && c.logos === 1 && c.cards === 1 && c.layouts === 1 && c.docs === 1 && /README/.test(r.data?.summary ?? '') && r.data?.warnings?.some((w) => /unsafe/.test(w)),
+    JSON.stringify(r.data),
+  );
+  r = await call('design_system', { action: 'import', path: zipPath });
+  check('ds re-import updates', !r.data?.counts?.colors && r.data?.counts?.colorsUpdated === 3, JSON.stringify(r.data?.counts));
+  r = await call('list_items', { collection: 'ds_sources' });
+  check('ds one source per file', r.data?.items?.filter((x) => x.fileName === 'mcp-ds.zip').length === 1, JSON.stringify(r.data?.items?.map((x) => x.fileName)));
+  r = await call('design_system', { action: 'import', fileName: 'extra.css', text: ':root { --mcp-lime: #82c91e; }' });
+  check('ds import css text', r.data?.counts?.colors === 1, JSON.stringify(r.data));
+  await call('add_items', { collection: 'ds_sources', items: [{ fileName: 'x' }] }, { expectError: true });
+  r = await call('list_items', { collection: 'ds_layouts', search: 'Cover slide' });
+  check('ds layout from card', r.data?.items?.[0]?.kind === 'slide' && !!r.data.items[0].file, JSON.stringify(r.data?.items));
+
+  // export, documents, show
+  r = await call('design_system', { action: 'export', format: 'folder' });
+  check(
+    'ds export folder',
+    r.data?.readFirst && existsSync(r.data.readFirst) && readFileSync(r.data.readFirst, 'utf8').includes('# The Last Take') && r.data.list?.includes('tokens.css') && r.data.list?.some((p) => p.startsWith('logos/')),
+    JSON.stringify(r.data).slice(0, 400),
+  );
+  r = await call('design_system', { action: 'export', format: 'zip' });
+  check('ds export zip', r.data?.files?.[0] && existsSync(r.data.files[0]) && statSync(r.data.files[0]).size > 2000, JSON.stringify(r.data));
+  r = await call('design_system', { action: 'export', format: 'css' });
+  check('ds export css', r.data?.files?.[0] && readFileSync(r.data.files[0], 'utf8').includes('[data-theme="night"]'), JSON.stringify(r.data));
+  r = await call('list_documents', {});
+  check('ds document listed', (r.data ?? []).some((d) => d.id === 'space-design-system'), JSON.stringify((r.data ?? []).map((d) => d.id)));
+  r = await call('preview_document', { docId: 'space-design-system' });
+  check('ds document preview', r.images.length === 1);
+  r = await call('show_in_app', { module: 'assets', params: { tab: 'system' } });
+  check('ds show in app', !r.res.isError, r.text.slice(0, 200));
 }
 
 /* ------------------------------------------------------------ business, finances, training, coach */

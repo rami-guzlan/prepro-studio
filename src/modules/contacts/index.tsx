@@ -119,7 +119,7 @@ async function exportContactsCsv() {
   try {
     const path = await exportCsv(safeFileName(`${p.meta.title || 'Project'} - Contacts & Vendors`), rows, cols);
     if (path) toast(`Exported ${rows.length} contacts to ${path.split(/[\\/]/).pop()}`);
-    else if (backend.kind === 'web') toast('Contacts CSV downloaded');
+    else if (backend.kind !== 'electron') toast('Contacts CSV downloaded');
   } catch (e) {
     toast(`Could not export: ${e instanceof Error ? e.message : String(e)}`, 'error');
   }

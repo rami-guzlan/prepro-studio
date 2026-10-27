@@ -1,0 +1,238 @@
+/* Ramp up (index.tsx) */
+.ramp-lead {
+  margin: 0 0 14px;
+  color: var(--text-2);
+  max-width: 70ch;
+  line-height: 1.55;
+}
+.ramp-setup {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.ramp-hero {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ramp-stages {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ramp-stage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ramp-stage-n {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg-elev);
+}
+.ramp-stage.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ramp-stage.done {
+  color: var(--success);
+}
+.ramp-stage-title {
+  margin: 6px 0 0;
+  font-size: 22px;
+}
+.ramp-week {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.ramp-dots {
+  display: flex;
+  gap: 6px;
+}
+.ramp-dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-sunken);
+  color: var(--text-3);
+}
+.ramp-dot.today {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ramp-dot.future {
+  opacity: 0.55;
+}
+.ramp-dot.full {
+  background: var(--success);
+  color: #fff;
+}
+.ramp-dot.mini {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.ramp-dot.move {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.ramp-next {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+.ramp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.ramp-why {
+  margin: 0 0 10px;
+  font-style: italic;
+  color: var(--text-2);
+}
+.ramp-mission-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.ramp-moves {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ramp-moves li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.ramp-moves li > span:first-child {
+  flex: 1;
+  min-width: 140px;
+}
+.ramp-moves li .muted {
+  flex-basis: 100%;
+}
+.ramp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ramp-mini {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ramp-mini summary {
+  cursor: pointer;
+}
+.ramp-done {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--success);
+}
+.ramp-done b {
+  color: var(--text);
+}
+.ramp-level {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--accent);
+}
+.ramp-level .grow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+}
+.ramp-reward {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  color: var(--text-2);
+}
+.ramp-streak {
+  margin: 12px 0 4px;
+}
+.ramp-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.ramp-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  color: var(--text-3);
+}
+.ramp-badge.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ramp-badge.on b {
+  color: var(--text);
+}
+.ramp-wins {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ramp-wins li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ramp-win-kind {
+  color: var(--success);
+  display: grid;
+}
+.ramp-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Today page card */
+.ramp-today {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ramp-today .grow {
+  min-width: 200px;
+}
+@media (max-width: 760px) {
+  .ramp-grid {
+    grid-template-columns: 1fr;
+  }
+  .ramp-dot {
+    width: 34px;
+    height: 34px;
+  }
+}

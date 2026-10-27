@@ -1,13 +1,16 @@
-/* Strategy › Pillars: recurring themes with target vs actual share of content. */
-import { useMemo, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, GripVertical, Layers, Plus, Scale, Trash2, TriangleAlert } from 'lucide-react';
+/* Strategy › Pillars: recurring themes with target vs actual share of content;
+   click a pillar (its piece count or its slice of the mix) to see and edit its content. */
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ArrowDown, ArrowUp, ChevronRight, GripVertical, Layers, Plus, Scale, Trash2, TriangleAlert } from 'lucide-react';
 import type { Pillar } from '@/spaces/types';
 import { PILLAR_COLORS } from '@/spaces/constants';
 import { updateSpace, useSpace } from '@/store/space';
-import { navigateSpace } from '@/store/app';
+import { useApp } from '@/store/app';
 import { SWATCHES } from '@/lib/constants';
 import { Button, EmptyState, IconButton, NumberInput } from '@/ui';
 import { ColorButton, addPillar, deletePillar, focusSelect, pillarOps, plural } from './shared';
+import { PillarContentPanel } from './PillarContent';
+import { NONE } from '../content/shared';
 
 const PILLAR_SWATCHES = [...PILLAR_COLORS, ...SWATCHES.filter((c) => !PILLAR_COLORS.includes(c))].slice(0, 16);
 
@@ -30,6 +33,23 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null);
+
+  // the pillar whose content is shown below the list (deep link: navigateSpace('strategy', { tab: 'pillars', pillarId }))
+  const params = useApp((s) => s.params);
+  const navKey = useApp((s) => s.navKey);
+  const [openId, setOpenId] = useState<string | null>(() => (typeof params?.pillarId === 'string' ? params.pillarId : null));
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (typeof params?.pillarId === 'string') setOpenId(params.pillarId);
+  }, [navKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (openId) requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }, [openId]);
+  // a deleted pillar closes its panel
+  useEffect(() => {
+    if (openId && openId !== NONE && !pillars.some((p) => p.id === openId)) setOpenId(null);
+  }, [pillars, openId]);
+  const toggle = (id: string) => setOpenId((cur) => (cur === id ? null : id));
 
   if (!pillars.length) {
     return (
@@ -83,7 +103,20 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
         <div className="sp-strategy-mix-head">
           <h3>Content mix</h3>
           <span className="muted small">
-            {stats.total ? `${plural(stats.total, 'piece')} · ${stats.unassigned ? `${stats.unassigned} without a pillar` : 'all assigned'}` : 'No content yet — actual shares appear as you add pieces'}
+            {stats.total ? (
+              <>
+                {plural(stats.total, 'piece')} ·{' '}
+                {stats.unassigned ? (
+                  <button type="button" className="sp-strategy-link" onClick={() => toggle(NONE)} title="Show the pieces without a pillar">
+                    {stats.unassigned} without a pillar
+                  </button>
+                ) : (
+                  'all assigned'
+                )}
+              </>
+            ) : (
+              'No content yet — actual shares appear as you add pieces'
+            )}
           </span>
         </div>
         <MixBar label="Target" segments={pillars.map((p) => ({ id: p.id, color: p.color, value: p.targetShare ?? 0, name: p.name }))} total={Math.max(100, stats.targetSum)} striped />
@@ -94,6 +127,8 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
             { id: '_none', color: 'var(--border-strong)', value: stats.unassigned, name: 'No pillar' },
           ]}
           total={stats.total}
+          onSelect={toggle}
+          selected={openId}
         />
         {!sumOk && (
           <div className="sp-strategy-warn">
@@ -128,7 +163,7 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
           return (
             <div
               key={p.id}
-              className={`sp-strategy-pillar ${dragId === p.id ? 'dragging' : ''} ${isDrop ? (drop!.after ? 'drop-after' : 'drop-before') : ''}`}
+              className={`sp-strategy-pillar ${openId === p.id ? 'open' : ''} ${dragId === p.id ? 'dragging' : ''} ${isDrop ? (drop!.after ? 'drop-after' : 'drop-before') : ''}`}
               onDragOver={
                 dragId
                   ? (e) => {
@@ -181,6 +216,10 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
                     onChange={(e) => pillarOps.update(p.id, { name: e.target.value })}
                     aria-label="Pillar name"
                   />
+                  <button type="button" className={`sp-pillar-open ${openId === p.id ? 'on' : ''}`} onClick={() => toggle(p.id)} aria-expanded={openId === p.id} title={openId === p.id ? 'Hide this pillar’s content' : 'See and edit this pillar’s content'}>
+                    {plural(count, 'piece')}
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
                 <input
                   className="sp-strategy-sub-input"
@@ -201,7 +240,7 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
                   value={actual}
                   color={p.color}
                   text={
-                    <button type="button" className="sp-strategy-link" onClick={() => navigateSpace('content', { pillarId: p.id })} title="Show these pieces in Content">
+                    <button type="button" className="sp-strategy-link" onClick={() => toggle(p.id)} title="See and edit these pieces">
                       {Math.round(actual)}% · {plural(count, 'piece')}
                     </button>
                   }
@@ -224,6 +263,12 @@ export function PillarsTab({ focusId, onAdded }: { focusId: string | null; onAdd
           )}
         </div>
       </div>
+
+      {openId && (
+        <div ref={panelRef} className="sp-pillar-panel-anchor">
+          <PillarContentPanel pillarId={openId} onClose={() => setOpenId(null)} onSwitch={setOpenId} />
+        </div>
+      )}
     </div>
   );
 }
@@ -249,7 +294,7 @@ function ShareBar({ label, value, color, striped, text, diff }: { label: string;
   );
 }
 
-function MixBar({ label, segments, total, striped }: { label: string; segments: { id: string; color: string; value: number; name: string }[]; total: number; striped?: boolean }) {
+function MixBar({ label, segments, total, striped, onSelect, selected }: { label: string; segments: { id: string; color: string; value: number; name: string }[]; total: number; striped?: boolean; onSelect?: (id: string) => void; selected?: string | null }) {
   return (
     <div className="sp-strategy-mixrow">
       <span className="sp-strategy-share-label">{label}</span>
@@ -260,9 +305,13 @@ function MixBar({ label, segments, total, striped }: { label: string; segments: 
             .map((s) => (
               <span
                 key={s.id}
-                className={striped ? 'striped' : ''}
+                className={`${striped ? 'striped' : ''} ${onSelect ? 'clickable' : ''} ${selected === (s.id === '_none' ? NONE : s.id) ? 'on' : ''}`}
                 style={{ width: `${(s.value / total) * 100}%`, ['--pc' as string]: s.color }}
-                title={`${s.name || 'Pillar'}: ${striped ? `${s.value}%` : `${s.value} (${Math.round((s.value / total) * 100)}%)`}`}
+                title={`${s.name || 'Pillar'}: ${striped ? `${s.value}%` : `${s.value} (${Math.round((s.value / total) * 100)}%)`}${onSelect ? ' — click to see the pieces' : ''}`}
+                role={onSelect ? 'button' : undefined}
+                tabIndex={onSelect ? 0 : undefined}
+                onClick={onSelect ? () => onSelect(s.id === '_none' ? NONE : s.id) : undefined}
+                onKeyDown={onSelect ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(s.id === '_none' ? NONE : s.id)) : undefined}
               >
                 {(s.value / total) * 100 >= 9 && <em>{s.name}</em>}
               </span>
