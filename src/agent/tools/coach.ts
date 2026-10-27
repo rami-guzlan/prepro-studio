@@ -1,13 +1,11 @@
 /* The holistic coach's view of the whole studio: one read-only snapshot across
-   Productions, Marketing Spaces, businesses, Personal Finances (only while the
-   user has unlocked them) and Training — so an agent can give advice that
+   Productions, Marketing Spaces, businesses, Personal Finances and Training — so an agent can give advice that
    accounts for workload, money and health together. */
 import type { SpaceData, SpaceKind } from '@/spaces/types';
 import { backend } from '@/backend';
 import { normalizeSpace } from '@/spaces/defaults';
 import { kindDef } from '@/spaces/registry';
 import { countByStage, overduePosts, upcomingPosts } from '@/spaces/derive';
-import { isFinanceUnlocked } from '@/spaces/finance/lock';
 import { useSpaceStore } from '@/store/space';
 import { useProjectStore } from '@/store/project';
 import { addDays, todayISO } from '@/lib/dates';
@@ -55,7 +53,7 @@ export const coachTools = [
     name: 'studio_context',
     title: 'Holistic coach: studio-wide snapshot',
     description:
-      'One read-only snapshot of the whole studio for holistic coaching: productions (status), Marketing Spaces (posts due, pipeline, active campaigns, milestones), businesses (income, expenses, overdue invoices, hours, contractors owed), Personal Finances (only while the user has unlocked them in the app — otherwise reported as locked; never ask for the PIN) and Training (weight trend and projection, workouts, streaks, macros, last check-in). Use it before giving advice that should weigh workload, money and health together, then dig in with the area tools (open_training + training_report, open_finances + finance_report, biz_report …). Advice is coaching, not medical or financial advice.',
+      'One read-only snapshot of the whole studio for holistic coaching: productions (status), Marketing Spaces (posts due, pipeline, active campaigns, milestones), businesses (income, expenses, overdue invoices, hours, contractors owed), Personal Finances and Training (weight trend and projection, workouts, streaks, macros, last check-in). Use it before giving advice that should weigh workload, money and health together, then dig in with the area tools (open_training + training_report, open_finances + finance_report, biz_report …). Advice is coaching, not medical or financial advice.',
     readOnly: true,
     global: true,
     noStep: true,
@@ -80,11 +78,8 @@ export const coachTools = [
       if (want.has('marketing')) out.marketing = (await loadKind('marketing')).map((s) => marketingSummary(s, today, days));
       if (want.has('business')) out.business = (await loadKind('business')).map((s) => ({ business: s.meta.title, ...kindDef('business').coachSummary(s, today) }));
       if (want.has('finance')) {
-        if (!isFinanceUnlocked()) out.finance = { locked: true, note: 'Personal Finances are locked. If money matters for this advice, ask the user to unlock them in PrePro Studio.' };
-        else {
-          const f = (await loadKind('finance'))[0];
-          out.finance = f ? kindDef('finance').coachSummary(f, today) : { empty: true };
-        }
+        const f = (await loadKind('finance'))[0];
+        out.finance = f ? kindDef('finance').coachSummary(f, today) : { empty: true };
       }
       if (want.has('training')) {
         const t = (await loadKind('training'))[0];

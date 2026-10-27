@@ -139,7 +139,7 @@ export default function SpaceSettingsModule() {
             <Card title="Security">
               <div className="col" style={{ gap: 10 }}>
                 <p className="muted small" style={{ margin: 0 }}>
-                  Your finances unlock with a PIN for this app session and lock again after 15 idle minutes or when the app closes. Connected AI agents can only read them while unlocked. This is an access lock: the files on disk are not encrypted.
+                  Your finances unlock on screen with a PIN for this app session and lock again after 15 idle minutes or when the app closes. It is a screen lock only: connected AI agents can use your finances either way, and the files on disk are not encrypted.
                 </p>
                 <div className="row wrap" style={{ gap: 10 }}>
                   <Button icon={KeyRound} onClick={async () => { if (await requestPinChange()) toast('PIN changed'); }}>

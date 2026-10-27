@@ -147,6 +147,6 @@ agent data tools. Each non-marketing kind lives in `src/spaces/<kind>/` and expo
 `normalize<Kind>()` from `types.ts` (stored in `SpaceData.business|finance|training`), and `sample<Kind>()` for the
 self-test. Agent collections, single fields and tools live in `src/agent/kinds/<kind>.ts`. `modulesFor(kind)` /
 `groupsFor(kind)` (registry) and `printDocsFor(kind)` (print registry) resolve per kind; Print & Export and Settings are
-shared. Personal Finances are gated by `src/spaces/finance/lock.tsx` (PIN hash in the app config; agents call
-`spaceOf('finance')` / `requireFinanceUnlocked()`). `studio_context` (src/agent/tools/coach.ts) aggregates every kind.
+shared. Personal Finances have a screen lock, `src/spaces/finance/lock.tsx` (PIN hash in the app config); it does not
+gate agents, and the hosted server keeps finances owner-only. `studio_context` (src/agent/tools/coach.ts) aggregates every kind.
 

@@ -1,8 +1,9 @@
-/* Personal Finances lock: a PIN (stored by the backend as a salted hash) unlocks
-   the finances for this app session. The lock applies to the screen AND to
-   connected AI agents: finance tools refuse to run while locked. Locks again
-   after 15 minutes without activity, from the sidebar, or when the app closes.
-   Note: this is an access lock, not encryption of the files on disk. */
+/* Personal Finances screen lock: a PIN (stored by the backend as a salted hash)
+   unlocks the finances on screen for this app session. It is a UI lock only:
+   connected AI agents use the finance tools whether or not the screen is locked
+   (in the hosted version the server keeps finances private to the owner).
+   Locks again after 15 minutes without activity, from the sidebar, or when the
+   app closes. Note: this is not encryption of the files on disk. */
 import './lock.css';
 import { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';

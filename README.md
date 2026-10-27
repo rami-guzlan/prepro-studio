@@ -68,8 +68,8 @@ Desktop app (the hosted version keeps the same documents in a Cloud Storage buck
 - Spaces live next to them: `Marketing Spaces\`, `Businesses\`, `Personal Finances\` and `Training\` (each `<name>__<id>\space.json`
   + `assets\` + `backups\`).
 - **Personal Finances are locked with a PIN** (stored only as a salted hash in the app's settings, never in this repository).
-  They unlock for the session, lock again after 15 idle minutes or when the app closes, and connected AI agents can only read
-  them while unlocked. This is an access lock — the files themselves are not encrypted.
+  They unlock for the session and lock again after 15 idle minutes or when the app closes. It is a screen lock only —
+  connected AI agents can use them either way, and the files themselves are not encrypted.
 
 ## Demo project
 *The Last Take* is a complete sample production with every module filled in (script, mind dump, storyboard, lighting
@@ -171,7 +171,7 @@ Generated documents are templates, not legal advice: have a lawyer review them b
 ## Personal Finances
 Import debit and credit card statements (CSV, OFX/QFX, PDF), categorise transactions with rules, and get a dashboard,
 budgets, goals, a debt payoff and savings planner, and insights. Connected AI agents can import statements they find in your
-email (with their own email connector), report on spending and save advice — only while you have unlocked the finances.
+email (with their own email connector), report on spending and save advice (the PIN only locks your screen).
 Not financial advice.
 
 ## Training

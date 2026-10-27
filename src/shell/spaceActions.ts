@@ -2,7 +2,6 @@
    Business Management, Personal Finances, Training). */
 import type { SpaceData, SpaceKind } from '@/spaces/types';
 import { KIND_INFO } from '@/spaces/kinds';
-import { isFinanceUnlocked, onFinanceLock, requestFinanceUnlock } from '@/spaces/finance/lock';
 import { backend } from '@/backend';
 import { closeProject, useProjectStore } from '@/store/project';
 import { closeSpaceData, openSpaceData, useSpaceStore } from '@/store/space';
@@ -18,7 +17,6 @@ export async function openSpaceById(id: string, moduleId?: SpaceModuleId) {
   try {
     await flushSave();
     const s = normalizeSpace(await backend.loadSpace(id));
-    if (s.meta.kind === 'finance' && !isFinanceUnlocked() && !(await requestFinanceUnlock())) return;
     if (useProjectStore.getState().project) {
       closeProject();
       (window as any).__preproProjectId = undefined;
@@ -53,11 +51,6 @@ export async function leaveSpace() {
   goHome();
 }
 
-// locking the finances closes them on screen
-onFinanceLock(() => {
-  if (useSpaceStore.getState().space?.meta.kind === 'finance') void leaveSpace();
-});
-
 /** The one Personal Finances / Training space (created the first time). */
 export async function singletonSpaceId(kind: 'finance' | 'training', create = true): Promise<string | null> {
   const hit = (await backend.listSpaces()).find((x) => (x.kind ?? 'marketing') === kind);
@@ -68,9 +61,9 @@ export async function singletonSpaceId(kind: 'finance' | 'training', create = tr
   return s.id;
 }
 
-/** Open Personal Finances (asks for the PIN) or Training. */
+/** Open Personal Finances or Training. Finances may open while locked (agents use
+   them): the workspace then covers the screen until the user enters the PIN. */
 export async function openSingleton(kind: 'finance' | 'training', moduleId?: SpaceModuleId): Promise<boolean> {
-  if (kind === 'finance' && !isFinanceUnlocked() && !(await requestFinanceUnlock())) return false;
   const id = await singletonSpaceId(kind);
   if (!id) return false;
   await openSpaceById(id, moduleId);

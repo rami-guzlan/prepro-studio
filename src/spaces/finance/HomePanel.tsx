@@ -37,13 +37,13 @@ function Points() {
       <div className="fin-home-point">
         <Bot size={16} />
         <span>
-          <b>Your agents help</b>Connected AI agents can find statements in your email, import them and leave advice — only while unlocked.
+          <b>Your agents help</b>Connected AI agents can find statements in your email, import them and leave advice, even while the screen is locked.
         </span>
       </div>
       <div className="fin-home-point">
         <ShieldCheck size={16} />
         <span>
-          <b>Private by PIN</b>Stored on this computer. Locks after 15 minutes idle or when the app closes.
+          <b>Screen lock</b>A PIN hides your numbers on screen. Locks after 15 minutes idle or when the app closes.
         </span>
       </div>
     </div>
@@ -97,8 +97,8 @@ export default function FinanceHomePanel() {
             <h2>{first ? 'Set up Personal Finances' : 'Personal Finances are locked'}</h2>
             <p>
               {first
-                ? 'Bring your bank and card statements together to see where your money goes, budget, plan goals and pay down debt. First, choose a PIN: it protects this section in the app and for connected AI agents.'
-                : 'Enter your PIN to see your accounts, spending and plans. Connected AI agents can only read your finances while they are unlocked.'}
+                ? 'Bring your bank and card statements together to see where your money goes, budget, plan goals and pay down debt. First, choose a PIN: it locks this section on your screen.'
+                : 'Enter your PIN to see your accounts, spending and plans.'}
             </p>
             <Button variant="primary" icon={first ? KeyRound : Unlock} onClick={() => void open()} disabled={pinSet == null}>
               {first ? 'Create a PIN and start' : 'Unlock'}

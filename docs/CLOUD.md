@@ -53,8 +53,8 @@ run in the app itself, as that person:
   them (`server/headless.mjs`). It stays out of presence, saves before every reply, and closes after
   10 idle minutes. The first call after that takes a few extra seconds while it starts.
 
-An agent tab is a fresh browser, so Personal Finances start locked there (the PIN is never given to agents);
-the owner's Finance tools work only while the owner has Finances unlocked in a real tab.
+The finance PIN is only a screen lock, so the owner's agent can use the Finance tools from its own tab (the PIN
+is never given to agents). Finances and Training stay private to the owner: the server refuses them to everyone else.
 
 - **Claude (claude.ai, Claude app):** Settings, Connectors, Add custom connector, URL `https://…run.app/mcp`. Claude registers itself, opens the sign-in page, and the person presses Allow (OAuth 2.1 with PKCE).
 - **Claude Code, Cursor, VS Code:** create a personal token on **Connect an AI agent** (`/connect`) and send it as `Authorization: Bearer <token>`.

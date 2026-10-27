@@ -9,7 +9,6 @@ import { uid } from '@/lib/id';
 import { SPACE_TYPES, STAGES } from '@/spaces/constants';
 import { allPosts, atRiskContent, cadenceForWeek, countByStage, engagement, goalProgress, overduePosts, sumMetrics, upcomingPosts, weekStart } from '@/spaces/derive';
 import { createSpaceAndOpen, deleteSpace, openDemoSpace, openSingleton, openSpaceById } from '@/shell/spaceActions';
-import { requireFinanceUnlocked } from '../ctx';
 import type { SpaceKind } from '@/spaces/types';
 import { modulesFor } from '@/spaces/registry';
 import type { SpaceModuleId } from '@/store/app';
@@ -70,7 +69,6 @@ export const spaceTools = [
     async run(a: { spaceId: string; module?: SpaceModuleId }) {
       const hit = await findSpace(a.spaceId);
       const kind = hit.kind ?? 'marketing';
-      if (kind === 'finance') requireFinanceUnlocked();
       if (a.module && !modulesFor(kind).some((m) => m.id === a.module)) fail(`"${a.module}" is not a module of a ${kind} space. Modules: ${modulesFor(kind).map((m) => m.id).join(', ')}`);
       await openSpaceById(hit.id, a.module);
       if (useSpaceStore.getState().space?.id !== hit.id) fail(`Could not open “${hit.title}”.`);
@@ -113,12 +111,11 @@ export const spaceTools = [
     name: 'open_finances',
     title: 'Open Personal Finances',
     description:
-      'Opens the Personal Finances space (accounts, statements, transactions, budgets, plans), optionally on a screen. Only works while the user has unlocked the finances in the app with their PIN; otherwise ask them to unlock it. Never ask the user for the PIN in chat.',
+      'Opens the Personal Finances space (accounts, statements, transactions, budgets, plans), optionally on a screen. Works even while the user has the finances locked on screen (the PIN is only a screen lock; the screen stays covered). Never ask the user for the PIN.',
     global: true,
     noStep: true,
     input: obj({ module: opt(str('module id (see get_app_state after opening)')) }),
     async run(a: { module?: string }) {
-      requireFinanceUnlocked();
       if (a.module && !modulesFor('finance').some((m) => m.id === a.module)) fail(`Modules: ${modulesFor('finance').map((m) => m.id).join(', ')}`);
       if (!(await openSingleton('finance', a.module))) fail('Personal Finances could not be opened.');
       return { data: { opened: useSpaceStore.getState().space?.id, modules: modulesFor('finance').map((m) => m.id) }, summary: 'Opened Personal Finances' };

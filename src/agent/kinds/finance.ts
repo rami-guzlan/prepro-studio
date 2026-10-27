@@ -1,7 +1,6 @@
 /* Agent (MCP) collections, single fields and tools of 'finance' spaces
-   (Personal Finances). Every finance tool goes through spaceOf('finance'), which
-   refuses while the finances are locked; the generic data tools refuse too
-   (activeDoc → requireFinanceUnlocked). The YNAB-style budget (assignments,
+   (Personal Finances). Every finance tool goes through spaceOf('finance'); the
+   PIN is a screen lock only, so agents work whether or not it is locked. The YNAB-style budget (assignments,
    targets, Ready to Assign) is read and changed with finance_budget. */
 import type { CollectionDef, FieldSpec } from '../collections';
 import type { SingletonDef } from '../singletons';
@@ -405,7 +404,7 @@ export const financeBudgetTool: ToolDef = defineTool({
   name: 'finance_budget',
   title: 'YNAB-style budget (Personal Finances)',
   description:
-    'Reads and changes the user’s zero-based, YNAB-style budget in Personal Finances (only while unlocked; open_finances first). Every dollar that comes in (income on on-budget accounts) lands in Ready to Assign (RTA); the user gives it a job by ASSIGNING it to categories per month. Per category and month: assigned, activity (that month’s categorised spending, negative), available (positive available rolls over; cash overspending comes out of next month’s RTA; card overspending becomes card debt). Credit cards have payment categories ("ccpay:<accountId>"). Actions: ' +
+    'Reads and changes the user’s zero-based, YNAB-style budget in Personal Finances (open_finances first). Every dollar that comes in (income on on-budget accounts) lands in Ready to Assign (RTA); the user gives it a job by ASSIGNING it to categories per month. Per category and month: assigned, activity (that month’s categorised spending, negative), available (positive available rolls over; cash overspending comes out of next month’s RTA; card overspending becomes card debt). Credit cards have payment categories ("ccpay:<accountId>"). Actions: ' +
     'read {month} → RTA and its parts, Age of Money, groups with every category (assigned / activity / available / status / target), uncategorised spending and Rule-of-YNAB tips; ' +
     'assign {month, category, amount, add?} or {month, assignments:[{category, amount}]} → set (or add to) assigned amounts; ' +
     'move {month, from, to, amount} → move money between categories ("rta" = Ready to Assign; use it to cover overspending); ' +
@@ -526,7 +525,7 @@ export const financeTools: ToolDef[] = [
     name: 'finance_import_transactions',
     title: 'Import statement transactions (Personal Finances)',
     description:
-      'Imports bank / credit card statement transactions into an account of the user’s Personal Finances (works only while the user has unlocked them; open_finances first). Pass exactly ONE source: `rows` (transactions you read yourself, e.g. from a PDF statement), `csvText` (CSV / TSV export; columns are auto-detected, or pass csvMapping), `ofxText` (OFX / QFX / QBO file contents — these file types cannot be read by path), `text` (statement lines copied from a PDF: date … description … amount), `path` (absolute path to a .csv / .tsv / .txt / .pdf file on this computer) or `base64` + fileName. Duplicates already in the account are skipped (safe to re-import), rules and category keywords categorise the rows, a statement record keeps the file (CSV / OFX / text / PDF) and the closing balance can update the account. PDF files (path or base64) are only STORED as a statement: read the PDF yourself, then call again with `rows` and the returned statementId. Finding statements: you can search the user’s email with your own email connector (Gmail, Outlook …) for statement emails from their banks, download the attachments and import each one here. Amount sign convention: negative = money out. Use dryRun to preview.',
+      'Imports bank / credit card statement transactions into an account of the user’s Personal Finances (open_finances first). Pass exactly ONE source: `rows` (transactions you read yourself, e.g. from a PDF statement), `csvText` (CSV / TSV export; columns are auto-detected, or pass csvMapping), `ofxText` (OFX / QFX / QBO file contents — these file types cannot be read by path), `text` (statement lines copied from a PDF: date … description … amount), `path` (absolute path to a .csv / .tsv / .txt / .pdf file on this computer) or `base64` + fileName. Duplicates already in the account are skipped (safe to re-import), rules and category keywords categorise the rows, a statement record keeps the file (CSV / OFX / text / PDF) and the closing balance can update the account. PDF files (path or base64) are only STORED as a statement: read the PDF yourself, then call again with `rows` and the returned statementId. Finding statements: you can search the user’s email with your own email connector (Gmail, Outlook …) for statement emails from their banks, download the attachments and import each one here. Amount sign convention: negative = money out. Use dryRun to preview.',
     global: true,
     input: obj({
       accountId: opt(str('account id, name or last 4 digits (list_items {collection:"accounts"})')),
@@ -751,7 +750,7 @@ export const financeTools: ToolDef[] = [
     name: 'finance_report',
     title: 'Finance report (Personal Finances)',
     description:
-      'Reads the user’s Personal Finances (only while unlocked) and returns totals for a period — income, spending, net, money moved to savings, savings rate — compared with the previous period of the same length, grouped by category, merchant, month or account, plus top / largest items, budget status, monthly trend, detected recurring charges & subscriptions, net worth and the app’s computed insights. Amounts are in the space currency; spending figures are positive numbers. Periods: this_month, last_month, last_3_months, last_6_months, last_12_months, ytd, all, custom (from / to YYYY-MM-DD). Anything you conclude for the user is educational, not professional financial advice.',
+      'Reads the user’s Personal Finances and returns totals for a period — income, spending, net, money moved to savings, savings rate — compared with the previous period of the same length, grouped by category, merchant, month or account, plus top / largest items, budget status, monthly trend, detected recurring charges & subscriptions, net worth and the app’s computed insights. Amounts are in the space currency; spending figures are positive numbers. Periods: this_month, last_month, last_3_months, last_6_months, last_12_months, ytd, all, custom (from / to YYYY-MM-DD). Anything you conclude for the user is educational, not professional financial advice.',
     global: true,
     readOnly: true,
     input: obj({
@@ -859,7 +858,7 @@ export const financeTools: ToolDef[] = [
     name: 'finance_categorize',
     title: 'Categorise transactions (Personal Finances)',
     description:
-      'Sets the category (and optionally merchant name, transfer / recurring flags, tags) of transactions chosen by ids or by a filter, optionally creating a rule so future imports are categorised the same way. Use autoCategorize instead of category to re-run the rules and keywords. Filter fields combine (AND). Works only while the finances are unlocked. Typical flow: finance_report {transactions: 200} or list_items {collection:"transactions"} → finance_categorize {filter:{search:"STARBUCKS"}, category:"dining", createRule:{match:"STARBUCKS", rename:"Starbucks"}}.',
+      'Sets the category (and optionally merchant name, transfer / recurring flags, tags) of transactions chosen by ids or by a filter, optionally creating a rule so future imports are categorised the same way. Use autoCategorize instead of category to re-run the rules and keywords. Filter fields combine (AND). Typical flow: finance_report {transactions: 200} or list_items {collection:"transactions"} → finance_categorize {filter:{search:"STARBUCKS"}, category:"dining", createRule:{match:"STARBUCKS", rename:"Starbucks"}}.',
     global: true,
     input: obj({
       ids: opt(arr(str(), 'transaction ids')),
@@ -1024,7 +1023,7 @@ export const financeTools: ToolDef[] = [
     name: 'finance_plan',
     title: 'Goal, debt payoff and savings projections (Personal Finances)',
     description:
-      'Projections from the user’s Personal Finances (only while unlocked): (1) goals — progress, months left and projected completion date at the monthly contribution, whether the target date is met and the monthly amount needed; (2) debt payoff — avalanche (highest APR first) vs snowball (smallest balance first) vs minimum payments only for every credit card / loan with a balance: months to debt-free, debt-free date, total interest and payoff order, with an optional extra monthly payment; (3) savings — what a monthly saving grows to after 1/3/5/10 (or N) years at an assumed yearly return, plus the user’s average monthly income / spending / surplus. Use it to compare scenarios ("what if I paid $300 extra?"). Results are educational estimates, not professional financial advice.',
+      'Projections from the user’s Personal Finances: (1) goals — progress, months left and projected completion date at the monthly contribution, whether the target date is met and the monthly amount needed; (2) debt payoff — avalanche (highest APR first) vs snowball (smallest balance first) vs minimum payments only for every credit card / loan with a balance: months to debt-free, debt-free date, total interest and payoff order, with an optional extra monthly payment; (3) savings — what a monthly saving grows to after 1/3/5/10 (or N) years at an assumed yearly return, plus the user’s average monthly income / spending / surplus. Use it to compare scenarios ("what if I paid $300 extra?"). Results are educational estimates, not professional financial advice.',
     global: true,
     readOnly: true,
     input: obj({

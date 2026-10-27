@@ -201,14 +201,14 @@ export function AskAgentCard({ prompts = AGENT_PROMPTS, limit, compact }: { prom
           <Bot size={15} /> Ask your agent
         </span>
       }
-      sub={compact ? undefined : 'Connected AI agents (Claude and others via MCP) can read and organise your finances while they are unlocked.'}
+      sub={compact ? undefined : 'Connected AI agents (Claude and others via MCP) can read and organise your finances.'}
     >
       <div className="fin-prompts">
         {shown.map((p) => (
           <PromptRow key={p.title} {...p} />
         ))}
       </div>
-      <p className="fin-footnote">Agents use their own email / drive connectors to find statements, then the finance_* tools here. They stop working the moment you lock your finances.</p>
+      <p className="fin-footnote">Agents use their own email / drive connectors to find statements, then the finance_* tools here. Locking only hides the numbers on your screen.</p>
     </FinCard>
   );
 }

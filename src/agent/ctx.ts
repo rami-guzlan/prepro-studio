@@ -18,7 +18,6 @@ import { BUSINESS_LIBRARY_COLLECTIONS, BUSINESS_LIBRARY_SINGLETONS } from './kin
 import { FINANCE_COLLECTIONS, FINANCE_SINGLETONS } from './kinds/finance';
 import { TRAINING_COLLECTIONS, TRAINING_SINGLETONS } from './kinds/training';
 import type { SpaceKind } from '@/spaces/types';
-import { isFinanceUnlocked } from '@/spaces/finance/lock';
 
 export class AgentError extends Error {}
 
@@ -60,16 +59,11 @@ const KIND_HINT: Record<SpaceKind, string> = {
   training: 'Training (open_training)',
 };
 
-/** The open space when it is of this kind (finance also requires the finances to be unlocked). */
+/** The open space when it is of this kind. */
 export function spaceOf(kind: SpaceKind): SpaceData {
   const s = useSpaceStore.getState().space;
   if (!s || openKind() !== 'space' || (s.meta.kind ?? 'marketing') !== kind) fail(`This tool works in ${KIND_HINT[kind]}. Open it first.`);
-  if (kind === 'finance') requireFinanceUnlocked();
   return s;
-}
-
-export function requireFinanceUnlocked() {
-  if (!isFinanceUnlocked()) fail('Personal Finances are locked. Ask the user to unlock them in PrePro Studio (Library → Personal Finances, enter the PIN); agents can read them only while they are unlocked.');
 }
 
 /** Collections and single fields of a kind of space. */
@@ -101,7 +95,6 @@ export function activeDoc(): ActiveDoc {
   if (kind === 'space') {
     const doc = useSpaceStore.getState().space!;
     const sk: SpaceKind = doc.meta.kind ?? 'marketing';
-    if (sk === 'finance') requireFinanceUnlocked();
     return { kind, spaceKind: sk, doc, ...spaceRegistry(sk), update: (r, o) => updateSpace(r as any, o) };
   }
   if (kind === 'project')

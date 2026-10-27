@@ -1,10 +1,10 @@
 /* Workspace of an open space (any kind): sidebar + the active module; Marketing
    Spaces also host the content editor (which opens over any module). */
 import { Component, Suspense, type ReactNode } from 'react';
-import { Folder, FolderOpen, Home as HomeIcon, Keyboard, Loader2, Lock, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Redo2, Settings, Sun, TriangleAlert, Undo2 } from 'lucide-react';
+import { Folder, FolderOpen, Home as HomeIcon, Keyboard, Loader2, Lock, LockKeyhole, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Redo2, Settings, Sun, TriangleAlert, Undo2 } from 'lucide-react';
 import { groupsFor, moduleDefFor, modulesFor } from '@/spaces/registry';
 import { KIND_INFO } from '@/spaces/kinds';
-import { lockFinances } from '@/spaces/finance/lock';
+import { lockFinances, requestFinanceUnlock, useFinanceLock } from '@/spaces/finance/lock';
 import { SPACE_TYPES } from '@/spaces/constants';
 import { ContentEditorHost } from '@/spaces/modules/content/ContentEditor';
 import { navigateSpace, setTheme, toggleSidebar, useApp } from '@/store/app';
@@ -156,12 +156,30 @@ function SpaceSidebar() {
   );
 }
 
+/** Personal Finances open while the screen is locked (an agent opened them, or the
+   user locked them): cover the numbers until the PIN is entered. */
+function FinanceLockCover() {
+  return (
+    <div className="empty" style={{ flex: 1 }}>
+      <div className="empty-icon">
+        <LockKeyhole />
+      </div>
+      <h3>Personal Finances are locked</h3>
+      <p className="muted small">Enter your PIN to see them. Connected AI agents can keep working while the screen is locked.</p>
+      <Button variant="primary" onClick={() => void requestFinanceUnlock()}>
+        Unlock
+      </Button>
+    </div>
+  );
+}
+
 export function SpaceWorkspace() {
   const moduleId = useApp((s) => s.spaceModuleId);
   const phone = useIsPhone();
   const collapsed = useApp((s) => s.sidebarCollapsed) && !phone;
   const navOpen = useApp((s) => s.navOpen);
   const kind = useSpace((s) => s.meta.kind ?? 'marketing');
+  const finLocked = useFinanceLock((s) => !s.unlocked) && kind === 'finance';
   const def = moduleDefFor(kind, moduleId);
   const Comp = def.component;
   const tabs = PHONE_TABS[kind].map((t) => {
@@ -181,7 +199,7 @@ export function SpaceWorkspace() {
               </div>
             }
           >
-            <Comp key={moduleId} />
+            {finLocked ? <FinanceLockCover /> : <Comp key={moduleId} />}
           </Suspense>
         </SpaceModuleBoundary>
       </main>
