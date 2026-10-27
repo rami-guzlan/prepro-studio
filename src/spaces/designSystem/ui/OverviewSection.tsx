@@ -60,7 +60,7 @@ export function OverviewSection() {
             <Input value={ds.version} placeholder="e.g. 1.0" onChange={(v) => dsSet('version', v)} />
           </Field>
           <Field label="Summary" span="all" hint="One paragraph: what the system covers and what it is used to make.">
-            <Textarea autoGrow minRows={3} value={ds.summary} placeholder="e.g. The visual system of Intuition’s proposals, decks and social posts: a dark, confident look built on oversized type, a cyan accent and a spectrum motif." onChange={(v) => dsSet('summary', v)} />
+            <Textarea autoGrow minRows={3} value={ds.summary} placeholder="e.g. The visual system of Acme’s proposals, decks and social posts: a dark, confident look built on oversized type, a cyan accent and a spectrum motif." onChange={(v) => dsSet('summary', v)} />
           </Field>
         </div>
       </div>
@@ -80,7 +80,7 @@ export function OverviewSection() {
         <SubHead title="Brand intent" hint="Who it is for and what the visuals have to achieve" />
         <div className="ds-grid-3">
           <Field label="Audience">
-            <Textarea autoGrow minRows={2} value={i.audience} placeholder="e.g. Heads of L&D at US banks and insurers" onChange={(v) => dsSet('intent.audience', v)} />
+            <Textarea autoGrow minRows={2} value={i.audience} placeholder="e.g. Marketing leads at mid-size software companies" onChange={(v) => dsSet('intent.audience', v)} />
           </Field>
           <Field label="Impression to leave">
             <Textarea autoGrow minRows={2} value={i.impression} placeholder="e.g. Serious, modern experts who make learning measurable" onChange={(v) => dsSet('intent.impression', v)} />

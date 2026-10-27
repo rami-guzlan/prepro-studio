@@ -38,7 +38,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
           <Select value={p.type} options={BUSINESS_TYPES.map((t) => ({ value: t.value, label: `${t.emoji} ${t.label}` }))} onChange={(v) => setProfile({ type: v as BusinessType }, false)} />
         </Field>
         <Field label="Legal / registered name" hint="Printed on invoices and documents">
-          <Input value={p.legalName} placeholder="e.g. Guzlan Media LLC" onChange={(v) => setProfile({ legalName: v || undefined })} />
+          <Input value={p.legalName} placeholder="e.g. Riverside Media LLC" onChange={(v) => setProfile({ legalName: v || undefined })} />
         </Field>
         <Field label="Entity type">
           <Input value={p.entityType} placeholder="e.g. limited liability company, sole proprietorship" onChange={(v) => setProfile({ entityType: v || undefined })} />

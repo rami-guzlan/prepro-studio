@@ -30,7 +30,7 @@ export type DSScope = 'brand' | 'campaign';
 
 export interface DSTheme {
   id: ID;
-  /** e.g. "IKN", "Intuition Light", "Intuition Dark" */
+  /** e.g. "Brand", "Brand Light", "Brand Dark" */
   name: string;
   mode: 'light' | 'dark';
   isDefault?: boolean;
@@ -292,7 +292,7 @@ export interface DSSource {
 }
 
 export interface DesignSystem {
-  /** e.g. "Intuition Proposal Studio" */
+  /** e.g. "Acme Proposal Studio" */
   name?: string;
   /** one paragraph: what this system is for */
   summary?: string;

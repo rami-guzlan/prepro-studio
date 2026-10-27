@@ -348,7 +348,7 @@ function matchBrace(s: string, open: number): number {
   return s.length;
 }
 
-/** A short comment used as a section heading ("Intuition core", "— Neutrals —"); '' for prose. */
+/** A short comment used as a section heading ("Brand core", "— Neutrals —"); '' for prose. */
 function cleanHeading(text: string): string {
   const first = text.split(/\r?\n/).map((l) => l.trim()).find((l) => l && !/^[-=*#/\s]+$/.test(l)) ?? '';
   const h = first

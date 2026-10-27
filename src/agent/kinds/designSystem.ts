@@ -61,7 +61,7 @@ export const DS_COLLECTIONS: CollectionDef[] = [
     name: 'ds_themes',
     label: 'Design system: themes',
     module: 'assets' as any,
-    description: 'Themes of the design system (e.g. "Light", "Dark", "IKN"). Semantic tokens (ds_semantic_tokens) have one value per theme.',
+    description: 'Themes of the design system (e.g. "Light", "Dark", "Brand"). Semantic tokens (ds_semantic_tokens) have one value per theme.',
     kind: 'array',
     ...list('themes'),
     idPrefix: 'dsth',

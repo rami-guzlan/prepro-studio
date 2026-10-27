@@ -98,13 +98,13 @@ export function NewBusinessDialog({ open, onClose }: { open: boolean; onClose: (
         </div>
         <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
           <Field label="Name">
-            <Input autoFocus value={title} onChange={setTitle} placeholder="e.g. Rami Guzlan Studio, Trailer edits, Consulting" />
+            <Input autoFocus value={title} onChange={setTitle} placeholder="e.g. Riverside Studio, Trailer edits, Consulting" />
           </Field>
           <Field label="Colour">
             <ColorPicker value={color ?? TYPE_COLORS[type]} onChange={(c) => setColor(c ?? undefined)} />
           </Field>
           <Field label="Legal / registered name" hint="Used on invoices and documents">
-            <Input value={legalName} onChange={setLegalName} placeholder="Optional, e.g. Guzlan Media LLC" />
+            <Input value={legalName} onChange={setLegalName} placeholder="Optional, e.g. Riverside Media LLC" />
           </Field>
           <Field label="Your name (signer)">
             <Input value={ownerName} onChange={setOwnerName} placeholder="Optional" />

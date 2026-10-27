@@ -196,7 +196,7 @@ function Themes() {
             </>
           }
         >
-          Themes let an agent switch a whole look by name (e.g. “IKN”, “Intuition Light”, “Intuition Dark”). Note what changes beyond the colours.
+          Themes let an agent switch a whole look by name (e.g. “Brand”, “Brand Light”, “Brand Dark”). Note what changes beyond the colours.
         </Teach>
       ) : (
         <div className="ds-themes">

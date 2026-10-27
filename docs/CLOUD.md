@@ -32,6 +32,12 @@ tabs with that document open fetch it and merge it into theirs
 race gets a 409 and is merged and saved again. The bar at the bottom right
 shows who else is in the same document.
 
+Edits merge item by item (lists with ids), list item by list item (lists without ids, such as screenplay
+paragraphs) and, inside one text field, letter by letter, so two people can type in the same field at once. Text
+fields keep the caret where it was when someone else's edit arrives, and the screenplay editor replaces only the
+changed range. Tabs ping every 20 s and reconnect when nothing has arrived for 50 s (laptop sleep, phone in a
+pocket, network change); coming back to a tab reconnects at once and fetches what changed meanwhile.
+
 Open documents are kept in the server's memory and written to Cloud Storage at
 most every 2.5 s (Cloud Storage allows about one write per second per object),
 so the service runs as **one instance** (`--max-instances 1`). Pending writes
@@ -55,6 +61,55 @@ the owner's Finance tools work only while the owner has Finances unlocked in a r
 
 An agent acts as its person and never gets the Finance or Training tools unless that person is the owner.
 
+## Set up your own (from scratch)
+
+You need a Google Cloud project with billing turned on, the [gcloud CLI](https://cloud.google.com/sdk/docs/install)
+signed in (`gcloud auth login`) and Node.js 20+. Replace `<project>` with your project ID and `<you@example.com>`
+with the owner's email. The commands are PowerShell; in bash, use `\` for line breaks.
+
+```powershell
+gcloud config set project <project>
+
+# 1. services
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com identitytoolkit.googleapis.com secretmanager.googleapis.com apikeys.googleapis.com iam.googleapis.com
+
+# 2. a private data bucket with versioning (old versions removed after 30 days)
+gcloud storage buckets create gs://<project>-data --location=us-east1 --uniform-bucket-level-access --public-access-prevention
+gcloud storage buckets update gs://<project>-data --versioning
+'{"rule":[{"action":{"type":"Delete"},"condition":{"daysSinceNoncurrentTime":30,"isLive":false}}]}' | Out-File -Encoding ascii lifecycle.json
+gcloud storage buckets update gs://<project>-data --lifecycle-file=lifecycle.json
+
+# 3. the app's own service account, with access to that bucket only
+gcloud iam service-accounts create prepro-run --display-name="PrePro Studio app"
+$sa = "prepro-run@<project>.iam.gserviceaccount.com"
+gcloud storage buckets add-iam-policy-binding gs://<project>-data --member="serviceAccount:$sa" --role=roles/storage.objectAdmin
+gcloud projects add-iam-policy-binding <project> --member="serviceAccount:$sa" --role=roles/identitytoolkit.admin --condition=None
+gcloud projects add-iam-policy-binding <project> --member="serviceAccount:$sa" --role=roles/serviceusage.serviceUsageConsumer --condition=None
+```
+
+**4. Sign-in (Identity Platform).** In the Cloud console open *Identity Platform*, enable it, add the
+**Email / Password** provider, and under *Settings → User actions* untick **Enable create (sign-up)** so people can
+only join by invite. (Or with the REST API: `identityPlatform:initializeAuth`, then patch the project config with
+`signIn.email.enabled` and `client.permissions.disabledUserSignup`.)
+
+```powershell
+# 5. a sign-in API key restricted to Identity Toolkit, and a session secret, in Secret Manager
+gcloud services api-keys create --display-name="PrePro Studio sign-in (server only)" --api-target=service=identitytoolkit.googleapis.com
+$key = gcloud services api-keys list --filter="displayName='PrePro Studio sign-in (server only)'" --format="value(name)"
+gcloud services api-keys get-key-string $key --format="value(keyString)" | Out-File -NoNewline -Encoding ascii key.txt
+-join ((1..48) | ForEach-Object { '{0:x2}' -f (Get-Random -Maximum 256) }) | Out-File -NoNewline -Encoding ascii secret.txt
+gcloud secrets create prepro-identity-api-key --replication-policy=automatic --data-file=key.txt
+gcloud secrets create prepro-session-secret --replication-policy=automatic --data-file=secret.txt
+Remove-Item key.txt, secret.txt
+foreach ($s in "prepro-identity-api-key","prepro-session-secret") { gcloud secrets add-iam-policy-binding $s --member="serviceAccount:$sa" --role=roles/secretmanager.secretAccessor }
+
+# 6. deploy (builds the container with Cloud Build; the owner defaults to the signed-in gcloud account)
+powershell -File scripts/deploy-cloud.ps1 -Project <project> -OwnerEmail <you@example.com>
+```
+
+**7. First sign-in.** Create the owner's one-time sign-in link (see *Everyday tasks*), open it, set a password, and
+you are in with all five tabs. Add a budget alert in *Billing → Budgets & alerts* so a surprise can't grow quietly.
+
 ## Everyday tasks
 
 ```powershell
@@ -73,10 +128,10 @@ On a network with TLS inspection, point gcloud at a bundle of the Windows certif
 
 ## Tests
 
-`scripts/cloud-test.mjs` runs 74 end-to-end checks (set `CHROME_PATH` to Chrome or Edge to include agent tabs) (sign-in, invites, scopes,
-Finance/Training lock-out, live updates, conflicts, MCP relay, OAuth with PKCE,
-turning a person off) against a running server and the real Identity Platform,
-then removes its two test accounts. Run the server locally with `STORAGE=disk`
+`scripts/cloud-test.mjs` runs up to 74 end-to-end checks (sign-in, invites, scopes, Finance/Training lock-out,
+live updates, conflicts, MCP relay, OAuth with PKCE, agent tabs, turning a person off) against a running server and
+the real Identity Platform, then removes its two test accounts. Set `CHROME_PATH` to Chrome or Edge to include the
+agent-tab checks. Run the server locally with `STORAGE=disk`
 (or a throwaway bucket), `OWNER_EMAIL` set to the test owner, then:
 
 ```powershell
@@ -89,4 +144,4 @@ node scripts/cloud-test.mjs
 - Uploads are capped at about 31 MB per file (Cloud Run's request limit is 32 MB).
 - The first visit after a quiet spell takes a few seconds while the instance starts.
 - Export PDF uses the browser's print dialog (Save as PDF); the merged production book is desktop only.
-- If two people edit the very same text field at the same moment, the later save wins for that field; everything else merges.
+- If two people type at the very same spot of a field in the same second, both pieces of text are kept side by side; tidy them up by hand.
