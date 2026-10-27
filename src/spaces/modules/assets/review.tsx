@@ -2,10 +2,10 @@
    links for chosen sections (images, videos …), and the feedback that comes back.
    The links and feedback live on the server (server/reviews.mjs), not in the space. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, ExternalLink, MessageSquareText, Power, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Copy, ExternalLink, MessageSquareText, Power, Send, Trash2 } from 'lucide-react';
 import type { BrandAsset } from '@/spaces/types';
 import { assetUrl } from '@/backend';
-import { reviewApi, type ReviewLink, type ReviewResponse } from '@/backend/cloud';
+import { reviewApi, type ReviewLink } from '@/backend/cloud';
 import { useSpace, useSpaceId } from '@/store/space';
 import { plural } from '@/lib/text';
 import { Button, Checkbox, confirmDialog, Field, Input, Modal, Select, Textarea, toast } from '@/ui';
@@ -69,6 +69,9 @@ function ReviewDialog({ links, reload, spaceId, onClose }: { links: ReviewLink[]
   const [showNotes, setShowNotes] = useState(true);
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState<string | null>(null);
+  // the link whose feedback is open (null: the list)
+  const [viewing, setViewing] = useState<string | null>(null);
+  const shown = links.find((l) => l.token === viewing);
 
   const create = async () => {
     if (!sections.length) return toast('Choose at least one section', 'error');
@@ -89,55 +92,89 @@ function ReviewDialog({ links, reload, spaceId, onClose }: { links: ReviewLink[]
 
   return (
     <Modal open onClose={onClose} size="lg" title="Share for review">
-      <div className="sp-review">
-        <p className="muted small" style={{ marginTop: 0 }}>
-          Anyone with the link can see the sections you choose, mark each item Approve or Needs changes, comment and send it back to you. No account needed. It always shows the current items of those sections, nothing else from this space.
-        </p>
-        <div className="sp-review-new">
-          <div className="sp-review-sections" role="group" aria-label="Sections to share">
-            {SECTIONS.map((s) => {
-              const Icon = s.icon;
-              return (
-                <label key={s.id} className={`sp-review-section ${sections.includes(s.id) ? 'on' : ''} ${counts[s.id] ? '' : 'none'}`}>
-                  <input type="checkbox" checked={sections.includes(s.id)} onChange={() => toggle(s.id)} />
-                  <Icon size={14} />
-                  <span className="grow">{s.title}</span>
-                  <span className="n">{counts[s.id] || '–'}</span>
-                </label>
-              );
-            })}
-          </div>
-          <div className="col" style={{ gap: 10 }}>
-            <Field label="Title">
-              <Input value={title} onChange={setTitle} />
-            </Field>
-            <Field label="Note for the reviewer">
-              <Textarea value={message} rows={3} placeholder="What should they look at? What do you need from them, and by when?" onChange={setMessage} />
-            </Field>
-            <div className="row wrap" style={{ gap: 12, alignItems: 'flex-end' }}>
-              <Field label="Link works for">
-                <Select value={days} options={EXPIRY} onChange={setDays} />
+      {shown ? (
+        <LinkDetail link={shown} assets={assets} spaceId={spaceId} reload={reload} onBack={() => setViewing(null)} />
+      ) : (
+        <div className="sp-review">
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Anyone with the link can see the sections you choose, mark each item Approve or Needs changes, comment and send it back to you. No account needed. It always shows the current items of
+            those sections, nothing else from this space.
+          </p>
+          <div className="sp-review-new">
+            <div className="sp-review-sections" role="group" aria-label="Sections to share">
+              {SECTIONS.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <label key={s.id} className={`sp-review-section ${sections.includes(s.id) ? 'on' : ''} ${counts[s.id] ? '' : 'none'}`}>
+                    <input type="checkbox" checked={sections.includes(s.id)} onChange={() => toggle(s.id)} />
+                    <Icon size={14} />
+                    <span className="grow">{s.title}</span>
+                    <span className="n">{counts[s.id] || '–'}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="col" style={{ gap: 10 }}>
+              <Field label="Title">
+                <Input value={title} onChange={setTitle} />
               </Field>
-              <Checkbox checked={showNotes} onChange={setShowNotes} label="Show each item’s notes" />
-              <div className="spacer" />
-              <Button variant="primary" icon={Send} disabled={busy || !sections.length} onClick={() => void create()}>
-                Create link
-              </Button>
+              <Field label="Note for the reviewer">
+                <Textarea value={message} rows={3} placeholder="What should they look at? What do you need from them, and by when?" onChange={setMessage} />
+              </Field>
+              <div className="row wrap" style={{ gap: 12, alignItems: 'flex-end' }}>
+                <Field label="Link works for">
+                  <Select value={days} options={EXPIRY} onChange={setDays} />
+                </Field>
+                <Checkbox checked={showNotes} onChange={setShowNotes} label="Show each item’s notes" />
+                <div className="spacer" />
+                <Button variant="primary" icon={Send} disabled={busy || !sections.length} onClick={() => void create()}>
+                  Create link
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {links.length > 0 && <h3 className="sp-review-h">Review links</h3>}
-        {links.map((l) => (
-          <LinkCard key={l.token} link={l} fresh={l.token === made} assets={assets} spaceId={spaceId} reload={reload} />
-        ))}
-      </div>
+          {links.length > 0 && <h3 className="sp-review-h">Review links · click one to see its feedback</h3>}
+          {links.map((l) => (
+            <LinkRow key={l.token} link={l} fresh={l.token === made} onOpen={() => setViewing(l.token)} />
+          ))}
+        </div>
+      )}
     </Modal>
   );
 }
 
-function LinkCard({ link: l, fresh, assets, spaceId, reload }: { link: ReviewLink; fresh: boolean; assets: BrandAsset[]; spaceId: string; reload: () => void }) {
-  const [showAll, setShowAll] = useState(fresh || l.responses.length > 0);
+function LinkRow({ link: l, fresh, onOpen }: { link: ReviewLink; fresh: boolean; onOpen: () => void }) {
+  const url = reviewApi.url(l.token);
+  const n = l.responses.length;
+  return (
+    <div className={`sp-review-link ${isOpen(l) ? '' : 'closed'} ${fresh ? 'fresh' : ''}`}>
+      <button type="button" className="sp-review-row" onClick={onOpen} title="See the feedback and manage the link">
+        <span className="grow">
+          <span className="strong">{l.title}</span>
+          <span className="muted small sp-review-meta">
+            {sectionNames(l)} · {statusOf(l)} · {plural(l.views || 0, 'view')}
+          </span>
+        </span>
+        <span className={`sp-review-count ${n ? 'has' : ''}`}>
+          <MessageSquareText size={14} /> {n ? plural(n, 'response') : 'No feedback yet'}
+        </span>
+        <ChevronRight size={16} className="muted" />
+      </button>
+      {fresh && (
+        <div className="sp-review-url">
+          <Check size={14} /> Link copied: <code>{url}</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const sectionNames = (l: ReviewLink) => l.sections.map((id) => SECTIONS.find((s) => s.id === id)?.title ?? id).join(', ');
+const statusOf = (l: ReviewLink) => (l.revoked ? 'Turned off' : !isOpen(l) ? 'Expired' : l.expiresAt ? `Open until ${new Date(l.expiresAt).toLocaleDateString()}` : 'Open');
+
+/** One review link: its feedback by item and by person, and the link's controls. */
+function LinkDetail({ link: l, assets, spaceId, reload, onBack }: { link: ReviewLink; assets: BrandAsset[]; spaceId: string; reload: () => void; onBack: () => void }) {
   const url = reviewApi.url(l.token);
   const open = isOpen(l);
   const act = async (fn: () => Promise<unknown>) => {
@@ -148,82 +185,142 @@ function LinkCard({ link: l, fresh, assets, spaceId, reload }: { link: ReviewLin
       toast(e instanceof Error ? e.message : String(e), 'error');
     }
   };
-  const sectionNames = l.sections.map((id) => SECTIONS.find((s) => s.id === id)?.title ?? id).join(', ');
-  const status = l.revoked ? 'Turned off' : !open ? 'Expired' : l.expiresAt ? `Open until ${new Date(l.expiresAt).toLocaleDateString()}` : 'Open';
+  const responses = useMemo(() => [...l.responses].reverse(), [l.responses]);
+  // every item someone gave a decision or a comment on, in Brand Kit order
+  const byItem = useMemo(() => {
+    const ids = new Set(responses.flatMap((r) => Object.keys(r.items)));
+    const known = assets.filter((a) => ids.has(a.id));
+    const gone = [...ids].filter((id) => !assets.some((a) => a.id === id));
+    return [...known.map((a) => ({ id: a.id, a })), ...gone.map((id) => ({ id, a: undefined }))].map(({ id, a }) => ({
+      id,
+      a,
+      notes: responses.filter((r) => r.items[id]).map((r) => ({ r, f: r.items[id] })),
+    }));
+  }, [responses, assets]);
+  const tally = useMemo(() => {
+    let approve = 0;
+    let changes = 0;
+    for (const r of l.responses) for (const f of Object.values(r.items)) f.decision === 'approve' ? approve++ : f.decision === 'changes' && changes++;
+    return { approve, changes };
+  }, [l.responses]);
+  const overall = responses.filter((r) => r.overall || r.decision);
+
   return (
-    <div className={`sp-review-link ${open ? '' : 'closed'} ${fresh ? 'fresh' : ''}`}>
-      <div className="sp-review-link-head">
+    <div className="sp-review-detail">
+      <button type="button" className="sp-review-back" onClick={onBack}>
+        <ArrowLeft size={14} /> All review links
+      </button>
+      <div className="sp-review-detail-head">
         <div className="grow">
-          <div className="strong">{l.title}</div>
+          <h3>{l.title}</h3>
           <div className="muted small">
-            {sectionNames} · {status} · {plural(l.views || 0, 'view')} · by {l.createdByName}, {when(l.createdAt)}
+            {sectionNames(l)} · {statusOf(l)} · {plural(l.views || 0, 'view')} · by {l.createdByName}, {when(l.createdAt)}
           </div>
         </div>
         <Button size="sm" icon={Copy} disabled={!open} onClick={() => void copyText(url, 'the review link')}>
           Copy link
         </Button>
         <Button size="sm" variant="ghost" icon={ExternalLink} disabled={!open} title="Open the review page" onClick={() => window.open(url, '_blank', 'noopener')} />
-        <Button size="sm" variant="ghost" icon={Power} title={l.revoked ? 'Turn the link back on' : 'Turn the link off'} onClick={() => void act(() => reviewApi.change(spaceId, l.token, { revoked: !l.revoked }))} />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={Power}
+          title={l.revoked ? 'Turn the link back on' : 'Turn the link off'}
+          onClick={() => void act(() => reviewApi.change(spaceId, l.token, { revoked: !l.revoked }))}
+        />
         <Button
           size="sm"
           variant="ghost"
           icon={Trash2}
           title="Delete the link and its feedback"
           onClick={() =>
-            void confirmDialog({ title: 'Delete this review link?', message: `“${l.title}” stops working and its ${plural(l.responses.length, 'response')} are deleted.`, confirmLabel: 'Delete', danger: true }).then(
-              (ok) => {
-                if (ok) void act(() => reviewApi.remove(spaceId, l.token));
-              },
-            )
+            void confirmDialog({
+              title: 'Delete this review link?',
+              message: `“${l.title}” stops working and its ${plural(l.responses.length, 'response')} are deleted.`,
+              confirmLabel: 'Delete',
+              danger: true,
+            }).then((ok) => {
+              if (ok) void act(() => reviewApi.remove(spaceId, l.token)).then(onBack);
+            })
           }
         />
       </div>
-      {fresh && (
-        <div className="sp-review-url">
-          <Check size={14} /> Link copied: <code>{url}</code>
+      {l.message && <p className="sp-review-text muted">{l.message}</p>}
+
+      {!l.responses.length ? (
+        <div className="sp-review-empty">
+          <MessageSquareText size={20} />
+          <div>
+            <div className="strong">No feedback yet</div>
+            <div className="muted small">
+              {open ? 'When someone sends feedback from the link, it shows up here, and you get a notice if this space is open.' : 'This link is not open, so nobody can send feedback through it.'}
+            </div>
+          </div>
         </div>
-      )}
-      {l.responses.length > 0 && (
-        <div className="sp-review-responses">
-          <button type="button" className="sp-review-toggle" onClick={() => setShowAll((v) => !v)}>
-            <MessageSquareText size={14} /> {plural(l.responses.length, 'response')} {showAll ? '▾' : '▸'}
-          </button>
-          {showAll && [...l.responses].reverse().map((r) => <Response key={r.id} r={r} assets={assets} />)}
-        </div>
+      ) : (
+        <>
+          <div className="sp-review-summary">
+            <span>
+              <strong>{plural(l.responses.length, 'response')}</strong> from {[...new Set(l.responses.map((r) => r.name))].join(', ')}
+            </span>
+            {tally.approve > 0 && <span className="sp-review-dec approve">{tally.approve} approved</span>}
+            {tally.changes > 0 && <span className="sp-review-dec changes">{tally.changes} need changes</span>}
+          </div>
+
+          {overall.length > 0 && (
+            <>
+              <h4 className="sp-review-sub">Overall</h4>
+              {overall.map((r) => (
+                <div key={r.id} className="sp-review-note">
+                  <div className="row" style={{ gap: 8 }}>
+                    <span className="strong">{r.name}</span>
+                    {r.decision && <span className={`sp-review-dec ${r.decision}`}>{r.decision === 'approve' ? 'Approved all' : DECISION_LABEL[r.decision]}</span>}
+                    <span className="muted small">{when(r.at)}</span>
+                  </div>
+                  {r.overall && <p className="sp-review-text">{r.overall}</p>}
+                </div>
+              ))}
+            </>
+          )}
+
+          {byItem.length > 0 && (
+            <>
+              <h4 className="sp-review-sub">By item</h4>
+              {byItem.map(({ id, a, notes }) => (
+                <div key={id} className="sp-review-byitem">
+                  <ItemThumb a={a} />
+                  <div className="grow">
+                    <div className="strong ellipsis">{a?.name || (a ? 'Untitled' : 'Item no longer in the kit')}</div>
+                    {notes.map(({ r, f }) => (
+                      <div key={r.id} className="sp-review-note">
+                        <div className="row" style={{ gap: 8 }}>
+                          <span>{r.name}</span>
+                          {f.decision && <span className={`sp-review-dec ${f.decision}`}>{DECISION_LABEL[f.decision]}</span>}
+                          <span className="muted small">{when(r.at)}</span>
+                        </div>
+                        {f.comment && <p className="sp-review-text">{f.comment}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function Response({ r, assets }: { r: ReviewResponse; assets: BrandAsset[] }) {
-  const items = Object.entries(r.items);
+const VIDEO_FILE = /\.(mp4|mov|webm|m4v)$/i;
+
+/** A still of the item: its image, else the first frame of its video file. Click to open it full size. */
+function ItemThumb({ a }: { a: BrandAsset | undefined }) {
+  const src = a?.image ? assetUrl(a.image) : a?.file && VIDEO_FILE.test(a.fileName || a.file) ? assetUrl(a.file) : '';
+  if (!src) return <div className="sp-review-bigthumb" />;
   return (
-    <div className="sp-review-resp">
-      <div className="row" style={{ gap: 8 }}>
-        <span className="strong">{r.name}</span>
-        {r.decision && <span className={`sp-review-dec ${r.decision}`}>{r.decision === 'approve' ? 'Approved all' : DECISION_LABEL[r.decision]}</span>}
-        <span className="muted small">{when(r.at)}</span>
-      </div>
-      {r.overall && <p className="sp-review-text">{r.overall}</p>}
-      {items.length > 0 && (
-        <div className="sp-review-items">
-          {items.map(([id, f]) => {
-            const a = assets.find((x) => x.id === id);
-            return (
-              <div key={id} className="sp-review-item">
-                <div className="sp-review-thumb">{a?.image ? <img src={assetUrl(a.image)} alt="" /> : null}</div>
-                <div className="grow">
-                  <div className="row" style={{ gap: 8 }}>
-                    <span className="ellipsis">{a?.name || (a ? 'Untitled' : 'Item no longer in the kit')}</span>
-                    {f.decision && <span className={`sp-review-dec ${f.decision}`}>{DECISION_LABEL[f.decision]}</span>}
-                  </div>
-                  {f.comment && <p className="sp-review-text">{f.comment}</p>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <button type="button" className="sp-review-bigthumb" title="Open full size" onClick={() => window.open(src, '_blank', 'noopener')}>
+      {a?.image ? <img src={src} alt="" /> : <video src={`${src}#t=0.5`} muted playsInline preload="metadata" />}
+    </button>
   );
 }
