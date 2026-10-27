@@ -959,3 +959,19 @@
 .sp-review-bigthumb { width: 160px; aspect-ratio: 16 / 10; flex: none; border-radius: 6px; overflow: hidden; background: var(--bg-sunken, rgba(127, 127, 127, 0.12)); border: 0; padding: 0; cursor: zoom-in; }
 .sp-review-bigthumb img, .sp-review-bigthumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
 @media (max-width: 560px) { .sp-review-byitem { flex-direction: column; } .sp-review-bigthumb { width: 100%; } }
+.sp-review-picks { margin-top: 4px; }
+.sp-review-pick { margin-top: 10px; }
+.sp-review-pick-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.sp-review-linkbtn { border: 0; background: none; color: var(--accent); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0 2px; }
+.sp-review-linkbtn:disabled { color: var(--text-muted); cursor: default; }
+.sp-review-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.sp-review-tile { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 12px; text-align: left; cursor: pointer; opacity: 0.55; }
+.sp-review-tile.on { opacity: 1; border-color: var(--accent); }
+.sp-review-tile-pic { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 5px; display: block; background: var(--bg-sunken, rgba(127, 127, 127, 0.12)); }
+.sp-review-tile-pic.icon { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.sp-review-tile-name { display: block; padding: 0 2px 2px; }
+.sp-review-tile-check { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #fff; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center; color: #fff; }
+.sp-review-tile.on .sp-review-tile-check { background: var(--accent); border-color: var(--accent); }
+.sp-review-pick-group + .sp-review-pick-group { margin-top: 10px; }
+.sp-review-pick-sub { display: flex; align-items: baseline; gap: 8px; margin: 4px 0 6px; font-size: 12.5px; font-weight: 600; }
+.sp-review-create { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }

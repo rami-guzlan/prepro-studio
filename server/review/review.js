@@ -196,7 +196,21 @@
       total += s.items.length;
       root.appendChild(el('h2', {}, [s.title, el('span', { class: 'n', text: String(s.items.length) })]));
       if (!s.items.length) root.appendChild(el('p', { class: 'empty', text: 'Nothing here yet.' }));
-      else root.appendChild(el('div', { class: 'grid' }, s.items.map(item)));
+      else if (!s.items.some(function (i) { return i.campaign; })) root.appendChild(el('div', { class: 'grid' }, s.items.map(item)));
+      else {
+        // campaign resources: general ones first, then one group per campaign
+        var groups = [];
+        s.items.forEach(function (i) {
+          var g = groups.find(function (x) { return x.name === i.campaign; });
+          if (!g) groups.push((g = { name: i.campaign, items: [] }));
+          g.items.push(i);
+        });
+        groups.sort(function (a, b) { return (a.name ? 1 : 0) - (b.name ? 1 : 0); });
+        groups.forEach(function (g) {
+          root.appendChild(el('h3', { class: 'group', text: g.name || 'General' }));
+          root.appendChild(el('div', { class: 'grid' }, g.items.map(item)));
+        });
+      }
     });
     if (total) root.appendChild(sendBox(data));
   }

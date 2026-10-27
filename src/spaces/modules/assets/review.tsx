@@ -2,7 +2,7 @@
    links for chosen sections (images, videos …), and the feedback that comes back.
    The links and feedback live on the server (server/reviews.mjs), not in the space. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, Copy, ExternalLink, MessageSquareText, Power, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Copy, ExternalLink, FileText, MessageSquareText, Power, Send, Trash2 } from 'lucide-react';
 import type { BrandAsset } from '@/spaces/types';
 import { assetUrl } from '@/backend';
 import { reviewApi, type ReviewLink } from '@/backend/cloud';
@@ -10,7 +10,7 @@ import { useSpace, useSpaceId } from '@/store/space';
 import { plural } from '@/lib/text';
 import { Button, Checkbox, confirmDialog, Field, Input, Modal, Select, Textarea, toast } from '@/ui';
 import { copyText } from './actions';
-import { assetsOfSection, SECTIONS, type SectionId } from './util';
+import { assetsOfSection, normalizeHex, SECTIONS, type SectionId } from './util';
 
 const EXPIRY = [
   { value: '7', label: '7 days' },
@@ -69,15 +69,20 @@ function ReviewDialog({ links, reload, spaceId, onClose }: { links: ReviewLink[]
   const [showNotes, setShowNotes] = useState(true);
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState<string | null>(null);
+  // items picked per section; a section without an entry shares all of its items (new ones too)
+  const [picks, setPicks] = useState<Partial<Record<SectionId, string[]>>>({});
   // the link whose feedback is open (null: the list)
   const [viewing, setViewing] = useState<string | null>(null);
   const shown = links.find((l) => l.token === viewing);
 
   const create = async () => {
     if (!sections.length) return toast('Choose at least one section', 'error');
+    const empty = sections.find((id) => picks[id]?.length === 0);
+    if (empty) return toast(`Pick at least one item in ${SECTIONS.find((s) => s.id === empty)!.title}, or untick it`, 'error');
+    const chosen = Object.fromEntries(sections.filter((id) => picks[id]).map((id) => [id, picks[id]!]));
     setBusy(true);
     try {
-      const l = await reviewApi.create(spaceId, { title, message, sections, showNotes, days: Number(days) });
+      const l = await reviewApi.create(spaceId, { title, message, sections, picks: chosen, showNotes, days: Number(days) });
       setMade(l.token);
       reload();
       await copyText(reviewApi.url(l.token), 'the review link');
@@ -88,6 +93,43 @@ function ReviewDialog({ links, reload, spaceId, onClose }: { links: ReviewLink[]
     }
   };
 
+  const pickItem = (sec: SectionId, id: string) =>
+    setPicks((p) => {
+      const all = assetsOfSection(assets, sec).map((a) => a.id);
+      const cur = p[sec] ?? all;
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : all.filter((x) => x === id || cur.includes(x));
+      const out = { ...p };
+      if (next.length === all.length) delete out[sec];
+      else out[sec] = next;
+      return out;
+    });
+  /** Pick or drop a group of items (a campaign's resources) at once. */
+  const pickGroup = (sec: SectionId, ids: string[], on: boolean) =>
+    setPicks((p) => {
+      const all = assetsOfSection(assets, sec).map((a) => a.id);
+      const cur = p[sec] ?? all;
+      const next = on ? all.filter((x) => ids.includes(x) || cur.includes(x)) : cur.filter((x) => !ids.includes(x));
+      const out = { ...p };
+      if (next.length === all.length) delete out[sec];
+      else out[sec] = next;
+      return out;
+    });
+  const campaigns = useSpace((s) => s.campaigns) ?? [];
+  /** Links & documents split into general items and each campaign's resources; other sections are one group. */
+  const groupsOf = (sec: SectionId, items: BrandAsset[]) => {
+    if (sec !== 'links' || !items.some((a) => a.campaignId)) return [{ key: '', name: '', items }];
+    const general = items.filter((a) => !a.campaignId || !campaigns.some((c) => c.id === a.campaignId));
+    const per = campaigns.map((c) => ({ key: c.id, name: c.name || 'Untitled campaign', items: items.filter((a) => a.campaignId === c.id) })).filter((g) => g.items.length);
+    return [...(general.length ? [{ key: 'general', name: 'General', items: general }] : []), ...per];
+  };
+  const pickAll = (sec: SectionId, on: boolean) =>
+    setPicks((p) => {
+      const out = { ...p };
+      if (on) delete out[sec];
+      else out[sec] = [];
+      return out;
+    });
+
   const toggle = (id: SectionId) => setSections((s) => (s.includes(id) ? s.filter((x) => x !== id) : SECTIONS.map((d) => d.id).filter((x) => x === id || s.includes(x))));
 
   return (
@@ -97,8 +139,8 @@ function ReviewDialog({ links, reload, spaceId, onClose }: { links: ReviewLink[]
       ) : (
         <div className="sp-review">
           <p className="muted small" style={{ marginTop: 0 }}>
-            Anyone with the link can see the sections you choose, mark each item Approve or Needs changes, comment and send it back to you. No account needed. It always shows the current items of
-            those sections, nothing else from this space.
+            Anyone with the link can see what you choose, mark each item Approve or Needs changes, comment and send it back to you. No account needed. Tick the sections, then untick any items to leave
+            out. Nothing else from this space is shared.
           </p>
           <div className="sp-review-new">
             <div className="sp-review-sections" role="group" aria-label="Sections to share">
@@ -126,12 +168,78 @@ function ReviewDialog({ links, reload, spaceId, onClose }: { links: ReviewLink[]
                   <Select value={days} options={EXPIRY} onChange={setDays} />
                 </Field>
                 <Checkbox checked={showNotes} onChange={setShowNotes} label="Show each item’s notes" />
-                <div className="spacer" />
-                <Button variant="primary" icon={Send} disabled={busy || !sections.length} onClick={() => void create()}>
-                  Create link
-                </Button>
               </div>
             </div>
+          </div>
+
+          {sections.some((id) => counts[id] > 0) && (
+            <div className="sp-review-picks">
+              <h3 className="sp-review-h">Pick what to share</h3>
+              {sections
+                .filter((id) => counts[id] > 0)
+                .map((sec) => {
+                  const def = SECTIONS.find((s) => s.id === sec)!;
+                  const items = assetsOfSection(assets, sec);
+                  const sel = picks[sec];
+                  const n = sel ? sel.length : items.length;
+                  return (
+                    <div key={sec} className="sp-review-pick">
+                      <div className="sp-review-pick-head">
+                        <span className="strong">{def.title}</span>
+                        <span className="muted small">{sel ? `${n} of ${items.length} picked` : `All ${items.length}, and any you add later`}</span>
+                        <div className="spacer" />
+                        <button type="button" className="sp-review-linkbtn" disabled={!sel} onClick={() => pickAll(sec, true)}>
+                          All
+                        </button>
+                        <button type="button" className="sp-review-linkbtn" disabled={sel?.length === 0} onClick={() => pickAll(sec, false)}>
+                          None
+                        </button>
+                      </div>
+                      {groupsOf(sec, items).map((g) => {
+                        const ids = g.items.map((a) => a.id);
+                        const onCount = ids.filter((id) => !sel || sel.includes(id)).length;
+                        return (
+                          <div key={g.key} className="sp-review-pick-group">
+                            {g.name && (
+                              <div className="sp-review-pick-sub">
+                                <span>{g.name}</span>
+                                <span className="muted small">
+                                  {onCount} of {g.items.length}
+                                </span>
+                                <button type="button" className="sp-review-linkbtn" disabled={onCount === ids.length} onClick={() => pickGroup(sec, ids, true)}>
+                                  All
+                                </button>
+                                <button type="button" className="sp-review-linkbtn" disabled={onCount === 0} onClick={() => pickGroup(sec, ids, false)}>
+                                  None
+                                </button>
+                              </div>
+                            )}
+                            <div className="sp-review-pick-grid">
+                              {g.items.map((a) => {
+                                const on = !sel || sel.includes(a.id);
+                                return (
+                                  <button key={a.id} type="button" className={`sp-review-tile ${on ? 'on' : ''}`} aria-pressed={on} title={a.name || 'Untitled'} onClick={() => pickItem(sec, a.id)}>
+                                    <PickThumb a={a} />
+                                    <span className="sp-review-tile-name ellipsis">{a.name || a.fileName || 'Untitled'}</span>
+                                    <span className="sp-review-tile-check">{on && <Check size={12} />}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+          {/* below the picker, so the items are picked first */}
+          <div className="sp-review-create">
+            <span className="muted small">{sections.length ? `Shares ${sectionSummary(sections, picks, counts)}` : 'Tick at least one section'}</span>
+            <Button variant="primary" icon={Send} disabled={busy || !sections.length} onClick={() => void create()}>
+              Create link
+            </Button>
           </div>
 
           {links.length > 0 && <h3 className="sp-review-h">Review links · click one to see its feedback</h3>}
@@ -170,7 +278,22 @@ function LinkRow({ link: l, fresh, onOpen }: { link: ReviewLink; fresh: boolean;
   );
 }
 
-const sectionNames = (l: ReviewLink) => l.sections.map((id) => SECTIONS.find((s) => s.id === id)?.title ?? id).join(', ');
+/** "3 of 14 Images & references, all Video / footage" */
+const sectionSummary = (sections: SectionId[], picks: Partial<Record<SectionId, string[]>>, counts: Record<SectionId, number>) =>
+  sections
+    .map((id) => {
+      const t = SECTIONS.find((s) => s.id === id)!.title;
+      return picks[id] ? `${picks[id]!.length} of ${counts[id]} ${t}` : `all ${t}`;
+    })
+    .join(', ');
+
+const sectionNames = (l: ReviewLink) =>
+  l.sections
+    .map((id) => {
+      const t = SECTIONS.find((s) => s.id === id)?.title ?? id;
+      return l.picks?.[id] ? `${t} (${plural(l.picks[id].length, 'item')})` : t;
+    })
+    .join(', ');
 const statusOf = (l: ReviewLink) => (l.revoked ? 'Turned off' : !isOpen(l) ? 'Expired' : l.expiresAt ? `Open until ${new Date(l.expiresAt).toLocaleDateString()}` : 'Open');
 
 /** One review link: its feedback by item and by person, and the link's controls. */
@@ -313,6 +436,20 @@ function LinkDetail({ link: l, assets, spaceId, reload, onBack }: { link: Review
 }
 
 const VIDEO_FILE = /\.(mp4|mov|webm|m4v)$/i;
+
+/** Small picture of an item in the picker: its image, a video's first frame, a colour swatch, or its kind's icon. */
+function PickThumb({ a }: { a: BrandAsset }) {
+  const hex = a.kind === 'color' ? normalizeHex(a.value) : null;
+  if (hex) return <span className="sp-review-tile-pic" style={{ background: hex }} />;
+  if (a.image) return <img className="sp-review-tile-pic" src={assetUrl(a.image)} alt="" loading="lazy" />;
+  if (a.file && VIDEO_FILE.test(a.fileName || a.file)) return <video className="sp-review-tile-pic" src={`${assetUrl(a.file)}#t=0.5`} muted playsInline preload="metadata" />;
+  const Icon = a.file ? FileText : (SECTIONS.find((s) => s.kinds.includes(a.kind))?.icon ?? FileText);
+  return (
+    <span className="sp-review-tile-pic icon">
+      <Icon size={18} />
+    </span>
+  );
+}
 
 /** A still of the item: its image, else the first frame of its video file. Click to open it full size. */
 function ItemThumb({ a }: { a: BrandAsset | undefined }) {

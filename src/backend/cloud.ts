@@ -234,6 +234,8 @@ export interface ReviewLink {
   title: string;
   message: string;
   sections: string[];
+  /** items picked per section; a section without picks shares all of its items */
+  picks?: Record<string, string[]>;
   showNotes: boolean;
   createdByName: string;
   createdAt: string;
@@ -247,6 +249,7 @@ export interface NewReviewLink {
   title: string;
   message: string;
   sections: string[];
+  picks?: Record<string, string[]>;
   showNotes: boolean;
   /** days until it stops working; 0 = never */
   days: number;

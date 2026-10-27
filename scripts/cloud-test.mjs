@@ -297,6 +297,12 @@ async function main() {
     check('views are counted', list.body[0].views >= 1);
     const big = await owner.json(`/api/docs/${M1}/assets/upload`, { method: 'POST', body: { ext: 'mp4', size: 200 * 1024 * 1024 } });
     check('big uploads get a name (and a bucket address on Cloud Storage)', big.status === 200 && /^a_.*.mp4$/.test(big.body.name) && 'uploadUrl' in big.body, JSON.stringify(big.body));
+    const picked = await owner.json(`/api/docs/${M1}/reviews`, { method: 'POST', body: { title: 'Picked', sections: ['images', 'video'], picks: { video: ['as_yt'] } } });
+    const pv = await anon.json(`/api/review/${picked.body.token}`);
+    check('a link can share picked items only', pv.body?.sections?.[0].items.length === 1 && pv.body.sections[1].items.map((i) => i.id).join() === 'as_yt', JSON.stringify(pv.body?.sections?.map((x) => x.items.map((i) => i.id))));
+    check('a file of an item that was not picked cannot be fetched', (await anon.req(`/api/review/${picked.body.token}/file/${vid}`)).status === 404);
+    check('picking nothing in a section is refused', (await owner.json(`/api/docs/${M1}/reviews`, { method: 'POST', body: { sections: ['video'], picks: { video: [] } } })).status === 400);
+    await owner.json(`/api/docs/${M1}/reviews/${picked.body.token}`, { method: 'DELETE' });
     check('owner turns the link off', (await owner.json(`/api/docs/${M1}/reviews/${tok}`, { method: 'PATCH', body: { revoked: true } })).status === 200);
     check('a turned-off link stops working', (await anon.json(`/api/review/${tok}`)).status === 410 && (await anon.json(`/api/review/${tok}/feedback`, { method: 'POST', body: { name: 'x', overall: 'y' } })).status === 410);
     check('unknown links do not work', (await anon.json('/api/review/abcdefghijklmnopqrstuvwxyz')).status === 404);

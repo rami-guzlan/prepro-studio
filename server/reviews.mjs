@@ -3,8 +3,9 @@
    feedback (approve / needs changes, a comment per item, an overall note).
 
    Stored in _system/reviews.json: { links: { [token]: record } }. The page
-   always shows the space's current assets in those sections, and only the
-   files those assets point to can be fetched with the token. */
+   always shows the space's current assets in those sections (or only the
+   items picked in a section, record.picks[sectionId]), and only the files
+   those assets point to can be fetched with the token. */
 import { readJson, updateJson } from './storage.mjs';
 import { httpError, randomToken } from './auth.mjs';
 
@@ -40,6 +41,18 @@ export function createReviews(store) {
     if (!s.length) throw httpError(400, 'Choose at least one section');
     return s;
   }
+  /** { sectionId: [assetId…] } for the chosen sections only; a section left out shows all of its items. */
+  function cleanPicks(picks, sections) {
+    const out = {};
+    for (const id of sections) {
+      const list = picks && typeof picks === 'object' ? picks[id] : null;
+      if (!Array.isArray(list)) continue;
+      const ids = [...new Set(list.filter((x) => typeof x === 'string' && x.length <= 64))].slice(0, 1000);
+      if (!ids.length) throw httpError(400, `Pick at least one item in ${REVIEW_SECTIONS[id].title}, or leave it out`);
+      out[id] = ids;
+    }
+    return out;
+  }
   const expiry = (days) => (Number(days) > 0 ? new Date(Date.now() + Number(days) * 86400000).toISOString() : null);
 
   /** Links of one space, newest first (for the people who can open the space). */
@@ -67,6 +80,7 @@ export function createReviews(store) {
       views: 0,
       responses: [],
     };
+    rec.picks = cleanPicks(body.picks, rec.sections);
     await update((links) => ({ ...links, [token]: rec }));
     return rec;
   }
@@ -79,6 +93,7 @@ export function createReviews(store) {
       if (body.title != null) r.title = clip(body.title, 160) || r.title;
       if (body.message != null) r.message = clip(body.message, 4000);
       if (body.sections != null) r.sections = cleanSections(body.sections);
+      if (body.picks !== undefined || body.sections != null) r.picks = cleanPicks(body.picks !== undefined ? body.picks : r.picks, r.sections);
       if (body.showNotes != null) r.showNotes = !!body.showNotes;
       if (body.revoked != null) r.revoked = !!body.revoked;
       if (body.days !== undefined) r.expiresAt = expiry(body.days);
@@ -108,15 +123,18 @@ export function createReviews(store) {
   /** What the reviewer sees: the chosen sections of the space's current assets. */
   function view(r, space) {
     const assets = Array.isArray(space?.assets) ? space.assets : [];
+    const campaigns = new Map((Array.isArray(space?.campaigns) ? space.campaigns : []).map((c) => [c.id, c.name || 'Untitled campaign']));
     const sections = r.sections.map((id) => ({
       id,
       title: REVIEW_SECTIONS[id].title,
       items: assets
-        .filter((a) => a && sectionOf(a) === id)
+        .filter((a) => a && sectionOf(a) === id && (!r.picks?.[id] || r.picks[id].includes(a.id)))
         .map((a) => ({
           id: a.id,
           name: a.name || '',
           kind: a.kind,
+          // campaign resources are grouped per campaign on the page
+          campaign: (a.campaignId && campaigns.get(a.campaignId)) || '',
           notes: r.showNotes ? a.notes || '' : '',
           url: /^https?:\/\//i.test(a.url || '') ? a.url : '',
           // colours and fonts show their value; elsewhere it can be a path on someone's computer
