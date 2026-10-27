@@ -1,5 +1,7 @@
 # PrePro Studio
 
+<img src="docs/screenshots/production-overview.webp" alt="The overview of a production in PrePro Studio">
+
 A fully local pre-production and post-production planning workspace for video projects:
 short films, commercials, corporate and training videos, social content, music videos and documentaries.
 Write the script, build storyboards and shot lists, draw lighting plots, manage cast, crew and locations,
@@ -53,6 +55,9 @@ npm run build
 node server/index.mjs          # http://localhost:8080, data in ./cloud-data (STORAGE=disk)
 node scripts/cloud-test.mjs    # end-to-end checks against a running server (see docs/CLOUD.md)
 ```
+
+The README screenshots come from the demo data: run `npm run dev`, then `node scripts/screenshots.mjs` with `CHROME_PATH`
+set to Chrome or Edge (`scripts/screenshots-hosted.mjs` takes the hosted-version pages from a local server).
 Sign-in uses Google Identity Platform even locally, so set the environment described in [docs/CLOUD.md](docs/CLOUD.md).
 
 ## Where your data lives
@@ -95,6 +100,21 @@ shot list and storyboard.
 
 ## Modules
 
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/script.webp" alt="Script: Final Draft-style screenplay with real pages, scene navigator and breakdown tags"><br><sub>Script: Final Draft-style screenplay with real pages, scene navigator and breakdown tags</sub></td>
+<td width="50%"><img src="docs/screenshots/storyboard.webp" alt="Storyboard: frames per scene with shot specs, dialogue and an animatic player"><br><sub>Storyboard: frames per scene with shot specs, dialogue and an animatic player</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/shot-list.webp" alt="Shot List: every shot with size, angle, movement, lens, gear and status"><br><sub>Shot List: every shot with size, angle, movement, lens, gear and status</sub></td>
+<td width="50%"><img src="docs/screenshots/lighting.webp" alt="Lighting Diagrams: top-down plots with a fixture library, beams and a legend"><br><sub>Lighting Diagrams: top-down plots with a fixture library, beams and a legend</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/schedule.webp" alt="Shooting Schedule: drag-and-drop stripboard and shoot days"><br><sub>Shooting Schedule: drag-and-drop stripboard and shoot days</sub></td>
+<td width="50%"><img src="docs/screenshots/call-sheet.webp" alt="Call Sheets: built from the schedule, with sunrise and sunset worked out offline"><br><sub>Call Sheets: built from the schedule, with sunrise and sunset worked out offline</sub></td>
+</tr>
+</table>
+
 | Area | Module | What you can do |
 |---|---|---|
 | Overview | **Overview** | Dashboard, key info, readiness checklist, timeline, notes. Print a project one-sheet. |
@@ -121,6 +141,19 @@ Next to **Productions** (one film or video with its script, team, shoot and post
 marketing for a goal: your personal brand, a YouTube channel, a film's release campaign. **New marketing space** (Ctrl+Shift+M) asks for the kind of space and starts from a template (channels
 with cadences, content pillars, goals, campaign phases with dated milestones, starter content ideas) or blank, and can
 link production projects (a release campaign links its film and uses its poster as the cover).
+
+<p><img src="docs/screenshots/marketing-calendar.webp" alt="Calendar: posts by channel, shoot days, milestones and campaigns; drag to reschedule"><br><sub>Calendar: posts by channel, shoot days, milestones and campaigns; drag to reschedule</sub></p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/marketing-content.webp" alt="Content: every piece from idea to published, as a board or a list"><br><sub>Content: every piece from idea to published, as a board or a list</sub></td>
+<td width="50%"><img src="docs/screenshots/marketing-strategy.webp" alt="Strategy: content pillars with target vs actual share"><br><sub>Strategy: content pillars with target vs actual share</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/marketing-ideas.webp" alt="Ideas: brainstorm boards with notes, groups and arrows"><br><sub>Ideas: brainstorm boards with notes, groups and arrows</sub></td>
+<td width="50%"><img src="docs/screenshots/design-system.webp" alt="Brand Kit: a design system agents can read before they design"><br><sub>Brand Kit: a design system agents can read before they design</sub></td>
+</tr>
+</table>
 
 | Module | What you can do |
 |---|---|
@@ -165,6 +198,17 @@ Link the Marketing Spaces and Productions it runs (Work → Marketing & Producti
   contractors and the pay you agreed, legal documents generated from templates (contractor agreement, NDA, statement of
   work, services, revenue share, release, sponsorship …).
 - **Library** — Workflows & SOPs you can run as checklists, and Resources (templates, brand assets, files and links).
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/business-strategy.webp" alt="Strategy opens with the big picture in your own words"><br><sub>Strategy opens with the big picture in your own words</sub></td>
+<td width="50%"><img src="docs/screenshots/business-calculator.webp" alt="A shared calculator: lines with formulas that use each other"><br><sub>A shared calculator: lines with formulas that use each other</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/business-overview.webp" alt="Overview: income, expenses, invoices, pipeline and what is due"><br><sub>Overview: income, expenses, invoices, pipeline and what is due</sub></td>
+<td width="50%"><img src="docs/screenshots/business-growth.webp" alt="Growth: every initiative with its KPI, steps, budget and last check-in"><br><sub>Growth: every initiative with its KPI, steps, budget and last check-in</sub></td>
+</tr>
+</table>
+
 Every section exports to PDF (and CSV where it is a list) from its Print / Export menu and from Print & Export.
 Generated documents are templates, not legal advice: have a lawyer review them before signing.
 
@@ -174,6 +218,8 @@ budgets, goals, a debt payoff and savings planner, and insights. Connected AI ag
 email (with their own email connector), report on spending and save advice — only while you have unlocked the finances.
 Not financial advice.
 
+<p><img src="docs/screenshots/finances-overview.webp" alt="Personal Finances: income vs spending, budget, savings rate and net worth (sample data)"><br><sub>Personal Finances: income vs spending, budget, savings rate and net worth (sample data)</sub></p>
+
 ## Training
 **Ramp up** is a gentle, game-like way into the gym for anyone finding it hard to start. A four-question setup builds
 an eight-week ramp in four stages (*Show up*, *Make it a habit*, *Build*, *Own it*), at home or in the gym. A stage moves
@@ -181,6 +227,13 @@ on only after weeks where you hit the target, so a missed week never pushes you 
 the exact moves, with a 10-minute bad-day version that still counts. Points, levels with a reward you choose, a
 forgiving weekly streak, badges and "what unlocks next" keep it fun; a stage can go straight into your workout Program.
 Any connected AI can coach you through it with the `training_ramp` tool (copy the prompt on the page).
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/training-ramp-up.webp" alt="Ramp up: today's mission, the week, points, level, reward and badges"><br><sub>Ramp up: today's mission, the week, points, level, reward and badges</sub></td>
+<td width="50%"><img src="docs/screenshots/training-today.webp" alt="Today: the day at a glance, check-in, streaks and weight trend"><br><sub>Today: the day at a glance, check-in, streaks and weight trend</sub></td>
+</tr>
+</table>
 
 Also: goals, a macro calculator, a meal library with a weekly meal plan and generated grocery lists, a workout program with
 session logging and progress charts, body metrics, daily check-ins, and daily progress photos with a timelapse player
@@ -279,6 +332,15 @@ open, the server opens a hidden one for them (a headless Chromium) so agents kee
 ## Hosted version (Google Cloud)
 The same app served from Google Cloud Run in your own Google Cloud project, so you control the account, the data and
 the cost (it scales to zero; a small team typically stays within Google's free tier).
+
+<p><img src="docs/screenshots/hosted-live-presence.webp" alt="Live editing: a teammate opens the same space and both see each other’s changes as they happen"><br><sub>Live editing: a teammate opens the same space and both see each other’s changes as they happen</sub></p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/hosted-team.webp" alt="Team and access: invite people and choose what each one sees"><br><sub>Team and access: invite people and choose what each one sees</sub></td>
+<td width="50%"><img src="docs/screenshots/hosted-connect.webp" alt="Connect an AI agent: a Claude custom connector or a personal token"><br><sub>Connect an AI agent: a Claude custom connector or a personal token</sub></td>
+</tr>
+</table>
 
 - **Sign-in and access.** Accounts live in Google Identity Platform with self sign-up turned off: the owner invites
   people from **Team and access** with a one-time link. The owner sees all five tabs; everyone else sees at most
