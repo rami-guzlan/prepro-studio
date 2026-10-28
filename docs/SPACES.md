@@ -138,6 +138,12 @@ const fmt = useSpaceFormatters();   // fmt.date(iso) fmt.dateMedium fmt.time('18
 - Edits go through `src/spaces/modules/people/ops.ts` (one undo step each). The board groups by `boardColumnId`
   (a single-select column). Follow-up / due dates (`isFollowUpColumn`) feed `dueRows` (tab badge, subtitle, print).
 - Agents: `crm_read`, `crm_sheet`, `crm_rows` (values keyed by column name) and `add_resource` (src/agent/tools/crm.ts).
+- Accounts & outreach (the module's first tab): `space.outreach` = `{ lists, accounts, team }` (types in
+  src/spaces/types.ts, helpers in src/spaces/outreach.ts: stages, `filterAccounts`, `outreachStats`, CSV
+  `importOutreachCsv` / `outreachCsvRows`). A `TargetAccount` holds its `leads` (stage, owner, next step, `touches`);
+  lists carry the RSVP `goal` and `eventDate`. Screens in src/spaces/modules/people/outreach/ (Accounts, Pipeline,
+  Progress, dialogs; edits through its ops.ts). Agents: `outreach_read`, `outreach_write`, `outreach_log`
+  (src/agent/tools/outreach.ts).
 
 ## Space kinds
 Spaces have a kind (`meta.kind`): `marketing` (default), `business` (many), `finance` and `training` (one each).
