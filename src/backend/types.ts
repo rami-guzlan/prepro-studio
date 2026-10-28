@@ -79,6 +79,8 @@ export interface Backend {
 
   /** Store image/file bytes inside the project; returns the asset name. */
   importAsset(projectId: string, bytes: Uint8Array, ext: string): Promise<string>;
+  /** Hosted version: store a (large) file straight from disk, without reading it into memory. */
+  importAssetBlob?(projectId: string, blob: Blob, ext: string): Promise<string>;
   readAsset(projectId: string, name: string): Promise<Uint8Array | null>;
   /** Synchronous URL usable in <img src>. */
   assetUrl(projectId: string, name: string): string;

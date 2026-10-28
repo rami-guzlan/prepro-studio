@@ -9,13 +9,13 @@ import type { ID } from '@/types';
 import { useSpace } from '@/store/space';
 import { navigateSpace } from '@/store/app';
 import { plural, safeFileName } from '@/lib/text';
-import { assetUrl, backend, exportCsv } from '@/backend';
+import { assetUrl, backend, exportCsv, pickFileBlobs } from '@/backend';
 import { useFileDrop } from '@/spaces/modules/assets/resources';
 import { Button, Checkbox, DateInput, EmptyState, ExportMenu, Field, IconButton, ImageDrop, Input, Modal, ModuleHeader, SearchInput, Select, Tabs, Textarea, confirmDialog, toast } from '@/ui';
 import { PORTFOLIO_KINDS } from '../../constants';
 import { clientLabel } from '../../derive';
 import { addFiles, addItem, makePortfolioItem, removeItems, updateItem } from '../../ops';
-import { FileBox, storeFiles } from '../../files';
+import { FileBox, storeFiles, type UploadFile } from '../../files';
 import { OptionPill, clientOptions, useBiz, useNavParams, useToday } from '../../ui';
 import type { PortfolioItem, PortfolioKind } from '../../types';
 import { LinkSelect, Tags, TagsInput, allTags, bizProjectOptions, copyText, openUrl, useLinkOptions, videoThumb, yearOf } from '../pipeline/sales-shared';
@@ -25,9 +25,7 @@ const VIDEO_FILTERS = [{ name: 'Video', extensions: ['mp4', 'mov', 'webm', 'm4v'
 const titleOf = (fileName: string) => fileName.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim() || fileName;
 
 /** Store video files, with a note while big ones upload. */
-async function storeVideos(files: { name: string; data: Uint8Array }[]) {
-  const mb = files.reduce((n, f) => n + f.data.length, 0) / 1048576;
-  if (mb > 20) toast(`Uploading ${plural(files.length, 'video')} (${Math.round(mb)} MB)…`, 'info');
+async function storeVideos(files: UploadFile[]) {
   return storeFiles(files);
 }
 
@@ -52,7 +50,7 @@ export default function PortfolioModule() {
 
   /** Each video file becomes a piece of its own (title from the file name). */
   const [uploading, setUploading] = useState(false);
-  const addVideos = async (files: { name: string; data: Uint8Array }[]) => {
+  const addVideos = async (files: UploadFile[]) => {
     if (!files.length) return;
     setUploading(true);
     try {
@@ -67,8 +65,8 @@ export default function PortfolioModule() {
   };
   const pickVideos = async () => {
     try {
-      const files = await backend.openFiles({ multiple: true, filters: VIDEO_FILTERS, title: 'Upload videos' });
-      await addVideos(files.map((f) => ({ name: f.name, data: f.data })));
+      const files = await pickFileBlobs({ multiple: true, filters: VIDEO_FILTERS, title: 'Upload videos' });
+      await addVideos(files.map((f) => ({ name: f.name, data: f })));
     } catch (e) {
       toast(`Could not upload: ${e instanceof Error ? e.message : String(e)}`, 'error');
     }
@@ -79,7 +77,7 @@ export default function PortfolioModule() {
       toast('Drop video files here (MP4, MOV, WebM). Other files go in a piece’s Files.', 'info');
       return;
     }
-    void Promise.all(vids.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) }))).then(addVideos);
+    void addVideos(vids.map((f) => ({ name: f.name, data: f })));
   });
 
   useNavParams((p) => {
@@ -244,10 +242,10 @@ function PortfolioDialog({ x, onClose }: { x: PortfolioItem; onClose: () => void
   const [busy, setBusy] = useState(false);
   const uploadVideo = async () => {
     try {
-      const files = await backend.openFiles({ multiple: false, filters: VIDEO_FILTERS, title: 'Upload the video' });
+      const files = await pickFileBlobs({ multiple: false, filters: VIDEO_FILTERS, title: 'Upload the video' });
       if (!files.length) return;
       setBusy(true);
-      addFiles({ list: 'portfolio', id: x.id, field: 'files' }, await storeVideos(files.map((f) => ({ name: f.name, data: f.data }))));
+      addFiles({ list: 'portfolio', id: x.id, field: 'files' }, await storeVideos(files.map((f) => ({ name: f.name, data: f }))));
     } catch (e) {
       toast(`Could not upload: ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {

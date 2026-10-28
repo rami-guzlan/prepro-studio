@@ -70,6 +70,21 @@ const enc = encodeURIComponent;
 /** Files bigger than this upload straight to Cloud Storage. */
 const DIRECT_UPLOAD_FROM = 24 * 1024 * 1024;
 
+/** Store a file as an asset. Big files (videos) go straight to the bucket — requests through the
+   server stop at 32 MB — and are streamed from disk by the browser, never read whole into memory. */
+async function uploadAsset(docId: string, blob: Blob, ext: string): Promise<string> {
+  if (blob.size > DIRECT_UPLOAD_FROM) {
+    const up = await (await sendJson(`/api/docs/${enc(docId)}/assets/upload`, { ext, size: blob.size })).json();
+    if (up.uploadUrl) {
+      const put = await fetch(up.uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': up.contentType } });
+      if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+      return up.name as string;
+    }
+  }
+  const r = await api(`/api/docs/${enc(docId)}/assets?ext=${enc(ext)}`, { method: 'POST', body: blob, headers: { 'Content-Type': 'application/octet-stream' } });
+  return (await r.json()).name as string;
+}
+
 export async function fetchDoc<T>(id: string): Promise<{ doc: T; rev: number }> {
   const r = await api(`/api/docs/${enc(id)}`);
   const rev = Number(r.headers.get('X-Rev') || '1');
@@ -171,19 +186,8 @@ export function createCloudBackend(): Backend {
       await sendJson(`/api/docs/${enc(id)}/duplicate`, { newId, newTitle });
     },
 
-    async importAsset(docId, bytes, ext) {
-      // big files (videos) go straight to the bucket: requests through the server stop at 32 MB
-      if (bytes.length > DIRECT_UPLOAD_FROM) {
-        const up = await (await sendJson(`/api/docs/${enc(docId)}/assets/upload`, { ext, size: bytes.length })).json();
-        if (up.uploadUrl) {
-          const put = await fetch(up.uploadUrl, { method: 'PUT', body: bytes as BodyInit, headers: { 'Content-Type': up.contentType } });
-          if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-          return up.name as string;
-        }
-      }
-      const r = await api(`/api/docs/${enc(docId)}/assets?ext=${enc(ext)}`, { method: 'POST', body: bytes as BodyInit, headers: { 'Content-Type': 'application/octet-stream' } });
-      return (await r.json()).name as string;
-    },
+    importAsset: (docId, bytes, ext) => uploadAsset(docId, new Blob([bytes as BlobPart]), ext),
+    importAssetBlob: (docId, blob, ext) => uploadAsset(docId, blob, ext),
     async readAsset(docId, name) {
       const r = await fetch(this.assetUrl(docId, name), { credentials: 'same-origin' });
       return r.ok ? new Uint8Array(await r.arrayBuffer()) : null;

@@ -47,6 +47,28 @@ export async function importAssetBytes(bytes: Uint8Array, ext: string): Promise<
   return backend.importAsset(currentProjectId, bytes, ext);
 }
 
+/** Store a file (File/Blob) as is — in the hosted version big files stream from disk, never whole in memory. */
+export async function importAssetBlob(blob: Blob, ext: string): Promise<string> {
+  if (!currentProjectId) throw new Error('No project open');
+  if (backend.importAssetBlob) return backend.importAssetBlob(currentProjectId, blob, ext);
+  return backend.importAsset(currentProjectId, new Uint8Array(await blob.arrayBuffer()), ext);
+}
+
+/** Open dialog returning the files themselves (not read yet), so large videos can upload without loading into memory. */
+export async function pickFileBlobs(opts: { filters?: FileFilter[]; multiple?: boolean; title?: string }): Promise<File[]> {
+  if (backend.kind === 'electron') return (await backend.openFiles(opts)).map((f) => new File([f.data as BlobPart], f.name));
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = !!opts.multiple;
+    const exts = (opts.filters ?? []).flatMap((f) => f.extensions).filter((e) => e !== '*');
+    if (exts.length) input.accept = exts.map((e) => '.' + e).join(',');
+    input.onchange = () => resolve(Array.from(input.files ?? []));
+    input.oncancel = () => resolve([]);
+    input.click();
+  });
+}
+
 export const IMAGE_FILTERS: FileFilter[] = [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'] }];
 
 /** Show an open dialog for images and import them into the project. Returns asset names. */

@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Eye, FileText, FolderOpen, Paperclip, Trash2, Upload } from 'lucide-react';
 import type { BrandAsset } from '@/spaces/types';
-import { assetUrl, backend, importAssetBytes } from '@/backend';
+import { assetUrl, backend, importAssetBlob, importAssetBytes, pickFileBlobs } from '@/backend';
 import { toJob } from '@/print/build';
 import { buildSpaceDoc } from '@/spaces/print/run';
 import { plural, safeFileName } from '@/lib/text';
@@ -16,20 +16,26 @@ import { addFiles, makeFile, removeFile, type FileTarget } from './ops';
 
 /* ---------------------------------------------------------------- actions */
 
-export async function storeFiles(files: { name: string; data: Uint8Array }[]): Promise<BizFile[]> {
+/** A file to store: its bytes, or the file itself (a File / Blob — big videos upload straight from disk). */
+export type UploadFile = { name: string; data: Uint8Array | Blob };
+export const uploadSize = (files: UploadFile[]) => files.reduce((n, f) => n + (f.data instanceof Blob ? f.data.size : f.data.length), 0);
+
+export async function storeFiles(files: UploadFile[]): Promise<BizFile[]> {
   const out: BizFile[] = [];
+  const total = uploadSize(files);
+  if (total > 20 * 1024 * 1024) toast(`Uploading ${plural(files.length, 'file')} (${formatBytes(total)})… keep this tab open`, 'info');
   for (const f of files) {
     const ext = f.name.includes('.') ? f.name.split('.').pop()!.toLowerCase() : 'bin';
-    const stored = await importAssetBytes(f.data, ext);
-    out.push(makeFile(stored, f.name, f.data.length));
+    const stored = f.data instanceof Blob ? await importAssetBlob(f.data, ext) : await importAssetBytes(f.data, ext);
+    out.push(makeFile(stored, f.name, uploadSize([f])));
   }
   return out;
 }
 
-export async function pickFiles(title = 'Attach files (PDF, images, documents)'): Promise<BizFile[]> {
+export async function pickFiles(title = 'Attach files (PDF, images, documents, videos)'): Promise<BizFile[]> {
   try {
-    const files = await backend.openFiles({ multiple: true, title });
-    return await storeFiles(files.map((f) => ({ name: f.name, data: f.data })));
+    const files = await pickFileBlobs({ multiple: true, title });
+    return await storeFiles(files.map((f) => ({ name: f.name, data: f })));
   } catch (e) {
     toast(`Could not add the files: ${e instanceof Error ? e.message : String(e)}`, 'error');
     return [];
@@ -38,7 +44,7 @@ export async function pickFiles(title = 'Attach files (PDF, images, documents)')
 
 export async function droppedFiles(files: File[]): Promise<BizFile[]> {
   try {
-    return await storeFiles(await Promise.all(files.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) }))));
+    return await storeFiles(files.map((f) => ({ name: f.name, data: f })));
   } catch (e) {
     toast(`Could not add the files: ${e instanceof Error ? e.message : String(e)}`, 'error');
     return [];

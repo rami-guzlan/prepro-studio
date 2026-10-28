@@ -36,7 +36,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 const MAX_JSON = 40 * 1024 * 1024;
-const MAX_UPLOAD = 5 * 1024 ** 3; // direct-to-bucket uploads (videos)
+const MAX_UPLOAD = 50 * 1024 ** 3; // direct-to-bucket uploads (videos)
 const log = { info: console.log, warn: console.warn, error: console.error };
 
 const store = createStore();
