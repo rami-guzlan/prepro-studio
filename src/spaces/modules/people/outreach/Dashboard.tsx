@@ -1,13 +1,33 @@
 /* Accounts & outreach → Progress: the RSVP goal, the funnel, the team's outreach
    week by week, follow-ups that are due and the latest touches. */
 import type { ID } from '@/types';
-import { LEAD_STAGES, channelLabel, goalOf, type OutreachStats } from '@/spaces/outreach';
+import type { LeadStage } from '@/spaces/types';
+import { LEAD_STAGES, NO_SEGMENT, channelLabel, goalOf, type OutreachStats } from '@/spaces/outreach';
 import { diffDays, todayISO } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { BarChart, BarList, Meter } from '@/ui/charts';
 import { MemberDot, shortDate, useOutreach } from './shared';
 
-export function DashboardView({ stats, listId, onOpenLead, onPickOwner }: { stats: OutreachStats; listId?: ID; onOpenLead: (accountId: ID, leadId: ID) => void; onPickOwner: (id: ID) => void }) {
+/** One bar split by stage (width relative to the biggest row). */
+function StageStack({ stages, max }: { stages: Record<LeadStage, number>; max: number }) {
+  const total = LEAD_STAGES.reduce((n, s) => n + stages[s.value], 0);
+  return (
+    <span className="or-stack" style={{ width: `${Math.max(4, (total / Math.max(1, max)) * 100)}%` }} aria-label={LEAD_STAGES.filter((s) => stages[s.value]).map((s) => `${stages[s.value]} ${s.label}`).join(', ')}>
+      {LEAD_STAGES.map((s) =>
+        stages[s.value] ? <i key={s.value} style={{ flexGrow: stages[s.value], background: s.color }} title={`${s.label}: ${stages[s.value]}`} /> : null,
+      )}
+    </span>
+  );
+}
+
+const COVERAGE = [
+  { key: 'rsvp', label: 'Has an RSVP', color: '#2f9e44' },
+  { key: 'reached', label: 'Reached', color: '#4c6ef5' },
+  { key: 'notReached', label: 'Leads, not reached yet', color: '#adb5bd' },
+  { key: 'noLeads', label: 'No leads yet', color: 'transparent' },
+] as const;
+
+export function DashboardView({ stats, listId, onOpenLead, onPickOwner, onPickSegment, onOpenAccount }: { stats: OutreachStats; listId?: ID; onOpenLead: (accountId: ID, leadId: ID) => void; onPickOwner: (id: ID) => void; onPickSegment: (segment: string) => void; onOpenAccount: (id: ID) => void }) {
   const o = useOutreach();
   const today = todayISO();
   const { goal, eventDate, name } = goalOf(o, listId);
@@ -51,7 +71,126 @@ export function DashboardView({ stats, listId, onOpenLead, onPickOwner }: { stat
         </dl>
       </section>
 
+      <section className="or-cover">
+        <h3>Accounts at a glance</h3>
+        {stats.accounts === 0 ? (
+          <p className="muted small">No accounts match.</p>
+        ) : (
+          <>
+            <div className="or-cover-bar" role="img" aria-label={COVERAGE.map((c) => `${stats.coverage[c.key]} ${c.label}`).join(', ')}>
+              {COVERAGE.map((c) =>
+                stats.coverage[c.key] ? <i key={c.key} className={c.key} style={{ flexGrow: stats.coverage[c.key], background: c.color }} title={`${c.label}: ${stats.coverage[c.key]}`} /> : null,
+              )}
+            </div>
+            <div className="or-cover-legend">
+              {COVERAGE.map((c) => (
+                <span key={c.key}>
+                  <i className={c.key} style={{ background: c.color }} />
+                  <b>{stats.coverage[c.key]}</b> {c.label}
+                </span>
+              ))}
+              <span className="muted">
+                {stats.accounts ? (stats.leads / stats.accounts).toFixed(1) : '0'} leads per account
+              </span>
+            </div>
+          </>
+        )}
+      </section>
+
       <div className="or-dash-grid">
+        <section className="wide">
+          <h3>By industry</h3>
+          {stats.bySegment.length === 0 ? (
+            <p className="muted small">No accounts match.</p>
+          ) : (
+            <table className="or-team-table or-seg-table">
+              <thead>
+                <tr>
+                  <th>Industry</th>
+                  <th>Accounts</th>
+                  <th>Reached</th>
+                  <th className="or-seg-stack">Leads by stage</th>
+                  <th>RSVPs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.bySegment.map((g) => {
+                  const maxLeads = Math.max(1, ...stats.bySegment.map((x) => x.leads));
+                  return (
+                    <tr key={g.segment || 'none'} className="click" onClick={() => onPickSegment(g.segment)} title={`Show ${g.segment || 'accounts with no industry'}`}>
+                      <td>{g.segment === NO_SEGMENT ? <span className="muted">No industry set</span> : g.segment}</td>
+                      <td>{g.accounts}</td>
+                      <td>
+                        <span className="or-team-bar">
+                          <i style={{ width: `${(g.reached / Math.max(1, g.accounts)) * 60}px`, background: '#4c6ef5' }} />
+                          {g.reached}
+                        </span>
+                      </td>
+                      <td className="or-seg-stack">
+                        <span className="row" style={{ gap: 8 }}>
+                          <StageStack stages={g.stages} max={maxLeads} />
+                          <span className="muted small">{g.leads}</span>
+                        </span>
+                      </td>
+                      <td>
+                        <b>{g.rsvps}</b>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+          <div className="or-stage-legend">
+            {LEAD_STAGES.map((s) => (
+              <span key={s.value}>
+                <i style={{ background: s.color }} />
+                {s.label}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h3>By tier</h3>
+          <BarList
+            rows={stats.byTier.map((t) => ({ id: String(t.tier), label: t.tier ? `Tier ${t.tier}` : 'No tier', value: t.accounts, sub: `${t.reached} reached · ${t.rsvps} RSVP`, color: ['#adb5bd', '#5b45e0', '#7c6cf0', '#a99ff5'][t.tier] }))}
+            empty="No accounts match"
+          />
+        </section>
+
+        <section>
+          <h3>Who we are reaching</h3>
+          <BarList rows={stats.bySeniority.map((x) => ({ id: x.level, label: x.level, value: x.leads, sub: `${x.rsvps} RSVP`, color: 'var(--viz-2)' }))} empty="No leads yet" />
+          <p className="muted small">Seniority read from each lead’s title.</p>
+        </section>
+
+        <section className="wide">
+          <h3>Top accounts</h3>
+          {stats.topAccounts.length === 0 ? (
+            <p className="muted small">Accounts with leads show here, the most RSVPs first.</p>
+          ) : (
+            <ul className="or-list">
+              {stats.topAccounts.map((t) => (
+                <li key={t.account.id}>
+                  <button type="button" onClick={() => onOpenAccount(t.account.id)}>
+                    <span className="or-top-name ellipsis">
+                      <b>{t.account.name || 'Untitled account'}</b>
+                      <span className="muted small"> {[t.account.tier ? `Tier ${t.account.tier}` : '', t.account.segment].filter(Boolean).join(' · ')}</span>
+                    </span>
+                    <span className="grow">
+                      <StageStack stages={t.stages} max={Math.max(...stats.topAccounts.map((x) => x.leads))} />
+                    </span>
+                    <span className="small">
+                      {t.leads} leads{t.rsvps ? <b className="or-rsvp"> · {t.rsvps} RSVP</b> : null}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         <section>
           <h3>Funnel</h3>
           <BarList rows={LEAD_STAGES.map((s) => ({ id: s.value, label: s.label, value: stats.byStage[s.value], color: s.color }))} max={Math.max(1, stats.leads)} empty="No leads yet" />

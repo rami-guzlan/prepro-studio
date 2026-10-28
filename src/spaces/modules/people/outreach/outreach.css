@@ -532,3 +532,182 @@
   align-items: center;
   gap: 10px;
 }
+
+/* ---------------------------------------------------------------- filters */
+.or-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px 8px;
+}
+.or-fchip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  font-size: 12.5px;
+  overflow: hidden;
+}
+.or-fchip > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.or-fchip > button:hover {
+  color: var(--text);
+}
+.or-fchip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.or-fchip.on > button {
+  color: var(--text);
+}
+.or-fchip .or-fchip-x {
+  padding: 0 8px 0 2px;
+}
+.or-fclear {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.or-fpop {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-height: 340px;
+  overflow: auto;
+  padding: 4px;
+}
+.or-fopt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.or-fopt:hover {
+  background: var(--bg-hover);
+}
+.or-fopt.clear {
+  color: var(--accent);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  margin-top: 4px;
+}
+.or-fcheck {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.or-fopt.on .or-fcheck {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.or-fdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.or-lead-hidden {
+  padding: 8px 0 0;
+}
+
+/* ---------------------------------------------------------------- account breakdowns */
+.or-cover h3 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.or-cover-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--bg-sunken);
+  gap: 2px;
+}
+.or-cover-bar i {
+  display: block;
+  min-width: 4px;
+}
+.or-cover-bar i.noLeads,
+.or-cover-legend i.noLeads {
+  background: repeating-linear-gradient(45deg, var(--bg-sunken), var(--bg-sunken) 4px, var(--border) 4px, var(--border) 6px) !important;
+}
+.or-cover-legend,
+.or-stage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.or-cover-legend span,
+.or-stage-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.or-cover-legend i,
+.or-stage-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.or-stage-legend {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.or-stack {
+  display: inline-flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  gap: 1px;
+  min-width: 6px;
+  max-width: 100%;
+}
+.or-stack i {
+  display: block;
+  min-width: 3px;
+}
+.or-seg-table td.or-seg-stack,
+.or-seg-table th.or-seg-stack {
+  width: 40%;
+}
+.or-seg-table td.or-seg-stack .row {
+  width: 100%;
+}
+.or-top-name {
+  width: 38%;
+  min-width: 0;
+  flex: none;
+}

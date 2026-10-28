@@ -13,7 +13,7 @@ import { MemberDot, MemberSelect, StagePill, StageSelect, meId, shortDate, useOu
 
 const OPEN_KEY = 'prepro.or.open';
 
-export function AccountsView({ accounts, onOpenAccount, onOpenLead, onAddAccount }: { accounts: TargetAccount[]; onOpenAccount: (id: ID) => void; onOpenLead: (accountId: ID, leadId: ID) => void; onAddAccount: () => void }) {
+export function AccountsView({ accounts, hidden = {}, filtering, onOpenAccount, onOpenLead, onAddAccount }: { accounts: TargetAccount[]; hidden?: Record<ID, number>; filtering?: boolean; onOpenAccount: (id: ID) => void; onOpenLead: (accountId: ID, leadId: ID) => void; onAddAccount: () => void }) {
   const o = useOutreach();
   const [open, setOpen] = useState<ID[]>(() => readLS<ID[]>(OPEN_KEY, []));
   const toggle = (id: ID) =>
@@ -28,10 +28,12 @@ export function AccountsView({ accounts, onOpenAccount, onOpenLead, onAddAccount
   if (!accounts.length)
     return (
       <div className="or-empty">
-        <p className="muted">No accounts here yet.</p>
-        <Button variant="primary" icon={Plus} onClick={onAddAccount}>
-          Add an account
-        </Button>
+        <p className="muted">{filtering ? 'No accounts match these filters.' : 'No accounts here yet.'}</p>
+        {!filtering && (
+          <Button variant="primary" icon={Plus} onClick={onAddAccount}>
+            Add an account
+          </Button>
+        )}
       </div>
     );
 
@@ -116,6 +118,7 @@ export function AccountsView({ accounts, onOpenAccount, onOpenLead, onAddAccount
                     </div>
                   );
                 })}
+                {hidden[a.id] > 0 && <div className="or-lead-hidden muted small">{hidden[a.id]} more {hidden[a.id] === 1 ? 'lead' : 'leads'} hidden by the filters</div>}
                 <div className="or-lead-add">
                   <Button
                     size="sm"

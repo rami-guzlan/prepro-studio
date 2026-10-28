@@ -111,15 +111,19 @@ export const outreachTools = [
       owner: opt(str('team member name: their accounts and leads')),
       stage: opt(enm(STAGES, 'only leads at this stage')),
       search: opt(str('text in account or lead names, titles, emails')),
+      industry: opt(str('account segment, e.g. Bank, Insurer')),
+      tier: opt(int('1 to 3', 1)),
       account: opt(str('one account (name or id), with all touches')),
       limit: opt(int('max accounts (default 100)', 1)),
     }),
-    run(a: { list?: string; owner?: string; stage?: LeadStage; search?: string; account?: string; limit?: number }) {
+    run(a: { list?: string; owner?: string; stage?: LeadStage; search?: string; industry?: string; tier?: number; account?: string; limit?: number }) {
       const o = outreachOf();
       if (a.account) return { data: accountOut(o, findBy(o.accounts, a.account, 'account'), true) };
       const listId = a.list ? findBy(o.lists, a.list, 'list').id : undefined;
       const ownerId = a.owner ? findBy(o.team, a.owner, 'team member').id : undefined;
-      let accounts = filterAccounts(o, { listId, ownerId, q: a.search });
+      const segs = a.industry ? [...new Set(o.accounts.map((x) => x.segment?.trim() ?? '').filter((x) => x && x.toLowerCase().includes(a.industry!.trim().toLowerCase())))] : undefined;
+      if (segs && !segs.length) fail(`No accounts in "${a.industry}". Industries: ${[...new Set(o.accounts.map((x) => x.segment).filter(Boolean))].join(', ') || 'none set yet'}.`);
+      let accounts = filterAccounts(o, { listId, ownerId, q: a.search, segments: segs, tiers: a.tier ? [a.tier] : undefined });
       const stats = outreachStats(o, accounts);
       const goal = goalOf(o, listId);
       const summary = clean({
@@ -129,13 +133,15 @@ export const outreachTools = [
         accounts: stats.accounts,
         leads: stats.leads,
         reached: stats.reached,
+        byIndustry: stats.bySegment.map((g) => clean({ industry: g.segment || '(none)', accounts: g.accounts, reached: g.reached, leads: g.leads, rsvps: g.rsvps })),
+        coverage: stats.coverage,
         byStage: stats.byStage,
         touchesLast7: stats.touches.last7,
         touchesLast30: stats.touches.last30,
         team: stats.team.map((m) => clean({ name: m.name, accounts: m.accounts, leads: m.leads, open: m.open, rsvps: m.rsvps, touches7: m.touches7, touches30: m.touches30 })),
         followUpsDue: stats.due.slice(0, 20).map((d) => ({ lead: d.lead.name, account: d.account.name, date: d.date, nextStep: d.lead.nextStep })),
       });
-      if (!a.list && !a.owner && !a.stage && !a.search) {
+      if (!a.list && !a.owner && !a.stage && !a.search && !a.industry && !a.tier) {
         return {
           data: {
             lists: o.lists.map((l) => clean({ id: l.id, name: l.name, goal: l.goal, eventDate: l.eventDate, description: l.description, accounts: o.accounts.filter((x) => x.listIds.includes(l.id)).length })),

@@ -92,21 +92,149 @@ export function accountStage(a: TargetAccount): LeadStage | undefined {
   return a.leads.reduce((best, l) => (rank(l.stage) > rank(best) ? l.stage : best), a.leads[0].stage);
 }
 
+/** Lead activity filters; "no_leads" is about the account. */
+export type ActivityFilter = 'due' | 'stale' | 'untouched' | 'open' | 'no_leads';
+export const ACTIVITY_FILTERS: { value: ActivityFilter; label: string; hint: string }[] = [
+  { value: 'due', label: 'Follow-up due', hint: 'Next step date today or earlier' },
+  { value: 'stale', label: 'Gone quiet (14+ days)', hint: 'Still open, last touch more than 14 days ago' },
+  { value: 'untouched', label: 'Never contacted', hint: 'No outreach logged yet' },
+  { value: 'open', label: 'Still open', hint: 'Not yet a yes or a no' },
+  { value: 'no_leads', label: 'Accounts with no leads', hint: 'Nobody added at the account yet' },
+];
+export const STALE_DAYS = 14;
+/** "" stands for accounts without an industry; tier 0 for no tier. */
+export const NO_SEGMENT = '';
+
+export type AccountSort = 'default' | 'name' | 'tier' | 'stage' | 'rsvps' | 'leads' | 'last_touch' | 'next_date';
+export const ACCOUNT_SORTS: { value: AccountSort; label: string }[] = [
+  { value: 'default', label: 'Newest first' },
+  { value: 'name', label: 'Name' },
+  { value: 'tier', label: 'Tier' },
+  { value: 'stage', label: 'Furthest stage' },
+  { value: 'rsvps', label: 'Most RSVPs' },
+  { value: 'leads', label: 'Most leads' },
+  { value: 'last_touch', label: 'Last touch (oldest first)' },
+  { value: 'next_date', label: 'Next step date' },
+];
+
 export interface OutreachFilter {
   listId?: ID;
   ownerId?: ID;
   q?: string;
+  /** industries (account segment); NO_SEGMENT = none set */
+  segments?: string[];
+  /** 0 = no tier */
+  tiers?: number[];
+  stages?: LeadStage[];
+  activity?: ActivityFilter[];
+  sort?: AccountSort;
 }
 
-/** Accounts on a list (all when none), owned by someone (account or any of its leads), matching a search. */
-export function filterAccounts(o: Outreach, f: OutreachFilter): TargetAccount[] {
+export const filterCount = (f: OutreachFilter) => (f.segments?.length ? 1 : 0) + (f.tiers?.length ? 1 : 0) + (f.stages?.length ? 1 : 0) + (f.activity?.length ? 1 : 0) + (f.ownerId ? 1 : 0);
+
+const LEAD_ACTIVITY: ActivityFilter[] = ['due', 'stale', 'untouched', 'open'];
+function leadActivity(l: Lead, a: ActivityFilter, today: string): boolean {
+  if (a === 'due') return !!l.nextDate && l.nextDate <= today && isOpenLead(l);
+  if (a === 'untouched') return !l.touches.length;
+  if (a === 'open') return isOpenLead(l);
+  if (a === 'stale') {
+    const lt = lastTouch(l);
+    return isOpenLead(l) && !!lt && diffDays(lt.date, today) > STALE_DAYS;
+  }
+  return false;
+}
+
+const accountText = (a: TargetAccount) => [a.name, a.segment, a.website, a.notes].join(' ').toLowerCase();
+const leadText = (l: Lead) => [l.name, l.title, l.email, l.notes].join(' ').toLowerCase();
+
+/** The leads of an account that pass the lead filters (owner, stage, activity, search). */
+export function filterLeads(a: TargetAccount, f: OutreachFilter, today = todayISO()): Lead[] {
   const q = f.q?.trim().toLowerCase();
-  return o.accounts.filter((a) => {
-    if (f.listId && !a.listIds.includes(f.listId)) return false;
-    if (f.ownerId && a.ownerId !== f.ownerId && !a.leads.some((l) => leadOwner(a, l) === f.ownerId)) return false;
-    if (!q) return true;
-    return [a.name, a.segment, a.website, a.notes, ...a.leads.flatMap((l) => [l.name, l.title, l.email])].join(' ').toLowerCase().includes(q);
+  const acts = (f.activity ?? []).filter((x) => LEAD_ACTIVITY.includes(x));
+  const accountHit = !!q && accountText(a).includes(q);
+  return a.leads.filter((l) => {
+    if (f.ownerId && leadOwner(a, l) !== f.ownerId) return false;
+    if (f.stages?.length && !f.stages.includes(l.stage)) return false;
+    if (acts.length && !acts.some((x) => leadActivity(l, x, today))) return false;
+    if (q && !accountHit && !leadText(l).includes(q)) return false;
+    return true;
   });
+}
+
+/** Accounts on a list (all when none) that pass the filters. With lead filters on, an account needs a matching lead. */
+export function filterAccounts(o: Outreach, f: OutreachFilter, today = todayISO()): TargetAccount[] {
+  const q = f.q?.trim().toLowerCase();
+  const leadFilters = !!(f.stages?.length || f.activity?.some((x) => LEAD_ACTIVITY.includes(x)));
+  const noLeads = !!f.activity?.includes('no_leads');
+  const out = o.accounts.filter((a) => {
+    if (f.listId && !a.listIds.includes(f.listId)) return false;
+    if (f.segments?.length && !f.segments.includes(a.segment?.trim() || NO_SEGMENT)) return false;
+    if (f.tiers?.length && !f.tiers.includes(a.tier ?? 0)) return false;
+    if (f.ownerId && a.ownerId !== f.ownerId && !a.leads.some((l) => leadOwner(a, l) === f.ownerId)) return false;
+    const leads = filterLeads(a, f, today);
+    if (noLeads || leadFilters) {
+      const ok = (noLeads && !a.leads.length) || (leadFilters && leads.length > 0);
+      if (!ok) return false;
+    }
+    if (q && !accountText(a).includes(q) && !leads.length) return false;
+    return true;
+  });
+  return sortAccounts(out, f.sort ?? 'default', today);
+}
+
+export function sortAccounts(list: TargetAccount[], sort: AccountSort, today = todayISO()): TargetAccount[] {
+  if (sort === 'default') return list;
+  const rank = (a: TargetAccount) => {
+    const st = accountStage(a);
+    return st ? (st === 'declined' ? -1 : STAGE_ORDER.indexOf(st)) : -2;
+  };
+  const next = (a: TargetAccount) => a.leads.map((l) => (isOpenLead(l) ? l.nextDate : undefined)).filter(Boolean).sort()[0] ?? '9999';
+  const by: Record<Exclude<AccountSort, 'default'>, (a: TargetAccount, b: TargetAccount) => number> = {
+    name: (a, b) => a.name.localeCompare(b.name),
+    tier: (a, b) => (a.tier ?? 9) - (b.tier ?? 9) || a.name.localeCompare(b.name),
+    stage: (a, b) => rank(b) - rank(a) || a.name.localeCompare(b.name),
+    rsvps: (a, b) => b.leads.filter(isRsvp).length - a.leads.filter(isRsvp).length || b.leads.length - a.leads.length,
+    leads: (a, b) => b.leads.length - a.leads.length || a.name.localeCompare(b.name),
+    last_touch: (a, b) => (accountLastTouch(a) ?? '0000').localeCompare(accountLastTouch(b) ?? '0000'),
+    next_date: (a, b) => next(a).localeCompare(next(b)),
+  };
+  void today;
+  return [...list].sort(by[sort]);
+}
+
+/** What the screens show: the filtered accounts, each with only its matching leads, and how many leads the filters hide. */
+export function outreachView(o: Outreach, f: OutreachFilter, today = todayISO()): { accounts: TargetAccount[]; hidden: Record<ID, number> } {
+  const hidden: Record<ID, number> = {};
+  const accounts = filterAccounts(o, f, today).map((a) => {
+    const leads = filterLeads(a, f, today);
+    if (leads.length === a.leads.length) return a;
+    hidden[a.id] = a.leads.length - leads.length;
+    return { ...a, leads };
+  });
+  return { accounts, hidden };
+}
+
+/** Industries in use, most accounts first ("" = none set). */
+export function segmentsInUse(o: Outreach): { value: string; count: number }[] {
+  const m = new Map<string, number>();
+  for (const a of o.accounts) {
+    const k = a.segment?.trim() || NO_SEGMENT;
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return [...m.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
+/** Rough seniority from a job title, for the audience breakdown. */
+export const SENIORITY = ['C-level', 'SVP / VP', 'Director / Head', 'Manager', 'Other', 'No title'] as const;
+export type Seniority = (typeof SENIORITY)[number];
+export function seniorityOf(title: string | undefined): Seniority {
+  const t = (title ?? '').toLowerCase();
+  if (!t.trim()) return 'No title';
+  if (/\bchief\b|\bc[a-z]o\b|\bclo\b|\bcpo\b|\bchro\b|\bpresident\b|\bfounder\b/.test(t)) return 'C-level';
+  if (/\b(s?evp|svp|vp|vice president)\b/.test(t)) return 'SVP / VP';
+  if (/\bdirector\b|\bhead\b|\blead\b/.test(t)) return 'Director / Head';
+  if (/\bmanager\b|\bpartner\b|\bspecialist\b/.test(t)) return 'Manager';
+  return 'Other';
 }
 
 export interface LeadRef {
@@ -154,6 +282,16 @@ export interface OutreachStats {
   due: (LeadRef & { date: string })[];
   /** latest touches, newest first */
   recent: (LeadRef & { touch: OutreachTouch })[];
+  /** accounts by industry ("" = none set), most accounts first, with each one's leads by stage */
+  bySegment: { segment: string; accounts: number; leads: number; reached: number; rsvps: number; stages: Record<LeadStage, number> }[];
+  /** accounts by tier (0 = no tier) */
+  byTier: { tier: number; accounts: number; leads: number; reached: number; rsvps: number }[];
+  /** where each account is: no leads, leads but nobody reached, reached, has an RSVP */
+  coverage: { noLeads: number; notReached: number; reached: number; rsvp: number };
+  /** leads by seniority (from their titles) and stage */
+  bySeniority: { level: Seniority; leads: number; rsvps: number }[];
+  /** accounts with the most RSVPs, then the most leads */
+  topAccounts: { account: TargetAccount; leads: number; rsvps: number; stages: Record<LeadStage, number> }[];
 }
 
 export function outreachStats(o: Outreach, accounts: TargetAccount[], today = todayISO(), weeks = 10): OutreachStats {
@@ -198,7 +336,62 @@ export function outreachStats(o: Outreach, accounts: TargetAccount[], today = to
       .filter((r) => r.lead.nextDate && r.lead.nextDate <= today && isOpenLead(r.lead))
       .map((r) => ({ ...r, date: r.lead.nextDate! }))
       .sort((a, b) => a.date.localeCompare(b.date)),
-    recent: touches.sort((a, b) => b.touch.date.localeCompare(a.touch.date)).slice(0, 15),
+    recent: [...touches].sort((a, b) => b.touch.date.localeCompare(a.touch.date)).slice(0, 15),
+    ...accountBreakdowns(accounts),
+  };
+}
+
+const zeroStages = () => Object.fromEntries(STAGE_ORDER.map((s) => [s, 0])) as Record<LeadStage, number>;
+const reachedAcc = (a: TargetAccount) => a.leads.some((l) => l.stage !== 'not_contacted');
+
+function accountBreakdowns(accounts: TargetAccount[]) {
+  const seg = new Map<string, OutreachStats['bySegment'][number]>();
+  const tier = new Map<number, OutreachStats['byTier'][number]>();
+  const coverage = { noLeads: 0, notReached: 0, reached: 0, rsvp: 0 };
+  const sen = new Map<Seniority, { level: Seniority; leads: number; rsvps: number }>(SENIORITY.map((level) => [level, { level, leads: 0, rsvps: 0 }]));
+  for (const a of accounts) {
+    const k = a.segment?.trim() || NO_SEGMENT;
+    const sg = seg.get(k) ?? { segment: k, accounts: 0, leads: 0, reached: 0, rsvps: 0, stages: zeroStages() };
+    const t = tier.get(a.tier ?? 0) ?? { tier: a.tier ?? 0, accounts: 0, leads: 0, reached: 0, rsvps: 0 };
+    const rsvps = a.leads.filter(isRsvp).length;
+    sg.accounts++;
+    t.accounts++;
+    sg.leads += a.leads.length;
+    t.leads += a.leads.length;
+    sg.rsvps += rsvps;
+    t.rsvps += rsvps;
+    if (reachedAcc(a)) {
+      sg.reached++;
+      t.reached++;
+    }
+    for (const l of a.leads) {
+      sg.stages[l.stage]++;
+      const s = sen.get(seniorityOf(l.title))!;
+      s.leads++;
+      if (isRsvp(l)) s.rsvps++;
+    }
+    seg.set(k, sg);
+    tier.set(a.tier ?? 0, t);
+    if (!a.leads.length) coverage.noLeads++;
+    else if (rsvps) coverage.rsvp++;
+    else if (reachedAcc(a)) coverage.reached++;
+    else coverage.notReached++;
+  }
+  const topAccounts = accounts
+    .filter((a) => a.leads.length)
+    .map((account) => {
+      const stages = zeroStages();
+      for (const l of account.leads) stages[l.stage]++;
+      return { account, leads: account.leads.length, rsvps: account.leads.filter(isRsvp).length, stages };
+    })
+    .sort((a, b) => b.rsvps - a.rsvps || b.leads - a.leads || a.account.name.localeCompare(b.account.name))
+    .slice(0, 8);
+  return {
+    bySegment: [...seg.values()].sort((a, b) => b.accounts - a.accounts || a.segment.localeCompare(b.segment)),
+    byTier: [...tier.values()].sort((a, b) => (a.tier || 9) - (b.tier || 9)),
+    coverage,
+    bySeniority: [...sen.values()].filter((x) => x.leads),
+    topAccounts,
   };
 }
 

@@ -7,13 +7,14 @@ import './outreach.css';
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Building2, FileUp, Handshake, Kanban, List, Pencil, Plus, Table2, Users } from 'lucide-react';
 import type { ID } from '@/types';
-import { filterAccounts, importOutreachCsv, leadsOf, outreachCsvRows, outreachStats } from '@/spaces/outreach';
+import { filterCount, importOutreachCsv, leadsOf, outreachCsvRows, outreachStats, outreachView, type OutreachFilter } from '@/spaces/outreach';
 import { getSpace } from '@/store/space';
 import { readLS, useApp, writeLS } from '@/store/app';
 import { parseCSV } from '@/lib/csv';
 import { plural, safeFileName } from '@/lib/text';
 import { backend, exportCsv } from '@/backend';
-import { Button, EmptyState, ExportMenu, Menu, ModuleHeader, SearchInput, Select, Tabs, Toolbar, UnderlineTabs, toast } from '@/ui';
+import { Button, EmptyState, ExportMenu, Menu, ModuleHeader, SearchInput, Tabs, Toolbar, UnderlineTabs, toast } from '@/ui';
+import { FilterBar } from './filters';
 import { AccountsView } from './Accounts';
 import { PipelineView } from './Pipeline';
 import { DashboardView } from './Dashboard';
@@ -66,7 +67,14 @@ export function OutreachModule({ modeTabs }: { modeTabs: React.ReactNode }) {
   const key = (k: string) => `prepro.or.${k}.${spaceId}`;
   const [listId, setListIdState] = useState<ID>(() => readLS<string>(key('list'), ''));
   const [view, setViewState] = useState<View>(() => readLS<View>(key('view'), 'accounts'));
-  const [ownerId, setOwnerId] = useState<ID>('');
+  // filters stay per space (the search box does not)
+  const [filters, setFiltersState] = useState<OutreachFilter>(() => readLS<OutreachFilter>(key('filters'), {}));
+  const setFilters = (patch: Partial<OutreachFilter>) =>
+    setFiltersState((f) => {
+      const next = { ...f, ...patch };
+      writeLS(key('filters'), next);
+      return next;
+    });
   const [q, setQ] = useState('');
   const [acc, setAcc] = useState<ID | null>(null);
   const [lead, setLead] = useState<{ accountId: ID; leadId: ID } | null>(null);
@@ -93,9 +101,11 @@ export function OutreachModule({ modeTabs }: { modeTabs: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navKey]);
 
-  const accounts = useMemo(() => filterAccounts(o, { listId: activeList || undefined, ownerId: ownerId || undefined, q }), [o, activeList, ownerId, q]);
-  const leads = useMemo(() => leadsOf(accounts, ownerId || undefined), [accounts, ownerId]);
+  // each account with only the leads that pass the filters (hidden: how many they hide)
+  const { accounts, hidden } = useMemo(() => outreachView(o, { ...filters, ownerId: filters.ownerId && o.team.some((m) => m.id === filters.ownerId) ? filters.ownerId : undefined, listId: activeList || undefined, q }), [o, filters, activeList, q]);
+  const leads = useMemo(() => leadsOf(accounts), [accounts]);
   const stats = useMemo(() => outreachStats(o, accounts), [o, accounts]);
+  const filtering = filterCount(filters) > 0 || !!q.trim();
 
   const newAccount = () => setAcc(addAccount({ listIds: activeList ? [activeList] : [] }));
   const newList = () => {
@@ -192,9 +202,9 @@ export function OutreachModule({ modeTabs }: { modeTabs: React.ReactNode }) {
               ]}
             />
             <SearchInput value={q} onChange={setQ} placeholder="Search accounts and leads…" />
-            <Select size="sm" style={{ width: 'auto', maxWidth: 200 }} value={ownerId} placeholder="Everyone" options={o.team.map((m) => ({ value: m.id, label: m.name }))} onChange={setOwnerId} aria-label="Owner" />
             <div className="spacer" />
             <span className="muted small">
+              {filtering ? 'Showing ' : ''}
               {plural(accounts.length, 'account')} · {plural(leads.length, 'lead')} · {stats.rsvps} RSVP
             </span>
             {view !== 'progress' && (
@@ -212,10 +222,11 @@ export function OutreachModule({ modeTabs }: { modeTabs: React.ReactNode }) {
               />
             )}
           </Toolbar>
+          <FilterBar f={filters} onChange={setFilters} showSort={view === 'accounts'} />
           <div className="module-body or-body">
-            {view === 'accounts' && <AccountsView accounts={accounts} onOpenAccount={setAcc} onOpenLead={(accountId, leadId) => setLead({ accountId, leadId })} onAddAccount={newAccount} />}
+            {view === 'accounts' && <AccountsView accounts={accounts} hidden={hidden} filtering={filtering} onOpenAccount={setAcc} onOpenLead={(accountId, leadId) => setLead({ accountId, leadId })} onAddAccount={newAccount} />}
             {view === 'pipeline' && <PipelineView leads={leads} onOpenLead={(accountId, leadId) => setLead({ accountId, leadId })} />}
-            {view === 'progress' && <DashboardView stats={stats} listId={activeList || undefined} onOpenLead={(accountId, leadId) => setLead({ accountId, leadId })} onPickOwner={(id) => { setOwnerId(id); setView('accounts'); }} />}
+            {view === 'progress' && <DashboardView stats={stats} listId={activeList || undefined} onOpenLead={(accountId, leadId) => setLead({ accountId, leadId })} onPickOwner={(id) => { setFilters({ ownerId: id }); setView('accounts'); }} onPickSegment={(segment) => { setFilters({ segments: [segment] }); setView('accounts'); }} onOpenAccount={setAcc} />}
           </div>
         </>
       )}
