@@ -98,13 +98,15 @@ export async function uploadResources(files: UploadFile[], patch: Partial<BrandA
   for (const f of files) {
     const ext = f.name.includes('.') ? f.name.split('.').pop()!.toLowerCase() : 'bin';
     const stored = await importAssetBytes(f.data, ext);
+    // video and sound files go to their own Brand Kit sections
+    const media = VIDEO_EXT.includes(ext) ? 'video' : AUDIO_EXT.includes(ext) ? 'audio' : null;
     made.push(
-      makeAsset('resource', {
+      makeAsset(media ?? 'resource', {
         name: baseName(f.name),
         file: stored,
         fileName: f.name,
         fileSize: f.data.length,
-        resourceType: guessResourceType(f.name),
+        resourceType: media ? undefined : guessResourceType(f.name),
         image: IMAGE_EXT.includes(ext) ? stored : undefined,
         ...patch,
       }),
@@ -112,7 +114,7 @@ export async function uploadResources(files: UploadFile[], patch: Partial<BrandA
   }
   const ids = addAssets(made);
   const camp = patch.campaignId ? getSpace().campaigns.find((c) => c.id === patch.campaignId) : undefined;
-  toast(`Added ${plural(ids.length, 'resource')}${camp ? ` to ${camp.name || 'the campaign'}` : ''} — stored in Brand Kit & Assets`);
+  toast(`Added ${plural(ids.length, made.every((a) => a.kind === 'video') ? 'video' : 'file')}${camp ? ` to ${camp.name || 'the campaign'}` : ''} — stored in Brand Kit & Assets`);
   return ids;
 }
 

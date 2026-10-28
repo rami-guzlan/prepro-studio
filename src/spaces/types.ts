@@ -455,6 +455,82 @@ export interface CrmSheet {
   boardColumnId?: ID;
 }
 
+/* ---------------------------------------------------------------- people & brands: accounts & outreach */
+
+/** Where a lead is in the outreach (the last ones come after the invite). */
+export type LeadStage = 'not_contacted' | 'contacted' | 'engaged' | 'invited' | 'rsvp_yes' | 'attended' | 'declined';
+export type TouchChannel = 'email' | 'linkedin' | 'call' | 'meeting' | 'event' | 'other';
+
+/** Someone on the team doing outreach (owner of accounts and leads, who logged a touch). */
+export interface OutreachMember {
+  id: ID;
+  name: string;
+  color?: string;
+}
+
+/** A list of target accounts, usually for one goal (e.g. an event's RSVP list). */
+export interface AccountList {
+  id: ID;
+  name: string;
+  color?: string;
+  description?: string;
+  /** RSVPs this list should bring in */
+  goal?: number;
+  /** the event or deadline it works towards */
+  eventDate?: ISODate;
+  campaignId?: ID;
+}
+
+/** One outreach step on a lead: an email, a LinkedIn message, a call … */
+export interface OutreachTouch {
+  id: ID;
+  date: ISODate;
+  channel: TouchChannel;
+  /** team member who did it */
+  byId?: ID;
+  note?: string;
+}
+
+/** A person at a target account. */
+export interface Lead {
+  id: ID;
+  name: string;
+  title?: string;
+  email?: string;
+  linkedin?: string;
+  phone?: string;
+  /** team member working this lead (falls back to the account owner) */
+  ownerId?: ID;
+  stage: LeadStage;
+  nextStep?: string;
+  nextDate?: ISODate;
+  notes?: string;
+  touches: OutreachTouch[];
+  updatedAt?: string;
+}
+
+/** A company to reach (a bank, an asset manager …) and its leads. */
+export interface TargetAccount {
+  id: ID;
+  name: string;
+  website?: string;
+  segment?: string;
+  /** 1 = top priority */
+  tier?: 1 | 2 | 3;
+  ownerId?: ID;
+  /** lists it is on */
+  listIds: ID[];
+  notes?: string;
+  leads: Lead[];
+  createdAt?: string;
+}
+
+export interface Outreach {
+  lists: AccountList[];
+  accounts: TargetAccount[];
+  team: OutreachMember[];
+}
+
 /* ---------------------------------------------------------------- root */
 
 export interface SpaceData {
@@ -476,6 +552,8 @@ export interface SpaceData {
   assets: BrandAsset[];
   /** People & Brands: CRM-style sheets (relationships, leads, brand deals …) */
   crm: CrmSheet[];
+  /** People & Brands: target account lists, their leads and the team's outreach (src/spaces/outreach.ts) */
+  outreach?: Outreach;
   /** brainstorming board (same model as the script's Mind Dump) */
   mind: MindDump;
   /** shared calculator lines on the Strategy page (src/spaces/calc) */

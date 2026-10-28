@@ -21,8 +21,8 @@ export const SECTIONS: SectionDef[] = [
   { id: 'fonts', title: 'Fonts', kinds: ['font'], addKind: 'font', icon: Type, hint: 'Typefaces and where to use them', addLabel: 'Add font' },
   { id: 'images', title: 'Images & references', kinds: ['image'], addKind: 'image', icon: Images, hint: 'Mood, look references, stills, portraits', addLabel: 'Add images' },
   { id: 'templates', title: 'Templates', kinds: ['template'], addKind: 'template', icon: LayoutTemplate, hint: 'Thumbnail, carousel and caption templates', addLabel: 'Add template' },
-  { id: 'video', title: 'Video / footage', kinds: ['video'], addKind: 'video', icon: Film, hint: 'Intros, stingers, b-roll libraries, trailers', addLabel: 'Add video' },
-  { id: 'audio', title: 'Music / sound', kinds: ['audio'], addKind: 'audio', icon: Music, hint: 'Theme music, licensed tracks, sound logos', addLabel: 'Add audio' },
+  { id: 'video', title: 'Video / footage', kinds: ['video'], addKind: 'video', icon: Film, hint: 'Intros, stingers, b-roll libraries, trailers', addLabel: 'Upload video' },
+  { id: 'audio', title: 'Music / sound', kinds: ['audio'], addKind: 'audio', icon: Music, hint: 'Theme music, licensed tracks, sound logos', addLabel: 'Upload sound' },
   { id: 'links', title: 'Links & documents', kinds: ['link', 'doc', 'resource', 'other'], addKind: 'link', icon: Link2, hint: 'Guidelines, shared drives and every campaign’s downloadable resources', addLabel: 'Add link' },
 ];
 

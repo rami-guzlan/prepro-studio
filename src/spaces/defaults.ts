@@ -1,5 +1,6 @@
 /* Factories, normalisation and starting templates for Marketing Spaces. */
 import { normalizeDesignSystem } from './designSystem/types';
+import { normalizeOutreach } from './outreach';
 import type { ID } from '@/types';
 import { uid } from '@/lib/id';
 import { normalizeMind } from '@/lib/mind';
@@ -401,6 +402,7 @@ export function normalizeSpace(raw: Partial<SpaceData> & Record<string, any>): S
   };
   s.strategy = { positioning: '', valueProp: '', voice: '', keyMessages: '', notes: '', ...(s.strategy ?? {}) };
   for (const k of ['goals', 'personas', 'pillars', 'tactics', 'channels', 'campaigns', 'milestones', 'content', 'shoots', 'assets', 'crm', 'projectIds']) if (!Array.isArray(s[k])) s[k] = [];
+  if (s.outreach) normalizeOutreach(s.outreach);
   for (const sh of s.crm) {
     sh.columns = Array.isArray(sh.columns) ? sh.columns : [];
     sh.rows = Array.isArray(sh.rows) ? sh.rows : [];

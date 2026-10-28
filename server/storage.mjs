@@ -74,7 +74,29 @@ function diskStore(root) {
     async copy(from, to) {
       write(file(to), await fsp.readFile(file(from)));
     },
+    /** no direct uploads on disk: big files go through the server */
+    async startUpload() {
+      return null;
+    },
+    async stream(key, range) {
+      const f = file(key);
+      const st = await fsp.stat(f).catch(() => null);
+      if (!st) return null;
+      const r = parseRange(range, st.size);
+      if (r === 'bad') return { status: 416, size: st.size };
+      if (!r) return { status: 200, body: fs.createReadStream(f), length: st.size };
+      return { status: 206, body: fs.createReadStream(f, { start: r[0], end: r[1] }), length: r[1] - r[0] + 1, contentRange: `bytes ${r[0]}-${r[1]}/${st.size}` };
+    },
   };
+}
+
+/** "bytes=a-b" → [start, end] (inclusive), null for none, 'bad' when outside the file. */
+function parseRange(header, size) {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(String(header || ''));
+  if (!m || (!m[1] && !m[2])) return null;
+  const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+  const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+  return start >= size || start > end ? 'bad' : [start, end];
 }
 
 function gcsStore(bucket) {
@@ -84,6 +106,8 @@ function gcsStore(bucket) {
     list: (prefix) => gcs.list(bucket, prefix),
     del: (key) => gcs.del(bucket, key),
     copy: (from, to) => gcs.copy(bucket, from, to),
+    startUpload: (key, opts) => gcs.startUpload(bucket, key, opts),
+    stream: (key, range) => gcs.stream(bucket, key, range),
   };
 }
 

@@ -1,6 +1,9 @@
-/* People & Brands — CRM-style sheets of a Marketing Space: relationships, leads,
-   brand deals, collaborators, press … Each sheet has its own typed columns, a
-   spreadsheet view and a board view grouped by a stage / status column. */
+/* People & Brands — two parts:
+   - Accounts & outreach (./outreach): target account lists, the leads at each
+     account and the team's outreach towards a goal such as an event's RSVPs.
+   - Sheets: CRM-style sheets of a Marketing Space: relationships, leads, brand
+     deals, collaborators, press … Each sheet has its own typed columns, a
+     spreadsheet view and a board view grouped by a stage / status column. */
 import './people.css';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Copy, FileUp, Handshake, Kanban, MoreHorizontal, Pencil, Plus, Table2, Trash2, X } from 'lucide-react';
@@ -18,6 +21,7 @@ import { SheetBoard } from './Board';
 import { SheetTable, type SortState } from './Table';
 import { ColumnDialog, RowDialog } from './dialogs';
 import { addRow, addSheet, deleteSheet, duplicateSheet, moveSheet, updateSheet } from './ops';
+import { ModeTabs, OutreachModule, type PeopleMode } from './outreach';
 
 /* ---------------------------------------------------------------- import / export */
 
@@ -152,6 +156,30 @@ function SheetTabs({ sheets, activeId, onSelect }: { sheets: CrmSheet[]; activeI
 /* ---------------------------------------------------------------- module */
 
 export default function PeopleModule() {
+  const spaceId = useSpace((s) => s.id);
+  const hasOutreach = useSpace((s) => !!(s.outreach?.accounts.length || s.outreach?.lists.length));
+  const sheetCount = useSpace((s) => s.crm?.length ?? 0);
+  const params = useApp((s) => s.params);
+  const navKey = useApp((s) => s.navKey);
+  const key = `prepro.sp-people.mode.${spaceId}`;
+  // spaces that only have sheets open on them; everything else on Accounts & outreach
+  const [mode, setModeState] = useState<PeopleMode>(() => readLS<PeopleMode>(key, '' as PeopleMode) || (sheetCount && !hasOutreach ? 'sheets' : 'accounts'));
+  const setMode = (m: PeopleMode) => {
+    setModeState(m);
+    writeLS(key, m);
+  };
+  // links from agents / other screens pick the part they point into
+  useEffect(() => {
+    const p = params as { sheetId?: string; rowId?: string; accountId?: string; listId?: string; outreachView?: string } | undefined;
+    if (p?.sheetId || p?.rowId) setModeState('sheets');
+    else if (p?.accountId || p?.listId || p?.outreachView) setModeState('accounts');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navKey]);
+  const tabs = <ModeTabs mode={mode} onMode={setMode} sheets={sheetCount} />;
+  return mode === 'accounts' ? <OutreachModule modeTabs={tabs} /> : <SheetsModule modeTabs={tabs} />;
+}
+
+function SheetsModule({ modeTabs }: { modeTabs: React.ReactNode }) {
   const sheets = useSpace((s) => s.crm) ?? [];
   const campaigns = useSpace((s) => s.campaigns);
   const spaceId = useSpace((s) => s.id);
@@ -254,6 +282,7 @@ export default function PeopleModule() {
           </>
         }
       />
+      {modeTabs}
 
       {sheets.length === 0 ? (
         <div className="module-body">
