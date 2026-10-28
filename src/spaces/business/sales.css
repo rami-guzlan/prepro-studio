@@ -578,6 +578,22 @@ button.sl-tagchip:hover,
   gap: 10px;
 }
 
+.sl-pf-video {
+  grid-column: 1 / -1;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--radius);
+}
+.sl-pf-edit-media > .btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.sl-pf-dropping {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+}
+
 /* ---------------------------------------------------------------- portfolio */
 
 .sl-pf-grid {

@@ -61,6 +61,19 @@ is never given to agents). Finances and Training stay private to the owner: the 
 
 An agent acts as its person and never gets the Finance or Training tools unless that person is the owner.
 
+## Review links (no sign-in)
+
+In a Marketing Space, **Brand Kit & Assets → Share for review** makes a link for chosen sections (for example
+Images & references and Video / footage) that anyone can open without an account. The reviewer marks each item
+**Approve** or **Needs changes**, comments, and sends it; the feedback appears in the same dialog, and anyone with the
+space open sees a notice right away.
+
+- The page always shows the current items of those sections, and nothing else from the space: only the files those
+  items point to can be fetched with the link, and a video's local path is never shown.
+- Links expire (7, 30 or 90 days, or never) and can be turned off or deleted at any time. They live in
+  `_system/reviews.json` (`server/reviews.mjs`), with the feedback.
+- Anyone who can edit the space can make links for it, so only share a space with people you'd trust to share it.
+
 ## Set up your own (from scratch)
 
 You need a Google Cloud project with billing turned on, the [gcloud CLI](https://cloud.google.com/sdk/docs/install)
@@ -78,6 +91,9 @@ gcloud storage buckets create gs://<project>-data --location=us-east1 --uniform-
 gcloud storage buckets update gs://<project>-data --versioning
 '{"rule":[{"action":{"type":"Delete"},"condition":{"daysSinceNoncurrentTime":30,"isLive":false}}]}' | Out-File -Encoding ascii lifecycle.json
 gcloud storage buckets update gs://<project>-data --lifecycle-file=lifecycle.json
+# big files (videos) upload from the browser straight to the bucket: allow the app's address (set it after the first deploy)
+'[{"origin":["https://prepro-studio-<project number>.us-east1.run.app"],"method":["PUT"],"responseHeader":["Content-Type","Content-Range","Range"],"maxAgeSeconds":3600}]' | Out-File -Encoding ascii cors.json
+gcloud storage buckets update gs://<project>-data --cors-file=cors.json
 
 # 3. the app's own service account, with access to that bucket only
 gcloud iam service-accounts create prepro-run --display-name="PrePro Studio app"
@@ -128,8 +144,8 @@ On a network with TLS inspection, point gcloud at a bundle of the Windows certif
 
 ## Tests
 
-`scripts/cloud-test.mjs` runs up to 74 end-to-end checks (sign-in, invites, scopes, Finance/Training lock-out,
-live updates, conflicts, MCP relay, OAuth with PKCE, agent tabs, turning a person off) against a running server and
+`scripts/cloud-test.mjs` runs up to 94 end-to-end checks (sign-in, invites, scopes, Finance/Training lock-out,
+live updates, conflicts, MCP relay, OAuth with PKCE, agent tabs, review links, turning a person off) against a running server and
 the real Identity Platform, then removes its two test accounts. Set `CHROME_PATH` to Chrome or Edge to include the
 agent-tab checks. Run the server locally with `STORAGE=disk`
 (or a throwaway bucket), `OWNER_EMAIL` set to the test owner, then:
@@ -141,7 +157,8 @@ node scripts/cloud-test.mjs
 
 ## Limits to know
 
-- Uploads are capped at about 31 MB per file (Cloud Run's request limit is 32 MB).
+- Files up to 24 MB upload through the server; bigger ones (videos, up to 5 GB) go from the browser straight to the
+  bucket, which needs the bucket's CORS rule from step 2. Files are streamed back with byte ranges, so videos seek.
 - The first visit after a quiet spell takes a few seconds while the instance starts.
 - Export PDF uses the browser's print dialog (Save as PDF); the merged production book is desktop only.
 - If two people type at the very same spot of a field in the same second, both pieces of text are kept side by side; tidy them up by hand.

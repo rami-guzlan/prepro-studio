@@ -1,6 +1,7 @@
 /* Small server-rendered pages: sign in, accept an invite, approve an AI agent,
    the owner's Team page and the "Connect an AI agent" page. Plain HTML with a
    little inline script; they talk to the same /api as the app. */
+import fs from 'node:fs';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -158,6 +159,17 @@ document.querySelectorAll('[data-pat]').forEach(b=>b.onclick=async()=>{await pos
 document.querySelectorAll('[data-app]').forEach(b=>b.onclick=async()=>{await post('/api/apps/'+encodeURIComponent(b.dataset.app),{},'DELETE');location.reload()});`,
     },
   );
+}
+
+/* The no-sign-in review page (server/review/): its data comes from /api/review/<token>. */
+let reviewAssets = null;
+export function reviewPage(token) {
+  reviewAssets ??= {
+    css: fs.readFileSync(new URL('./review/review.css', import.meta.url), 'utf8'),
+    js: fs.readFileSync(new URL('./review/review.js', import.meta.url), 'utf8'),
+  };
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Review</title><style>${reviewAssets.css}</style></head>
+<body data-token="${esc(token)}"><main><div class="brand">${LOGO}PrePro Studio review</div><div id="app"><p class="muted">Loading…</p></div></main><script>${reviewAssets.js}</script></body></html>`;
 }
 
 /** Only same-site paths are allowed as a post-sign-in destination. */
