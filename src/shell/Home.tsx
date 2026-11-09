@@ -14,6 +14,7 @@ import { readLS, setHomeTab, setTheme, useApp, writeLS, type HomeTab } from '@/s
 import { Badge, Button, EmptyState, Menu, Tabs, confirmDialog, toast, type MenuItem } from '@/ui';
 import { useCommand } from '@/lib/commands';
 import { NewProjectDialog } from './NewProjectDialog';
+import { ProductionsLibrary, isCreator, kindLabel } from './ProductionsLibrary';
 import { NewSpaceDialog } from './NewSpaceDialog';
 import { NewBusinessDialog } from './NewBusinessDialog';
 import { BUSINESS_TYPES } from '@/spaces/business/constants';
@@ -40,6 +41,11 @@ export function Home() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [newFolder, setNewFolder] = useState<string | undefined>();
+  const openNew = (folder?: string) => {
+    setNewFolder(folder);
+    setNewOpen(true);
+  };
   const [newSpaceOpen, setNewSpaceOpen] = useState(false);
   const [newBizOpen, setNewBizOpen] = useState(false);
   const tab = useApp((s) => s.homeTab);
@@ -207,7 +213,7 @@ export function Home() {
               <Button icon={Upload} onClick={async () => { const id = await importArchive(); if (id) refresh(); }}>
                 Import archive
               </Button>
-              <Button variant="primary" icon={Plus} onClick={() => setNewOpen(true)}>
+              <Button variant="primary" icon={Plus} onClick={() => openNew()}>
                 New production
               </Button>
             </>
@@ -307,28 +313,34 @@ export function Home() {
               title="Start your first production"
               description={`Create a production for each video. Write the script, build storyboards and shot lists, plan lighting, cast and crew, schedule the shoot, send call sheets and plan post — then print or export everything as PDF.${DEMO_HINT_PROJECT}`}
               action={
-                <Button variant="primary" icon={Plus} onClick={() => setNewOpen(true)}>
+                <Button variant="primary" icon={Plus} onClick={() => openNew()}>
                   New production
                 </Button>
               }
             />
           </div>
         ) : (
-          <div className="project-grid">
-            <button className="new-card" onClick={() => setNewOpen(true)}>
-              <Plus size={26} />
-              New production
-            </button>
-            {showDemo &&
-              (demo ? (
-                <ProjectCard key={demo.id} p={demo} menu={demoMenu('project', demo.id)} hint={DEMO_CARD_HINT} />
-              ) : (
-                <DemoCard kind="project" busy={busy} onOpen={demoAction(openDemo)} menu={demoMenu('project')} />
-              ))}
-            {others.map((p) => (
-              <ProjectCard key={p.id} p={p} menu={cardMenu(p)} />
-            ))}
-          </div>
+          <ProductionsLibrary
+            projects={others}
+            menu={cardMenu}
+            card={(p, menu) => <ProjectCard p={p} menu={menu} />}
+            onNew={openNew}
+            refresh={refresh}
+            lead={
+              <>
+                <button className="new-card" onClick={() => openNew()}>
+                  <Plus size={26} />
+                  New production
+                </button>
+                {showDemo &&
+                  (demo ? (
+                    <ProjectCard key={demo.id} p={demo} menu={demoMenu('project', demo.id)} hint={DEMO_CARD_HINT} />
+                  ) : (
+                    <DemoCard kind="project" busy={busy} onOpen={demoAction(openDemo)} menu={demoMenu('project')} />
+                  ))}
+              </>
+            }
+          />
         )}
         </>
         )}
@@ -405,7 +417,7 @@ export function Home() {
           />
         </div>
       </div>
-      <NewProjectDialog open={newOpen} onClose={() => setNewOpen(false)} />
+      <NewProjectDialog open={newOpen} onClose={() => setNewOpen(false)} folder={newFolder} folders={[...new Set(others.map((p) => p.folder).filter((x): x is string => !!x)), ...readLS<string[]>('prepro.prod.folders', [])].filter((x, i, a) => a.indexOf(x) === i).sort()} />
       <NewSpaceDialog open={newSpaceOpen} onClose={() => setNewSpaceOpen(false)} />
       <NewBusinessDialog open={newBizOpen} onClose={() => setNewBizOpen(false)} />
     </div>
@@ -428,10 +440,12 @@ function ProjectCard({ p, menu, hint }: { p: ProjectSummary; menu: any[]; hint?:
         <h3 className="ellipsis">{p.title}</h3>
         <div className="row" style={{ gap: 6 }}>
           {p.demo && <Badge tone="accent">Demo</Badge>}
-          {status && <Badge color={status.color}>{status.label}</Badge>}
-          <span className="meta">{optionLabel(PROJECT_TYPES, p.projectType)}</span>
+          {status && !isCreator(p) && <Badge color={status.color}>{status.label}</Badge>}
+          {isCreator(p) && <Badge color={status?.color}>{kindLabel(p)}</Badge>}
+          {!isCreator(p) && <span className="meta">{optionLabel(PROJECT_TYPES, p.projectType)}</span>}
+          {p.folder && <span className="meta">· {p.folder}</span>}
         </div>
-        <div className="meta">{hint ?? `Edited ${fmt.dateMedium(p.updatedAt.slice(0, 10))}`}</div>
+        <div className="meta">{hint ?? (isCreator(p) && p.targetDate ? `Publish by ${fmt.dateMedium(p.targetDate)}` : `Edited ${fmt.dateMedium(p.updatedAt.slice(0, 10))}`)}</div>
       </div>
     </div>
   );

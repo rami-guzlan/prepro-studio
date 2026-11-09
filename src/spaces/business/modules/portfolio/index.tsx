@@ -1,23 +1,35 @@
 /* Portfolio & Reels: showreels, work samples and case studies with thumbnails,
-   client, year, your role, results and files — what you send to win work. */
+   client, year, your role, results and files — what you send to win work.
+   Video files (uploaded or dropped) become pieces of their own and play in place. */
 import '../../biz.css';
 import '../../sales.css';
 import { useMemo, useState } from 'react';
-import { Copy, ExternalLink, Film, FolderKanban, Plus, Star, Trash2, UserRound } from 'lucide-react';
+import { Copy, ExternalLink, Film, FolderKanban, Loader2, Plus, Star, Trash2, Upload, UserRound } from 'lucide-react';
 import type { ID } from '@/types';
 import { useSpace } from '@/store/space';
 import { navigateSpace } from '@/store/app';
 import { plural, safeFileName } from '@/lib/text';
-import { exportCsv } from '@/backend';
+import { assetUrl, backend, exportCsv } from '@/backend';
+import { useFileDrop } from '@/spaces/modules/assets/resources';
 import { Button, Checkbox, DateInput, EmptyState, ExportMenu, Field, IconButton, ImageDrop, Input, Modal, ModuleHeader, SearchInput, Select, Tabs, Textarea, confirmDialog, toast } from '@/ui';
 import { PORTFOLIO_KINDS } from '../../constants';
 import { clientLabel } from '../../derive';
-import { addItem, makePortfolioItem, removeItems, updateItem } from '../../ops';
-import { FileBox } from '../../files';
+import { addFiles, addItem, makePortfolioItem, removeItems, updateItem } from '../../ops';
+import { FileBox, storeFiles } from '../../files';
 import { OptionPill, clientOptions, useBiz, useNavParams, useToday } from '../../ui';
 import type { PortfolioItem, PortfolioKind } from '../../types';
 import { LinkSelect, Tags, TagsInput, allTags, bizProjectOptions, copyText, openUrl, useLinkOptions, videoThumb, yearOf } from '../pipeline/sales-shared';
-import { ProofThumb, kindInfo } from './parts';
+import { ProofThumb, isVideoFile, kindInfo, videoFileOf } from './parts';
+
+const VIDEO_FILTERS = [{ name: 'Video', extensions: ['mp4', 'mov', 'webm', 'm4v'] }];
+const titleOf = (fileName: string) => fileName.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim() || fileName;
+
+/** Store video files, with a note while big ones upload. */
+async function storeVideos(files: { name: string; data: Uint8Array }[]) {
+  const mb = files.reduce((n, f) => n + f.data.length, 0) / 1048576;
+  if (mb > 20) toast(`Uploading ${plural(files.length, 'video')} (${Math.round(mb)} MB)…`, 'info');
+  return storeFiles(files);
+}
 
 type KindFilter = 'all' | PortfolioKind;
 
@@ -37,6 +49,38 @@ export default function PortfolioModule() {
     addItem('portfolio', it);
     setSel(it.id);
   };
+
+  /** Each video file becomes a piece of its own (title from the file name). */
+  const [uploading, setUploading] = useState(false);
+  const addVideos = async (files: { name: string; data: Uint8Array }[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const stored = await storeVideos(files);
+      for (const f of stored) addItem('portfolio', makePortfolioItem({ kind: kind === 'showreel' ? 'showreel' : 'video', title: titleOf(f.fileName), date: today, files: [f] }));
+      toast(`Added ${plural(stored.length, 'video')} to the portfolio`);
+    } catch (e) {
+      toast(`Could not upload: ${e instanceof Error ? e.message : String(e)}`, 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+  const pickVideos = async () => {
+    try {
+      const files = await backend.openFiles({ multiple: true, filters: VIDEO_FILTERS, title: 'Upload videos' });
+      await addVideos(files.map((f) => ({ name: f.name, data: f.data })));
+    } catch (e) {
+      toast(`Could not upload: ${e instanceof Error ? e.message : String(e)}`, 'error');
+    }
+  };
+  const drop = useFileDrop((files) => {
+    const vids = files.filter((f) => isVideoFile(f.name));
+    if (!vids.length) {
+      toast('Drop video files here (MP4, MOV, WebM). Other files go in a piece’s Files.', 'info');
+      return;
+    }
+    void Promise.all(vids.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) }))).then(addVideos);
+  });
 
   useNavParams((p) => {
     const id = p.itemId ?? p.portfolioId;
@@ -100,20 +144,26 @@ export default function PortfolioModule() {
               ]}
               csv={[{ label: 'Portfolio (CSV)', onClick: () => void exportList() }]}
             />
+            <Button icon={uploading ? Loader2 : Upload} disabled={uploading} title="Each video becomes a piece of its own. You can also drop video files on this page." onClick={() => void pickVideos()}>
+              {uploading ? 'Uploading…' : 'Upload videos'}
+            </Button>
             <Button variant="primary" icon={Plus} onClick={() => add(kind === 'all' ? 'video' : kind)}>
               Add work
             </Button>
           </>
         }
       />
-      <div className="module-body sl-page">
+      <div className={`module-body sl-page ${drop.over ? 'sl-pf-dropping' : ''}`} {...drop.props}>
         {b.portfolio.length === 0 ? (
           <EmptyState
             icon={Film}
             title="Show what you’ve made"
-            description="Add your showreel and your best work — paste a YouTube or Vimeo link, drop a still, note the client, your role and the results. Feature the strongest pieces so they show up in Sales Enablement and the printed portfolio."
+            description="Add your showreel and your best work — upload or drop the video files, or paste a YouTube or Vimeo link, note the client, your role and the results. Feature the strongest pieces so they show up in Sales Enablement and the printed portfolio."
             action={
               <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Button icon={Upload} disabled={uploading} onClick={() => void pickVideos()}>
+                  Upload videos
+                </Button>
                 <Button variant="primary" icon={Plus} onClick={() => add('showreel')}>
                   Add your showreel
                 </Button>
@@ -190,6 +240,20 @@ function PortfolioDialog({ x, onClose }: { x: PortfolioItem; onClose: () => void
     }
   };
   const yt = videoThumb(x.url);
+  const vid = videoFileOf(x.files);
+  const [busy, setBusy] = useState(false);
+  const uploadVideo = async () => {
+    try {
+      const files = await backend.openFiles({ multiple: false, filters: VIDEO_FILTERS, title: 'Upload the video' });
+      if (!files.length) return;
+      setBusy(true);
+      addFiles({ list: 'portfolio', id: x.id, field: 'files' }, await storeVideos(files.map((f) => ({ name: f.name, data: f.data }))));
+    } catch (e) {
+      toast(`Could not upload: ${e instanceof Error ? e.message : String(e)}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <Modal
       open
@@ -225,6 +289,13 @@ function PortfolioDialog({ x, onClose }: { x: PortfolioItem; onClose: () => void
     >
       <div className="sl-pf-edit">
         <div className="sl-pf-edit-media">
+          {vid ? (
+            <video className="sl-pf-video" src={assetUrl(vid.file)} poster={x.image ? assetUrl(x.image) : undefined} controls playsInline preload="metadata" />
+          ) : (
+            <Button icon={busy ? Loader2 : Upload} disabled={busy} onClick={() => void uploadVideo()}>
+              {busy ? 'Uploading…' : 'Upload the video'}
+            </Button>
+          )}
           <ImageDrop value={x.image} onChange={(img) => up({ image: img }, false)} aspect={16 / 9} label={yt ? 'Using the YouTube thumbnail — drop a still to replace it' : 'Drop a still / thumbnail or click'} />
           {!x.image && yt && (
             <div className="sl-pf-yt">

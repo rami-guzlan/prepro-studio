@@ -12,7 +12,7 @@ import { getSpace, useSpace, useSpaceId } from '@/store/space';
 import { navigateSpace, readLS, useApp, writeLS } from '@/store/app';
 import { useCommand } from '@/lib/commands';
 import { matchesQuery, plural, safeFileName } from '@/lib/text';
-import { backend, exportCsv, importDroppedImages, pickImages } from '@/backend';
+import { backend, exportCsv, importDroppedImages, isCloud, pickImages } from '@/backend';
 import { isImageFile } from '@/lib/images';
 import { Button, ExportMenu, Input, isModalOpen, Menu, ModuleHeader, SearchInput, toast, Toolbar, UnderlineTabs, type MenuItem, type TabDef } from '@/ui';
 import { DesignSystemPane } from '@/spaces/designSystem/ui/DesignSystemPane';
@@ -22,8 +22,16 @@ import { exportMenuItems, importDroppedDesignSystem, isZipFile, pickImport } fro
 import { addAssets, addColor, addImageAssets, copyText, makeAsset } from './actions';
 import { AssetEditor, ImageLightbox } from './editors';
 import { ColorsGrid, FileList, FontsList, ImagesGallery, LinksSection, LogosGrid, SectionShell, type TileHandlers } from './sections';
-import { ResourceModal, addResourcePlaceholder, dropResources, pickResources } from './resources';
+import { ResourceModal, addResourcePlaceholder, dropResources, pickResources, uploadResources as uploadFiles } from './resources';
+import { ShareForReviewButton } from './review';
 import { assetsOfSection, inkOn, keyMessageLines, normalizeHex, SECTIONS, type SectionId } from './util';
+
+const MEDIA_FILTERS = {
+  video: [{ name: 'Video', extensions: ['mp4', 'mov', 'webm', 'm4v'] }],
+  audio: [{ name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'ogg', 'aac', 'flac'] }],
+};
+const VIDEO_FILE = /.(mp4|mov|webm|m4v)$/i;
+const AUDIO_FILE = /.(mp3|wav|m4a|ogg|aac|flac)$/i;
 
 const kindLabel = (k: AssetKind) => ASSET_KINDS.find((x) => x.value === k)?.label ?? k;
 
@@ -283,8 +291,11 @@ export default function AssetsModule() {
     if (imgs.length) void importImages(imgs);
     if (other.length) {
       clearFilters();
-      expand('links');
-      void dropResources(other);
+      if (other.some((f) => VIDEO_FILE.test(f.name))) expand('video');
+      if (other.some((f) => AUDIO_FILE.test(f.name))) expand('audio');
+      if (other.some((f) => !VIDEO_FILE.test(f.name) && !AUDIO_FILE.test(f.name))) expand('links');
+      setBusy(true);
+      void dropResources(other).finally(() => setBusy(false));
     }
   };
 
@@ -292,6 +303,24 @@ export default function AssetsModule() {
     clearFilters();
     expand('links');
     void pickResources();
+  };
+
+  /** Upload video or sound files into their section (big files can take a while). */
+  const uploadMedia = async (kind: 'video' | 'audio') => {
+    try {
+      const files = await backend.openFiles({ multiple: true, filters: MEDIA_FILTERS[kind], title: kind === 'video' ? 'Add video files' : 'Add sound files' });
+      if (!files.length) return;
+      clearFilters();
+      expand(kind);
+      setBusy(true);
+      const mb = files.reduce((n, f) => n + f.data.length, 0) / 1048576;
+      if (mb > 20) toast(`Uploading ${plural(files.length, 'file')} (${Math.round(mb)} MB)…`, 'info');
+      await uploadFiles(files.map((f) => ({ name: f.name, data: f.data })));
+    } catch (e) {
+      toast(`Could not upload: ${e instanceof Error ? e.message : String(e)}`, 'error');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const pickInto = async (kind: 'image' | 'logo') => {
@@ -347,8 +376,10 @@ export default function AssetsModule() {
     { label: 'Images & references…', icon: ImagePlus, onClick: () => add('image') },
     { separator: true },
     { label: 'Template', icon: LayoutTemplate, onClick: () => add('template') },
-    { label: 'Video / footage', icon: Film, onClick: () => add('video') },
-    { label: 'Music / sound', icon: Music, onClick: () => add('audio') },
+    { label: 'Video files (upload)…', icon: Film, onClick: () => void uploadMedia('video') },
+    { label: 'Video link', icon: Film, onClick: () => add('video') },
+    { label: 'Music / sound files (upload)…', icon: Music, onClick: () => void uploadMedia('audio') },
+    { label: 'Music / sound link', icon: Music, onClick: () => add('audio') },
     { label: 'Link', icon: Link2, onClick: () => add('link') },
     { label: 'Document', icon: FileText, onClick: () => add('doc') },
     { separator: true },
@@ -380,6 +411,9 @@ export default function AssetsModule() {
         return <ImagesGallery items={items} h={h} onOpen={setViewing} canAdd={!filtering} />;
       case 'links':
         return <LinksSection items={items} h={h} def={def} filtering={filtering} onAdd={filtering ? undefined : () => add(def.addKind)} />;
+      case 'video':
+      case 'audio':
+        return <FileList items={items} h={h} def={def} onAdd={filtering ? undefined : () => void uploadMedia(id)} />;
       default:
         return <FileList items={items} h={h} def={def} onAdd={filtering ? undefined : () => add(def.addKind)} />;
     }
@@ -407,6 +441,21 @@ export default function AssetsModule() {
             { label: 'Link', icon: Link2, onClick: () => add('link') },
             { label: 'Document', icon: FileText, onClick: () => add('doc') },
             { label: 'Other', icon: Plus, onClick: () => add('other') },
+          ]}
+        />
+      );
+    if (id === 'video' || id === 'audio')
+      return (
+        <Menu
+          align="end"
+          trigger={
+            <Button size="sm" variant="ghost" icon={Plus}>
+              Add
+            </Button>
+          }
+          items={[
+            { label: id === 'video' ? 'Upload video files…' : 'Upload sound files…', icon: Upload, onClick: () => void uploadMedia(id) },
+            { label: id === 'video' ? 'Video link (YouTube, Vimeo, Drive …)' : 'Link', icon: Link2, onClick: () => add(id) },
           ]}
         />
       );
@@ -447,6 +496,7 @@ export default function AssetsModule() {
         subtitle={subtitle}
         actions={
           <>
+            {isCloud && <ShareForReviewButton />}
             <ExportMenu docs={[{ id: 'space-brand-kit', label: 'Brand kit (PDF)' }]} csv={[{ label: 'Asset list (CSV)', onClick: exportAssetsCsv }]} extra={exportMenuItems()} />
             <Button
               icon={FileArchive}
@@ -592,7 +642,7 @@ export default function AssetsModule() {
         <div className="sp-assets-dropzone" aria-hidden>
           <div>
             <ImagePlus />
-            <span>Drop a design-system .zip to import it · images → Images & references · other files → Links & documents</span>
+            <span>Drop a design-system .zip to import it · images → Images & references · videos → Video / footage · other files → Links & documents</span>
           </div>
         </div>
       )}

@@ -115,6 +115,19 @@ shot list and storyboard.
 </tr>
 </table>
 
+**The library.** File productions in folders (drag a card onto a folder, or use its menu), and switch between a grid of cards, a sortable list and a board by status (drag a production to another column to change its status).
+
+**YouTube / social videos** get a lighter home: pick "YouTube / social video" when you create a production and it opens on the **Creator Workspace** instead of the film layout. Every film tool is still one click away under "All production tools".
+
+- **Today:** where the video stands, the one thing to do next (worked out from what you have filled in), a focus sprint timer, a streak, the publish-by date and a stage track (Idea, Plan, Shoot, Edit, Publish, Done).
+- **Idea:** the video in one sentence, hooks and titles to star one of (with hook formulas and a 60-character check), the thumbnail idea, and an outline of beats from ready-made shapes (tutorial, story, list, short, review).
+- **Plan:** run-and-gun: a shot list with A-roll straight from the outline and one-tap B-roll ideas, the gear to pack, the shoot day, where, what to wear and the camera settings that worked.
+- **Shoot:** pre-roll checks, the shots to tick with a take counter, take notes and a teleprompter (outline or your own text, speed, size, mirror). **Shoot mode** puts it all on one full screen; the space bar rolls the prompter.
+- **Edit:** edit passes to tick, the outline as a cut guide with timings, exported versions with review links, the project file and notes.
+- **Publish:** final title, description with chapters from the outline, tags, the final thumbnail, every platform's status and link, a launch checklist and how it did.
+
+Agents use `creator_read` and `creator_write` to see where a video stands and fill any of it in.
+
 | Area | Module | What you can do |
 |---|---|---|
 | Overview | **Overview** | Dashboard, key info, readiness checklist, timeline, notes. Print a project one-sheet. |
@@ -166,8 +179,8 @@ link production projects (a release campaign links its film and uses its poster 
 | **Calendar** | Month / week / agenda views of posts (coloured by channel), shoot days, milestones and campaigns; drag posts to reschedule, drag unscheduled content onto a day, weekly cadence per channel. |
 | **Channels** | Platforms and handles, cadence targets, best times, followers, per-channel stats and platform limits. |
 | **Results** | Views, engagement, clicks, followers gained by period, channel, format and pillar; top posts; quick results entry. |
-| **People & Brands** | CRM-style sheets: relationships, leads, brand deals, collaborators & guests, press — or your own. Typed columns (single / multi select with colours, money with totals, dates with follow-up reminders, email, links, checkbox, campaign), a spreadsheet and a pipeline board per sheet, CSV import / export. |
-| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, music and links. Links & documents also holds every campaign's downloadable resources, grouped per campaign (files are stored in the space folder). The **Design system** tab turns the kit into a design system agents can follow: themes and semantic tokens, palettes with roles and CSS variables, type styles, spacing and shape tokens, components and layouts, plus art direction for generated imagery (intent, imagery, composition, colour behaviour, treatments, rules by level, annotated references, formats, briefs, review checklist). **Import** a Claude Design design-system zip (or README / tokens.css / tokens.json / images / fonts); **export** a bundle (README guide, tokens, logos, fonts, briefs) for Claude Design, image models and coding agents. |
+| **People & Brands** | **Accounts & outreach:** lists of target accounts with an RSVP goal and event date, the leads at each account in a drop-down under it, owners on your team, every email / LinkedIn message / call logged per lead, a pipeline board by stage and a Progress view (RSVPs against the goal, RSVPs needed a week, funnel, outreach by week and by person, follow-ups due). CSV import (one row per lead) and export. **Sheets:** CRM-style sheets: relationships, leads, brand deals, collaborators & guests, press — or your own. Typed columns (single / multi select with colours, money with totals, dates with follow-up reminders, email, links, checkbox, campaign), a spreadsheet and a pipeline board per sheet, CSV import / export. |
+| **Brand Kit & Assets** | Logos, colours, fonts, images, templates, video, music and links (drop or upload video and sound files straight into their sections). In the hosted version, **Share for review** makes a no-sign-in link to chosen sections where a reviewer approves or asks for changes per item and sends feedback back. Links & documents also holds every campaign's downloadable resources, grouped per campaign (files are stored in the space folder). The **Design system** tab turns the kit into a design system agents can follow: themes and semantic tokens, palettes with roles and CSS variables, type styles, spacing and shape tokens, components and layouts, plus art direction for generated imagery (intent, imagery, composition, colour behaviour, treatments, rules by level, annotated references, formats, briefs, review checklist). **Import** a Claude Design design-system zip (or README / tokens.css / tokens.json / images / fonts); **export** a bundle (README guide, tokens, logos, fonts, briefs) for Claude Design, image models and coding agents. |
 | **Linked Projects** | Productions this space promotes, with their linked content and campaigns. |
 | **Print & Export** | One-sheet, strategy brief, campaign plan, content briefs, content plan, calendar, posting schedule, shoot plan, results report, brand kit, design system book, ideas board, People & Brands sheets — or one merged **marketing plan** PDF. |
 

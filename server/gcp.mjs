@@ -82,6 +82,23 @@ export const gcs = {
     if (!r.ok) throw await fail(r, `write ${name}`);
     return String((await r.json()).generation);
   },
+  /** Start a resumable upload the browser finishes itself (PUT to the returned address); for files too big to go through the server. */
+  async startUpload(bucket, name, { contentType = 'application/octet-stream', size, origin } = {}) {
+    const q = new URLSearchParams({ uploadType: 'resumable', name, ifGenerationMatch: '0' });
+    const headers = { 'Content-Type': 'application/json', 'X-Upload-Content-Type': contentType, ...(size ? { 'X-Upload-Content-Length': String(size) } : {}), ...(origin ? { Origin: origin } : {}) };
+    const r = await gfetch(`${GCS_UP}/b/${bucket}/o?${q}`, { method: 'POST', headers, body: JSON.stringify({ name, contentType }) });
+    if (!r.ok) throw await fail(r, `start upload ${name}`);
+    return r.headers.get('location');
+  },
+  /** The object as a stream (fetch Response), optionally one byte range ("bytes=0-1023"); null when it doesn't exist. */
+  async stream(bucket, name, range) {
+    const r = await gfetch(`${GCS}/b/${bucket}/o/${enc(name)}?alt=media`, { headers: range ? { Range: range } : {} });
+    if (r.status === 404) return null;
+    if (r.status === 416) return { status: 416, size: Number(String(r.headers.get('content-range') || '').split('/')[1]) || 0 };
+    if (!r.ok) throw await fail(r, `read ${name}`);
+    const cr = r.headers.get('content-range');
+    return { status: r.status, body: r.body, length: Number(r.headers.get('content-length')) || 0, contentRange: cr };
+  },
   async list(bucket, prefix) {
     const out = [];
     let pageToken = '';

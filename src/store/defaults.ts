@@ -9,6 +9,7 @@ import type {
 } from '@/types';
 import { SCHEMA_VERSION } from '@/types';
 import { uid } from '@/lib/id';
+import { defaultCreator, normalizeCreator } from '@/modules/creator/model';
 import { newBoard, normalizeMind } from '@/lib/mind';
 import { templateAvRows, templateBudget, templateDeliverables, templateGear, templateGraphics, templatePostSchedule, templateTasks } from '@/templates';
 
@@ -76,6 +77,12 @@ export interface NewProjectOptions {
   withTemplates?: boolean;
   scriptMode?: 'screenplay' | 'av';
   color?: string;
+  /** "creator": a YouTube / social video in the lightweight Creator workspace */
+  workflow?: 'creator';
+  /** creator videos: long-form or a short / reel */
+  creatorFormat?: 'long' | 'short';
+  /** library folder */
+  folder?: string;
 }
 
 /** Project types that default to the two-column A/V script. */
@@ -83,8 +90,10 @@ export const AV_TYPES: ProjectType[] = ['corporate', 'training', 'interview', 'd
 
 export function createProject(opts: NewProjectOptions): ProjectData {
   const now = new Date().toISOString();
-  const withT = opts.withTemplates !== false;
-  const vertical = opts.projectType === 'social';
+  const creator = opts.workflow === 'creator';
+  // creator videos start light: no film checklist, budget or deliverables (all still there when wanted)
+  const withT = opts.withTemplates !== false && !creator;
+  const vertical = creator ? opts.creatorFormat === 'short' : opts.projectType === 'social';
   const scriptMode = opts.scriptMode ?? (AV_TYPES.includes(opts.projectType) ? 'av' : 'screenplay');
   return normalizeProject({
     schemaVersion: SCHEMA_VERSION,
@@ -99,6 +108,8 @@ export function createProject(opts: NewProjectOptions): ProjectData {
       resolution: vertical ? '1080x1920' : '3840x2160',
       frameRate: opts.projectType === 'social' || opts.projectType === 'corporate' || opts.projectType === 'training' ? '29.97' : '23.976',
       color: opts.color ?? '#7c5cff',
+      ...(creator ? { workflow: 'creator' as const } : {}),
+      ...(opts.folder ? { folder: opts.folder } : {}),
       createdAt: now,
       updatedAt: now,
     },
@@ -125,6 +136,7 @@ export function createProject(opts: NewProjectOptions): ProjectData {
       editNotes: [],
       workflow: withT ? DEFAULT_WORKFLOW : '',
     },
+    ...(creator ? { creator: defaultCreator(opts.creatorFormat ?? 'long') } : {}),
   } as Partial<ProjectData>);
 }
 
@@ -224,5 +236,6 @@ export function normalizeProject(raw: Partial<ProjectData> & Record<string, any>
     if (!Array.isArray(p.post[key])) p.post[key] = [];
   }
   p.notes = p.notes ?? '';
+  if (p.meta.workflow === 'creator' || p.creator) p.creator = normalizeCreator(p.creator);
   return p as ProjectData;
 }

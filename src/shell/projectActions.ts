@@ -26,7 +26,7 @@ export async function openProjectById(id: string, moduleId?: ModuleId) {
     openProject(p);
     backend.setWindowTitle?.(p.meta.title);
     const last = readLS<ModuleId | null>(`prepro.lastModule.${p.id}`, null);
-    navigate(moduleId ?? last ?? 'overview');
+    navigate(moduleId ?? last ?? (p.meta.workflow === 'creator' ? 'creator' : 'overview'));
     writeLS('prepro.lastProject', p.id);
     writeLS('prepro.lastSpace', null);
   } catch (e) {
@@ -118,7 +118,7 @@ export async function createAndOpen(opts: NewProjectOptions, copyFrom?: CopyFrom
         toast(`Created the project, but copying from the other project failed: ${e instanceof Error ? e.message : e}`, 'error');
       }
     }
-    await openProjectById(p.id, 'overview');
+    await openProjectById(p.id, p.meta.workflow === 'creator' ? 'creator' : 'overview');
     return p;
   } catch (e) {
     toast(`Could not create project: ${e instanceof Error ? e.message : e}`, 'error');
@@ -308,5 +308,42 @@ export async function reopenLastProject() {
     if (list.some((p) => p.id === id)) await openProjectById(id);
   } catch {
     /* ignore */
+  }
+}
+
+/* ---------------------------------------------------------------- library: folders and status */
+
+/** Change a closed production's data without opening it (library actions). */
+async function editClosedProject(id: string, fn: (p: ProjectData) => void) {
+  const p = normalizeProject(await backend.loadProject(id));
+  fn(p);
+  await backend.saveProject(p);
+}
+
+/** File productions in a library folder ("" = top level). */
+export async function moveProjectsToFolder(ids: string[], folder: string) {
+  try {
+    for (const id of ids) await editClosedProject(id, (p) => void (p.meta.folder = folder.trim() || undefined));
+    return true;
+  } catch (e) {
+    toast(`Could not move: ${e instanceof Error ? e.message : e}`, 'error');
+    return false;
+  }
+}
+
+/** Creator stage that goes with a status dragged to on the library board. */
+const STAGE_OF_STATUS = { development: 'idea', pre: 'plan', production: 'shoot', post: 'edit', delivered: 'done' } as const;
+
+/** Set a production's status from the library board (creator videos move to the matching stage). */
+export async function setProjectStatus(id: string, status: ProjectData['meta']['status']) {
+  try {
+    await editClosedProject(id, (p) => {
+      p.meta.status = status;
+      if (p.meta.workflow === 'creator' && p.creator && status !== 'archived') p.creator.stage = STAGE_OF_STATUS[status];
+    });
+    return true;
+  } catch (e) {
+    toast(`Could not change the status: ${e instanceof Error ? e.message : e}`, 'error');
+    return false;
   }
 }

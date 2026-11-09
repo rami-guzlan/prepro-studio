@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
+import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { createStore, readJson, updateJson } from './storage.mjs';
 import { createAccess, canSee, canEdit, canCreate, tabOf, httpError, sign, unsign, parseCookies, OWNER_ONLY_TABS } from './auth.mjs';
@@ -25,7 +26,8 @@ import { createDocs, isSafeId, isSafeName, kindOf } from './docs.mjs';
 import { createLive } from './live.mjs';
 import { createOAuth } from './oauth.mjs';
 import { createHeadless } from './headless.mjs';
-import { loginPage, invitePage, consentPage, errorPage, teamPage, connectPage, safeNext } from './pages.mjs';
+import { createReviews } from './reviews.mjs';
+import { loginPage, invitePage, consentPage, errorPage, teamPage, connectPage, reviewPage, safeNext } from './pages.mjs';
 
 const require = createRequire(import.meta.url);
 const { createMcpServer } = require('../electron/mcp.cjs');
@@ -34,6 +36,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 const MAX_JSON = 40 * 1024 * 1024;
+const MAX_UPLOAD = 5 * 1024 ** 3; // direct-to-bucket uploads (videos)
 const log = { info: console.log, warn: console.warn, error: console.error };
 
 const store = createStore();
@@ -42,6 +45,7 @@ const docs = createDocs(store, log);
 const live = createLive({ auth, log });
 const oauth = createOAuth(store);
 const headless = createHeadless({ auth, live, port: Number(process.env.PORT || 8080), log });
+const reviews = createReviews(store);
 
 /* ------------------------------------------------------------ helpers */
 
@@ -103,7 +107,7 @@ function sameOrigin(req) {
   }
 }
 
-const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', bmp: 'image/bmp', pdf: 'application/pdf', json: 'application/json', txt: 'text/plain; charset=utf-8', csv: 'text/csv', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', zip: 'application/zip', html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', ico: 'image/x-icon', webmanifest: 'application/manifest+json', map: 'application/json' };
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', bmp: 'image/bmp', pdf: 'application/pdf', json: 'application/json', txt: 'text/plain; charset=utf-8', csv: 'text/csv', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', mp4: 'video/mp4', mov: 'video/quicktime', m4v: 'video/x-m4v', webm: 'video/webm', ogg: 'audio/ogg', aac: 'audio/aac', flac: 'audio/flac', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', zip: 'application/zip', html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', ico: 'image/x-icon', webmanifest: 'application/manifest+json', map: 'application/json' };
 const mimeOf = (name) => MIME[String(name).split('.').pop().toLowerCase()] || 'application/octet-stream';
 
 /* ------------------------------------------------------------ app page */
@@ -338,12 +342,33 @@ async function handleDocs(req, res, url, user) {
       await docs.putAsset(id, asset, await readBody(req, 31 * 1024 * 1024), mimeOf(asset));
       return send(res, 200, { name: asset });
     }
-    if (m === 'GET' && isSafeName(name)) {
+    if (m === 'POST' && name === 'upload') {
+      // a big file (a video): the browser sends it straight to the bucket
+      await requireDoc(user, id, true);
+      const { ext: rawExt, size } = await readJsonBody(req);
+      const ext = String(rawExt || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin';
+      if (!(Number(size) > 0) || Number(size) > MAX_UPLOAD) throw httpError(413, `Files can be up to ${MAX_UPLOAD / 1024 ** 3} GB`);
+      const asset = `a_${Date.now().toString(36)}${crypto.randomBytes(3).toString('hex')}.${ext}`;
+      const uploadUrl = await docs.uploadUrl(id, asset, { contentType: mimeOf(asset), size: Number(size), origin: baseUrl(req) });
+      return send(res, 200, { name: asset, uploadUrl, contentType: mimeOf(asset) });
+    }
+    if ((m === 'GET' || m === 'HEAD') && isSafeName(name)) {
       await requireDoc(user, id);
-      const r = await docs.getAsset(id, name);
-      if (!r) throw httpError(404, 'Not found');
       // asset names are unique and never rewritten
-      return send(res, 200, r.data, { 'Content-Type': mimeOf(name), 'Cache-Control': 'private, max-age=31536000, immutable', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:" });
+      return sendAsset(req, res, id, name, 'private, max-age=31536000, immutable');
+    }
+  }
+  if (sub === 'reviews') {
+    // review links of a Marketing Space's Brand Kit (see server/reviews.mjs)
+    const e = await requireDoc(user, id, m !== 'GET');
+    if (e.type !== 'space' || (e.kind || 'marketing') !== 'marketing') throw httpError(400, 'Review links are for Marketing Spaces');
+    const token = parts[4];
+    if (!token && m === 'GET') return send(res, 200, await reviews.listFor(id));
+    if (!token && m === 'POST') return send(res, 200, await reviews.create(id, user, await readJsonBody(req)));
+    if (token && m === 'PATCH') return send(res, 200, await reviews.change(id, token, await readJsonBody(req)));
+    if (token && m === 'DELETE') {
+      await reviews.remove(id, token);
+      return send(res, 200, { ok: true });
     }
   }
   if (sub === 'backups' && m === 'GET') {
@@ -354,6 +379,64 @@ async function handleDocs(req, res, url, user) {
     const b = await docs.readBackup(id, name);
     if (!b) throw httpError(404, 'Not found');
     return send(res, 200, b);
+  }
+  throw httpError(404, 'Not found');
+}
+
+/* ------------------------------------------------------------ review links (public) */
+
+async function reviewView(token) {
+  const r = await reviews.open(token);
+  const d = await docs.read(r.docId);
+  if (!d) throw httpError(404, 'This review link does not exist.');
+  return { r, v: reviews.view(r, d.data) };
+}
+
+const ASSET_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:";
+
+/** Stream a stored file with Range support (video players seek with it); big videos never sit in memory. */
+async function sendAsset(req, res, docId, name, cache) {
+  const s = await docs.streamAsset(docId, name, req.headers.range);
+  if (!s) throw httpError(404, 'Not found');
+  const head = { 'Content-Type': mimeOf(name), 'Accept-Ranges': 'bytes', 'Cache-Control': cache, 'Content-Security-Policy': ASSET_CSP, ...SEC_HEADERS };
+  if (s.status === 416) {
+    res.writeHead(416, { ...head, 'Content-Range': `bytes */${s.size}` });
+    return res.end();
+  }
+  res.writeHead(s.status, { ...head, ...(s.length ? { 'Content-Length': s.length } : {}), ...(s.contentRange ? { 'Content-Range': s.contentRange } : {}) });
+  const body = typeof s.body?.getReader === 'function' ? Readable.fromWeb(s.body) : s.body;
+  if (req.method === 'HEAD') {
+    body?.destroy();
+    return res.end();
+  }
+  body.on('error', () => res.destroy());
+  res.on('close', () => body.destroy());
+  body.pipe(res);
+}
+
+async function handleReview(req, res, [token, sub, name]) {
+  const m = req.method;
+  if (!sub && m === 'GET') {
+    const { v } = await reviewView(token);
+    void reviews.seen(token);
+    return send(res, 200, v);
+  }
+  if (sub === 'file' && (m === 'GET' || m === 'HEAD')) {
+    const { r, v } = await reviewView(token);
+    if (!isSafeName(name) || !reviews.allowedFiles(v).has(name)) throw httpError(404, 'Not found');
+    return sendAsset(req, res, r.docId, name, 'private, max-age=3600');
+  }
+  if (sub === 'feedback' && m === 'POST') {
+    const { v } = await reviewView(token);
+    let body;
+    try {
+      body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}');
+    } catch {
+      throw httpError(400, 'Invalid JSON');
+    }
+    const { rec, resp } = await reviews.respond(token, v, body);
+    live.review(rec.docId, { title: rec.title, by: resp.name, token });
+    return send(res, 200, { ok: true });
   }
   throw httpError(404, 'Not found');
 }
@@ -429,6 +512,10 @@ async function route(req, res) {
     const user = await auth.acceptInvite(token, password);
     return send(res, 200, { ok: true }, { 'Set-Cookie': auth.sessionCookie(user.uid, user.epoch, isSecure(req)) });
   }
+
+  /* ---- review links: no sign-in, the token is the key */
+  if (p.startsWith('/review/') && m === 'GET') return html(res, 200, reviewPage(p.split('/')[2] || ''), { 'X-Robots-Tag': 'noindex, nofollow' });
+  if (p.startsWith('/api/review/')) return handleReview(req, res, p.split('/').slice(3));
 
   /* ---- everything below needs a signed-in person */
   const user = await auth.fromRequest(req);

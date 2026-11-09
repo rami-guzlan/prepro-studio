@@ -67,6 +67,8 @@ async function api(path: string, init: RequestInit = {}): Promise<Response> {
 const getJson = async <T>(path: string) => (await (await api(path)).json()) as T;
 const sendJson = (path: string, body: unknown, method = 'POST') => api(path, { method, body: JSON.stringify(body) });
 const enc = encodeURIComponent;
+/** Files bigger than this upload straight to Cloud Storage. */
+const DIRECT_UPLOAD_FROM = 24 * 1024 * 1024;
 
 export async function fetchDoc<T>(id: string): Promise<{ doc: T; rev: number }> {
   const r = await api(`/api/docs/${enc(id)}`);
@@ -170,6 +172,15 @@ export function createCloudBackend(): Backend {
     },
 
     async importAsset(docId, bytes, ext) {
+      // big files (videos) go straight to the bucket: requests through the server stop at 32 MB
+      if (bytes.length > DIRECT_UPLOAD_FROM) {
+        const up = await (await sendJson(`/api/docs/${enc(docId)}/assets/upload`, { ext, size: bytes.length })).json();
+        if (up.uploadUrl) {
+          const put = await fetch(up.uploadUrl, { method: 'PUT', body: bytes as BodyInit, headers: { 'Content-Type': up.contentType } });
+          if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+          return up.name as string;
+        }
+      }
       const r = await api(`/api/docs/${enc(docId)}/assets?ext=${enc(ext)}`, { method: 'POST', body: bytes as BodyInit, headers: { 'Content-Type': 'application/octet-stream' } });
       return (await r.json()).name as string;
     },
@@ -202,3 +213,53 @@ export function createCloudBackend(): Backend {
     restoreBackup: (id, name) => getJson(`/api/docs/${enc(id)}/backups/${enc(name)}`),
   };
 }
+
+/* ------------------------------------------------------------ review links (server/reviews.mjs) */
+
+export interface ReviewItemFeedback {
+  decision: '' | 'approve' | 'changes' | 'comment';
+  comment: string;
+}
+export interface ReviewResponse {
+  id: string;
+  name: string;
+  at: string;
+  decision: ReviewItemFeedback['decision'];
+  overall: string;
+  items: Record<string, ReviewItemFeedback>;
+}
+export interface ReviewLink {
+  token: string;
+  docId: string;
+  title: string;
+  message: string;
+  sections: string[];
+  /** items picked per section; a section without picks shares all of its items */
+  picks?: Record<string, string[]>;
+  showNotes: boolean;
+  createdByName: string;
+  createdAt: string;
+  expiresAt: string | null;
+  revoked: boolean;
+  views: number;
+  lastViewedAt?: string;
+  responses: ReviewResponse[];
+}
+export interface NewReviewLink {
+  title: string;
+  message: string;
+  sections: string[];
+  picks?: Record<string, string[]>;
+  showNotes: boolean;
+  /** days until it stops working; 0 = never */
+  days: number;
+}
+
+/** Review links of a Marketing Space: no-sign-in pages for feedback on Brand Kit sections. */
+export const reviewApi = {
+  list: (docId: string) => getJson<ReviewLink[]>(`/api/docs/${enc(docId)}/reviews`),
+  create: async (docId: string, body: NewReviewLink) => (await (await sendJson(`/api/docs/${enc(docId)}/reviews`, body)).json()) as ReviewLink,
+  change: async (docId: string, token: string, patch: Partial<NewReviewLink> & { revoked?: boolean }) => (await (await sendJson(`/api/docs/${enc(docId)}/reviews/${enc(token)}`, patch, 'PATCH')).json()) as ReviewLink,
+  remove: async (docId: string, token: string) => void (await api(`/api/docs/${enc(docId)}/reviews/${enc(token)}`, { method: 'DELETE' })),
+  url: (token: string) => `${location.origin}/review/${token}`,
+};

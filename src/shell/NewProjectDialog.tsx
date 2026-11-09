@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Building2, Clapperboard, FilePlus2, Film, GraduationCap, LayoutTemplate, Megaphone, Mic, Music, Popcorn, Smartphone, Sparkles, Tv, Video } from 'lucide-react';
+import { BookOpen, Building2, Clapperboard, FilePlus2, Film, GraduationCap, LayoutTemplate, Megaphone, Mic, MonitorPlay, Music, Popcorn, Smartphone, Sparkles, Tv, Video } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ProjectSummary, ProjectType } from '@/types';
 import { PROJECT_TYPES } from '@/lib/constants';
@@ -43,8 +43,15 @@ function templateSummary(type: ProjectType): string {
 
 const COPY_DEFAULT: Omit<CopyFromOptions, 'sourceId'> = { branding: true, cast: true, crew: true, locations: true };
 
-export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NewProjectDialog({ open, onClose, folder: folderIn, folders = [] }: { open: boolean; onClose: () => void; folder?: string; folders?: string[] }) {
   const [title, setTitle] = useState('');
+  // YouTube / social videos get the light Creator workspace; everything else the full toolkit
+  const [kind, setKind] = useState<'creator' | 'production'>('production');
+  const [creatorFormat, setCreatorFormat] = useState<'long' | 'short'>('long');
+  const [folder, setFolder] = useState(folderIn ?? '');
+  useEffect(() => {
+    if (open) setFolder(folderIn ?? '');
+  }, [open, folderIn]);
   const [type, setType] = useState<ProjectType>('short');
   const [mode, setMode] = useState<'screenplay' | 'av'>('screenplay');
   const [modeTouched, setModeTouched] = useState(false);
@@ -69,8 +76,10 @@ export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: ()
   const create = async () => {
     setBusy(true);
     const p = await createAndOpen(
-      { title: title.trim() || suggestedTitle || 'Untitled Project', projectType: type, scriptMode: mode, color, withTemplates: start === 'template' },
-      sourceId ? { sourceId, ...copy } : undefined,
+      kind === 'creator'
+        ? { title: title.trim() || 'Untitled video', projectType: 'social', scriptMode: 'av', color, workflow: 'creator', creatorFormat, folder: folder || undefined }
+        : { title: title.trim() || suggestedTitle || 'Untitled Project', projectType: type, scriptMode: mode, color, withTemplates: start === 'template', folder: folder || undefined },
+      kind === 'production' && sourceId ? { sourceId, ...copy } : undefined,
     );
     setBusy(false);
     if (p) {
@@ -90,23 +99,57 @@ export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: ()
         <>
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={create} disabled={busy}>
-            {busy ? 'Creating…' : start === 'blank' ? 'Create blank project' : 'Create project'}
+            {busy ? 'Creating…' : kind === 'creator' ? 'Create video' : start === 'blank' ? 'Create blank project' : 'Create project'}
           </Button>
         </>
       }
     >
       <div className="col" style={{ gap: 16 }}>
-        <Field label="Project title">
+        <div className="type-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <button type="button" className={`type-option ${kind === 'creator' ? 'on' : ''}`} onClick={() => setKind('creator')}>
+            <MonitorPlay />
+            <span className="t">YouTube / social video</span>
+            <span className="muted small" style={{ lineHeight: 1.4 }}>
+              The Creator workspace: idea, quick plan, shoot mode with a teleprompter, edit and publish, with one clear next step. Made for solo, run-and-gun videos.
+            </span>
+          </button>
+          <button type="button" className={`type-option ${kind === 'production' ? 'on' : ''}`} onClick={() => setKind('production')}>
+            <Clapperboard />
+            <span className="t">Full production</span>
+            <span className="muted small" style={{ lineHeight: 1.4 }}>
+              Script, storyboard, shot list, lighting, cast and crew, schedule, call sheets, budget and post. For films, commercials and client work.
+            </span>
+          </button>
+        </div>
+        <Field label={kind === 'creator' ? 'Working title' : 'Project title'}>
           <Input
             autoFocus
             value={title}
             onChange={setTitle}
-            placeholder={suggestedTitle || 'e.g. Spring Campaign — Hero Film'}
+            placeholder={kind === 'creator' ? 'e.g. How I plan a video in 20 minutes' : suggestedTitle || 'e.g. Spring Campaign — Hero Film'}
             onKeyDown={(e) => {
               if (e.key === 'Enter') create();
             }}
           />
         </Field>
+        {kind === 'creator' ? (
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Format">
+              <Select
+                value={creatorFormat}
+                onChange={(v) => setCreatorFormat(v as 'long' | 'short')}
+                options={[
+                  { value: 'long', label: 'Long-form (YouTube)' },
+                  { value: 'short', label: 'Short / reel (vertical)' },
+                ]}
+              />
+            </Field>
+            <Field label="Folder">
+              <Select value={folder} onChange={setFolder} placeholder="No folder" options={folders} />
+            </Field>
+          </div>
+        ) : (
+        <>
         <Field label="What are you making?">
           <div className="type-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {PROJECT_TYPES.map((t) => {
@@ -166,6 +209,11 @@ export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: ()
             <ColorPicker value={color} onChange={(c) => setColor(c ?? '#7c5cff')} />
           </Field>
         </div>
+        {folders.length > 0 && (
+          <Field label="Folder">
+            <Select value={folder} onChange={setFolder} placeholder="No folder" options={folders} />
+          </Field>
+        )}
 
         {projects.length > 0 && (
           <Field label="Based on an existing project (optional)" hint="Great for a trailer, teaser or BTS mini-doc of a film you already planned here.">
@@ -185,6 +233,8 @@ export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: ()
               </div>
             )}
           </Field>
+        )}
+        </>
         )}
       </div>
     </Modal>

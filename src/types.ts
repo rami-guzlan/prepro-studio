@@ -76,6 +76,10 @@ export interface ProjectMeta {
   tags?: string[];
   /** the built-in demo project (can be reset from the library) */
   demo?: boolean;
+  /** "creator": a YouTube / social video worked in the lightweight Creator workspace (src/modules/creator) */
+  workflow?: 'creator';
+  /** library folder it is filed in (e.g. "Client work"); none = top level */
+  folder?: string;
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }
@@ -881,6 +885,117 @@ export interface ProjectData {
   post: PostData;
   /** free-form project notes (overview) */
   notes: string;
+  /** YouTube / social workflow (meta.workflow === 'creator') */
+  creator?: CreatorData;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Creator workspace (YouTube / social videos)                                  */
+/* -------------------------------------------------------------------------- */
+
+export type CreatorStage = 'idea' | 'plan' | 'shoot' | 'edit' | 'publish' | 'done';
+
+export interface CreatorCheck {
+  id: ID;
+  label: string;
+  done?: boolean;
+}
+
+/** A hook or a title idea; one of each gets picked. */
+export interface CreatorOption {
+  id: ID;
+  text: string;
+  picked?: boolean;
+}
+
+/** One beat of the outline (also the teleprompter's cards). */
+export interface CreatorBeat {
+  id: ID;
+  text: string;
+  kind?: 'hook' | 'intro' | 'point' | 'cta' | 'outro';
+  /** rough length in seconds */
+  seconds?: number;
+}
+
+export type CreatorShotKind = 'a_roll' | 'b_roll' | 'insert' | 'screen';
+
+export interface CreatorShot {
+  id: ID;
+  text: string;
+  kind: CreatorShotKind;
+  done?: boolean;
+  takes?: number;
+}
+
+export interface CreatorPlatform {
+  id: ID;
+  platform: string;
+  status: 'todo' | 'scheduled' | 'live';
+  date?: ISODate;
+  url?: string;
+}
+
+export interface CreatorVersion {
+  id: ID;
+  label: string;
+  date: ISODate;
+  note?: string;
+  url?: string;
+}
+
+/** A work session (from the sprint timer). */
+export interface CreatorSession {
+  id: ID;
+  date: ISODate;
+  stage: CreatorStage;
+  minutes: number;
+}
+
+export interface CreatorData {
+  stage: CreatorStage;
+  /** long-form (YouTube) or a short / reel */
+  format: 'long' | 'short';
+  /** publish by */
+  targetDate?: ISODate;
+  idea: {
+    premise: string;
+    audience: string;
+    payoff: string;
+    hooks: CreatorOption[];
+    titles: CreatorOption[];
+    thumbnail: { concept: string; text: string; image?: string };
+    beats: CreatorBeat[];
+    notes: string;
+  };
+  plan: {
+    shootDate?: ISODate;
+    location: string;
+    wardrobe: string;
+    notes: string;
+    shots: CreatorShot[];
+    gear: CreatorCheck[];
+  };
+  shoot: {
+    preroll: CreatorCheck[];
+    prompter: { source: 'beats' | 'text'; text: string; speed: number; size: number; mirror?: boolean };
+    log: { id: ID; at: string; text: string }[];
+  };
+  edit: {
+    checklist: CreatorCheck[];
+    versions: CreatorVersion[];
+    notes: string;
+    projectFile: string;
+  };
+  publish: {
+    title: string;
+    description: string;
+    tags: string;
+    thumbnail?: string;
+    platforms: CreatorPlatform[];
+    checklist: CreatorCheck[];
+    results: string;
+  };
+  sessions: CreatorSession[];
 }
 
 /** Lightweight summary used by the project library. */
@@ -898,4 +1013,14 @@ export interface ProjectSummary {
   path?: string;
   /** the built-in demo project */
   demo?: boolean;
+  /** "creator" = YouTube / social workspace */
+  workflow?: 'creator';
+  /** creator videos: the stage they are at */
+  creatorStage?: CreatorStage;
+  /** creator videos: short or long form */
+  creatorFormat?: 'long' | 'short';
+  /** creator videos: publish-by date */
+  targetDate?: ISODate;
+  /** library folder */
+  folder?: string;
 }
