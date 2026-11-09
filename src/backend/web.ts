@@ -67,6 +67,11 @@ function summary(p: ProjectData): ProjectSummary {
     updatedAt: p.meta.updatedAt,
     createdAt: p.meta.createdAt,
     demo: !!p.meta.demo,
+    workflow: p.meta.workflow === 'creator' ? 'creator' : undefined,
+    creatorStage: p.meta.workflow === 'creator' ? p.creator?.stage ?? 'idea' : undefined,
+    creatorFormat: p.meta.workflow === 'creator' ? p.creator?.format : undefined,
+    targetDate: p.meta.workflow === 'creator' ? p.creator?.targetDate : undefined,
+    folder: p.meta.folder || undefined,
   };
 }
 

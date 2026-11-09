@@ -22,6 +22,7 @@ import { outputTools } from './tools/output';
 import { spaceTools } from './tools/spaces';
 import { crmTools } from './tools/crm';
 import { outreachTools } from './tools/outreach';
+import { creatorTools } from './tools/creator';
 import { businessTools } from './kinds/business';
 import { businessSalesTools } from './kinds/business-sales';
 import { businessWorkTools } from './kinds/business-work';
@@ -31,7 +32,7 @@ import { trainingTools } from './kinds/training';
 import { coachTools } from './tools/coach';
 import { designSystemTools } from './kinds/designSystem';
 
-export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...designSystemTools, ...crmTools, ...outreachTools, ...businessTools, ...businessSalesTools, ...businessWorkTools, ...businessLibraryTools, ...financeTools, ...trainingTools, ...coachTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...outputTools];
+export const TOOLS: ToolDef[] = [...appTools, ...spaceTools, ...designSystemTools, ...crmTools, ...outreachTools, ...businessTools, ...businessSalesTools, ...businessWorkTools, ...businessLibraryTools, ...financeTools, ...trainingTools, ...coachTools, ...dataTools, ...scriptTools, ...visualTools, ...productionTools, ...creatorTools, ...outputTools];
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 /** owner-only areas: the hosted version hides these tools from everyone else's agents */
 const AREA = new Map<string, string>([...financeTools.map((t) => [t.name, 'finance'] as const), ...trainingTools.map((t) => [t.name, 'training'] as const)]);

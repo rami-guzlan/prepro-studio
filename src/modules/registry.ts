@@ -22,6 +22,7 @@ import {
   Settings,
   Users,
   Wallet,
+  MonitorPlay,
   type LucideIcon,
 } from 'lucide-react';
 import type { ModuleId } from '@/store/app';
@@ -29,13 +30,14 @@ import type { ModuleId } from '@/store/app';
 export interface ModuleDef {
   id: ModuleId;
   label: string;
-  group: 'Overview' | 'Writing' | 'Visuals' | 'People' | 'Production' | 'Post' | 'Output' | 'Project';
+  group: 'Creator' | 'Overview' | 'Writing' | 'Visuals' | 'People' | 'Production' | 'Post' | 'Output' | 'Project';
   icon: LucideIcon;
   description: string;
   component: LazyExoticComponent<ComponentType>;
 }
 
 export const MODULES: ModuleDef[] = [
+  { id: 'creator', label: 'Creator Workspace', group: 'Creator', icon: MonitorPlay, description: 'YouTube / social: idea, plan, shoot, edit, publish', component: lazy(() => import('./creator')) },
   { id: 'overview', label: 'Overview', group: 'Overview', icon: LayoutDashboard, description: 'Project dashboard, key info & progress', component: lazy(() => import('./overview')) },
   { id: 'tasks', label: 'Tasks & Milestones', group: 'Overview', icon: ListChecks, description: 'Pre-production checklist, milestones', component: lazy(() => import('./tasks')) },
   { id: 'script', label: 'Script', group: 'Writing', icon: FileText, description: 'Screenplay & two-column A/V scripts', component: lazy(() => import('./script')) },
@@ -56,5 +58,8 @@ export const MODULES: ModuleDef[] = [
   { id: 'printcenter', label: 'Print & Export', group: 'Output', icon: Printer, description: 'All documents, PDFs & production book', component: lazy(() => import('./printcenter')) },
   { id: 'settings', label: 'Project Settings', group: 'Project', icon: Settings, description: 'Format, paper, script & print settings', component: lazy(() => import('../shell/ProjectSettings')) },
 ];
+
+/** Shown first for YouTube / social videos (meta.workflow "creator"); the rest sit under "All production tools". */
+export const CREATOR_QUICK: ModuleId[] = ['script', 'shots', 'gear', 'locations', 'tasks', 'printcenter'];
 
 export const MODULE_BY_ID = Object.fromEntries(MODULES.map((m) => [m.id, m])) as Record<ModuleId, ModuleDef>;

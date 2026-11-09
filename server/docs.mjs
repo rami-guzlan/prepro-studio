@@ -36,6 +36,11 @@ export function projectSummary(data) {
     updatedAt: m.updatedAt || new Date(0).toISOString(),
     createdAt: m.createdAt || new Date(0).toISOString(),
     demo: !!m.demo,
+    workflow: m.workflow === 'creator' ? 'creator' : undefined,
+    creatorStage: m.workflow === 'creator' ? data.creator?.stage || 'idea' : undefined,
+    creatorFormat: m.workflow === 'creator' ? data.creator?.format : undefined,
+    targetDate: m.workflow === 'creator' ? data.creator?.targetDate : undefined,
+    folder: m.folder || undefined,
   };
 }
 

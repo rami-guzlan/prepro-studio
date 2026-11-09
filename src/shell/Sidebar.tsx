@@ -1,6 +1,7 @@
-import { Archive, FolderOpen, Home as HomeIcon, Keyboard, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Redo2, Settings, Sun, Undo2 } from 'lucide-react';
-import { MODULES, type ModuleDef } from '@/modules/registry';
-import { navigate, setTheme, toggleSidebar, useApp } from '@/store/app';
+import { Archive, ChevronDown, ChevronRight, FolderOpen, Home as HomeIcon, Keyboard, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Redo2, Settings, Sun, Undo2 } from 'lucide-react';
+import { CREATOR_QUICK, MODULES, type ModuleDef } from '@/modules/registry';
+import { navigate, readLS, setTheme, toggleSidebar, useApp, writeLS } from '@/store/app';
+import { useState } from 'react';
 import { redo, undo, useCanRedo, useCanUndo, useProject, useProjectStore } from '@/store/project';
 import { PROJECT_TYPES, optionLabel } from '@/lib/constants';
 import { assetUrl, backend } from '@/backend';
@@ -20,6 +21,22 @@ export function Sidebar() {
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
   const logo = assetUrl(meta.logo || meta.poster);
+  const creator = meta.workflow === 'creator';
+  // creator videos: the workspace and a few tools up top, the full film toolkit folded away
+  const [allTools, setAllTools] = useState(() => readLS<boolean>('prepro.sidebar.allTools', false));
+  const toggleAll = () => {
+    setAllTools(!allTools);
+    writeLS('prepro.sidebar.allTools', !allTools);
+  };
+  const item = (m: ModuleDef) => {
+    const Icon = m.icon;
+    return (
+      <button key={m.id} className={`nav-item ${moduleId === m.id ? 'active' : ''}`} onClick={() => navigate(m.id)} title={collapsed ? m.label : m.description}>
+        <Icon />
+        <span>{m.label}</span>
+      </button>
+    );
+  };
 
   return (
     <aside className="sidebar">
@@ -47,18 +64,20 @@ export function Sidebar() {
         />
       </div>
       <nav className="sidebar-nav">
-        {GROUPS.map((g) => (
+        {creator && (
+          <div className="nav-group">
+            <div className="nav-group-label">YouTube / Social</div>
+            {MODULES.filter((m) => m.id === 'creator' || CREATOR_QUICK.includes(m.id)).map(item)}
+            <button className="nav-item nav-more" onClick={toggleAll} title="Every production tool: storyboard, lighting, cast, schedule, call sheets, budget, post …">
+              {allTools ? <ChevronDown /> : <ChevronRight />}
+              <span>All production tools</span>
+            </button>
+          </div>
+        )}
+        {(!creator || allTools) && GROUPS.map((g) => (
           <div className="nav-group" key={g}>
             <div className="nav-group-label">{g}</div>
-            {MODULES.filter((m) => m.group === g).map((m) => {
-              const Icon = m.icon;
-              return (
-                <button key={m.id} className={`nav-item ${moduleId === m.id ? 'active' : ''}`} onClick={() => navigate(m.id)} title={collapsed ? m.label : m.description}>
-                  <Icon />
-                  <span>{m.label}</span>
-                </button>
-              );
-            })}
+            {MODULES.filter((m) => m.group === g && !(creator && CREATOR_QUICK.includes(m.id))).map(item)}
           </div>
         ))}
       </nav>

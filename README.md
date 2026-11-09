@@ -115,6 +115,19 @@ shot list and storyboard.
 </tr>
 </table>
 
+**The library.** File productions in folders (drag a card onto a folder, or use its menu), and switch between a grid of cards, a sortable list and a board by status (drag a production to another column to change its status).
+
+**YouTube / social videos** get a lighter home: pick "YouTube / social video" when you create a production and it opens on the **Creator Workspace** instead of the film layout. Every film tool is still one click away under "All production tools".
+
+- **Today:** where the video stands, the one thing to do next (worked out from what you have filled in), a focus sprint timer, a streak, the publish-by date and a stage track (Idea, Plan, Shoot, Edit, Publish, Done).
+- **Idea:** the video in one sentence, hooks and titles to star one of (with hook formulas and a 60-character check), the thumbnail idea, and an outline of beats from ready-made shapes (tutorial, story, list, short, review).
+- **Plan:** run-and-gun: a shot list with A-roll straight from the outline and one-tap B-roll ideas, the gear to pack, the shoot day, where, what to wear and the camera settings that worked.
+- **Shoot:** pre-roll checks, the shots to tick with a take counter, take notes and a teleprompter (outline or your own text, speed, size, mirror). **Shoot mode** puts it all on one full screen; the space bar rolls the prompter.
+- **Edit:** edit passes to tick, the outline as a cut guide with timings, exported versions with review links, the project file and notes.
+- **Publish:** final title, description with chapters from the outline, tags, the final thumbnail, every platform's status and link, a launch checklist and how it did.
+
+Agents use `creator_read` and `creator_write` to see where a video stands and fill any of it in.
+
 | Area | Module | What you can do |
 |---|---|---|
 | Overview | **Overview** | Dashboard, key info, readiness checklist, timeline, notes. Print a project one-sheet. |
